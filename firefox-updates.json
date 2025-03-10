@@ -7,7 +7,7 @@
           "update_link": "https://latteralus.github.io/MCPextension/dist-firefox.zip",
           "applications": {
             "gecko": {
-              "strict_min_version": "60.0"
+              "strict_min_version": "109.0"
             }
           }
         }

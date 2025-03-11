@@ -146,17 +146,17 @@ export function createFixedHeader() {
     // Create settings section
     const settingsGroup = createSettingsGroup();
     
-    // Add all groups to header
+    // Add all groups to header - rearranged for better positioning
     header.appendChild(logoGroup);
     header.appendChild(externalLinksGroup); // Add the external links group after the logo
     header.appendChild(nameGroup);
     header.appendChild(phoneGroup);
     header.appendChild(dobGroup);
     header.appendChild(srxIdGroup);
+    header.appendChild(dropdownsGroup); // Automation and Tags dropdowns right after SRx ID
     header.appendChild(actionsGroup);
-    header.appendChild(dropdownsGroup);
-    header.appendChild(spacer);
-    header.appendChild(settingsGroup);
+    header.appendChild(spacer); // Spacer to push Settings to the far right
+    header.appendChild(settingsGroup); // Settings stays at the far right
     
     // Add header to body
     document.body.appendChild(header);

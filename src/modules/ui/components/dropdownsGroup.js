@@ -56,6 +56,11 @@ function addCustomDropdownCSS() {
     /* Improved dropdown positioning */
     .dropdown {
       position: relative !important;
+      margin-right: 8px !important; /* Ensure space between dropdowns, reduced for tighter layout */
+    }
+    
+    .dropdown:last-child {
+      margin-right: 0 !important; /* Remove margin from the last dropdown */
     }
     
     .dropdown-content {
@@ -70,6 +75,12 @@ function addCustomDropdownCSS() {
       top: 100% !important; /* Position below the button */
       display: none;
       border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+    }
+    
+    /* Ensure right-aligned dropdowns don't overflow */
+    #crm-tags-dropdown .dropdown-content {
+      right: 0;
+      left: auto; /* Override left positioning for Tags dropdown */
     }
     
     .dropdown.show .dropdown-content {

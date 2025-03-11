@@ -105,6 +105,16 @@ export function createTagsDropdown() {
     document.head.appendChild(style);
   }
   
+  // Add Opt-in button at the top
+  const optInTag = document.createElement("button");
+  optInTag.className = "tag-btn";
+  optInTag.textContent = "Opt-in";
+  optInTag.addEventListener("click", () => {
+    selectTagOption("opt-in");
+    dropdown.classList.remove("show"); // Close dropdown after selection
+  });
+  dropdownContent.appendChild(optInTag);
+  
   // Add direct tag options to the main dropdown as buttons
   // Create Refill-Sema-Inj button
   const semaRefillTag = document.createElement("button");

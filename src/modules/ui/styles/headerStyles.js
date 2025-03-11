@@ -38,6 +38,18 @@ export function createHeaderStyles() {
     
     #mcp-crm-header .group:last-child {
       border-right: none;
+      margin-right: 0; /* Remove margin from the last group (Settings) */
+    }
+    
+    /* Special styling for dropdowns group to match other elements' spacing */
+    #crm-dropdowns-group {
+      margin-right: 15px; /* Same spacing as other elements */
+      padding-right: 15px; /* Same padding as other elements */
+    }
+    
+    /* Ensure settings is positioned at the far right */
+    #crm-settings-btn {
+      margin-right: 0;
     }
     
     #mcp-crm-header .spacer {

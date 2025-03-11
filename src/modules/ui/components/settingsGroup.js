@@ -10,6 +10,7 @@ import { showToast } from '../../phoneUtils.js';
 export function createSettingsGroup() {
   const settingsGroup = document.createElement("div");
   settingsGroup.className = "group";
+  settingsGroup.id = "crm-settings-group";
   settingsGroup.style.position = "relative"; // Make sure position is relative for dropdown positioning
   
   // Create "Settings" button
@@ -226,6 +227,20 @@ export function createSettingsGroup() {
         font-style: italic;
         color: #aaa;
       }
+      
+      /* Section styles */
+      .setting-section {
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .setting-section-title {
+        font-size: 12px;
+        font-weight: bold;
+        color: #e6e6e6;
+        margin-bottom: 10px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -311,17 +326,118 @@ function createSettingsDropdown() {
   settingsBody.className = "settings-body";
   settingsDropdown.appendChild(settingsBody);
   
+  // Add feature sections
+  
+  // Section 1: General Settings
+  const generalSection = document.createElement("div");
+  generalSection.className = "setting-section";
+  
+  const generalTitle = document.createElement("div");
+  generalTitle.className = "setting-section-title";
+  generalTitle.textContent = "General Settings";
+  generalSection.appendChild(generalTitle);
+  
+  // Add header visibility setting
+  generalSection.appendChild(createSettingItem(
+    "Show Header Bar",
+    "crmplus_headerBarVisible",
+    (enabled) => {
+      // Apply the header visibility change directly
+      const header = document.getElementById("mcp-crm-header");
+      if (header) {
+        header.style.display = enabled ? "flex" : "none";
+        document.body.style.paddingTop = enabled ? "32px" : "0";
+      }
+      
+      showToast(`Header bar: ${enabled ? "Visible" : "Hidden"}`);
+    },
+    true // default to true
+  ));
+  
+  // Add to body
+  settingsBody.appendChild(generalSection);
+  
+  // Section 2: Toolbar Links
+  const linksSection = document.createElement("div");
+  linksSection.className = "setting-section";
+  
+  const linksTitle = document.createElement("div");
+  linksTitle.className = "setting-section-title";
+  linksTitle.textContent = "External Links";
+  linksSection.appendChild(linksTitle);
+  
+  // Add ShipStation link visibility setting
+  linksSection.appendChild(createSettingItem(
+    "Show ShipStation Link",
+    "crmplus_showShipStation",
+    (enabled) => {
+      // Apply visibility change directly
+      const shipStationLink = document.querySelector(".shipstation-link");
+      if (shipStationLink) {
+        shipStationLink.style.display = enabled ? "flex" : "none";
+      }
+      
+      showToast(`ShipStation link: ${enabled ? "Visible" : "Hidden"}`);
+    },
+    true // default to true
+  ));
+  
+  // Add Stripe link visibility setting
+  linksSection.appendChild(createSettingItem(
+    "Show Stripe Link",
+    "crmplus_showStripe",
+    (enabled) => {
+      // Apply visibility change directly
+      const stripeLink = document.querySelector(".stripe-link");
+      if (stripeLink) {
+        stripeLink.style.display = enabled ? "flex" : "none";
+      }
+      
+      showToast(`Stripe link: ${enabled ? "Visible" : "Hidden"}`);
+    },
+    true // default to true
+  ));
+  
+  // Add Webmail link visibility setting
+  linksSection.appendChild(createSettingItem(
+    "Show Webmail Link",
+    "crmplus_showWebmail",
+    (enabled) => {
+      // Apply visibility change directly
+      const webmailLink = document.querySelector(".webmail-link");
+      if (webmailLink) {
+        webmailLink.style.display = enabled ? "flex" : "none";
+      }
+      
+      showToast(`Webmail link: ${enabled ? "Visible" : "Hidden"}`);
+    },
+    true // default to true
+  ));
+  
+  // Add to body
+  settingsBody.appendChild(linksSection);
+  
+  // Section 3: Feature Settings
+  const featureSection = document.createElement("div");
+  featureSection.className = "setting-section";
+  
+  const featureTitle = document.createElement("div");
+  featureTitle.className = "setting-section-title";
+  featureTitle.textContent = "Features";
+  featureSection.appendChild(featureTitle);
+  
   // Add auto-copy setting
-  settingsBody.appendChild(createSettingItem(
+  featureSection.appendChild(createSettingItem(
     "Auto-copy phone number on page load",
     "crmplus_autoCopyPhone",
     (enabled) => {
       showToast(`Auto-copy phone: ${enabled ? "Enabled" : "Disabled"}`);
-    }
+    },
+    false // default to false
   ));
   
   // Add automation options setting
-  settingsBody.appendChild(createSettingItem(
+  featureSection.appendChild(createSettingItem(
     "CRM Automation",
     "crmplus_automationEnabled",
     (enabled) => {
@@ -343,8 +459,12 @@ function createSettingsDropdown() {
       });
       
       showToast(`CRM Automation: ${enabled ? "Enabled" : "Disabled"}`);
-    }
+    },
+    true // default to true
   ));
+  
+  // Add to body
+  settingsBody.appendChild(featureSection);
   
   // Add version information section
   const versionInfo = createVersionInfoSection();
@@ -521,9 +641,10 @@ function createVersionInfoSection() {
  * @param {string} label - Setting label text
  * @param {string} storageKey - LocalStorage key for the setting
  * @param {Function} changeCallback - Function to call when setting changes
+ * @param {boolean} defaultValue - Default value for the setting
  * @returns {HTMLElement} The setting item element
  */
-function createSettingItem(label, storageKey, changeCallback) {
+function createSettingItem(label, storageKey, changeCallback, defaultValue = false) {
   const settingItem = document.createElement("div");
   settingItem.className = "setting-item";
   
@@ -541,16 +662,22 @@ function createSettingItem(label, storageKey, changeCallback) {
   const toggleInput = document.createElement("input");
   toggleInput.type = "checkbox";
   
-  // Get the saved setting value (default to false/off)
-  // Use only localStorage, avoid browser.storage API
-  const isEnabled = localStorage.getItem(storageKey) === "true";
+  // Get the saved setting value or use default
+  const savedValue = localStorage.getItem(storageKey);
+  const isEnabled = savedValue !== null ? savedValue === "true" : defaultValue;
+  
+  // If no saved value, initialize with default
+  if (savedValue === null) {
+    localStorage.setItem(storageKey, defaultValue.toString());
+  }
+  
   toggleInput.checked = isEnabled;
   
   // When toggle changes, save setting and invoke callback
   toggleInput.addEventListener("change", () => {
     const newState = toggleInput.checked;
-    // Save only to localStorage
-    localStorage.setItem(storageKey, newState);
+    // Save to localStorage
+    localStorage.setItem(storageKey, newState.toString());
     
     if (changeCallback && typeof changeCallback === 'function') {
       changeCallback(newState);

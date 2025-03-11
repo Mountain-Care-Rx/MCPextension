@@ -133,7 +133,7 @@ export function createAutomationDropdown() {
 
   const semaNestedBtn = document.createElement("button");
   semaNestedBtn.className = "nested-dropdown-btn";
-  semaNestedBtn.textContent = "Sema";
+  semaNestedBtn.textContent = "Semaglutide (Step 2)";
 
   const semaNestedContent = document.createElement("div");
   semaNestedContent.className = "nested-dropdown-content";
@@ -223,7 +223,7 @@ export function createAutomationDropdown() {
 
   const tirzNestedBtn = document.createElement("button");
   tirzNestedBtn.className = "nested-dropdown-btn";
-  tirzNestedBtn.textContent = "Tirz";
+  tirzNestedBtn.textContent = "Tirzepatide (Step 2)";
 
   const tirzNestedContent = document.createElement("div");
   tirzNestedContent.className = "nested-dropdown-content";

@@ -2,6 +2,7 @@
 
 import { createDropdown } from '../dropdownsGroup.js';
 import { showToast } from '../../../phoneUtils.js';
+import { removeAllTags, removeAllAutomations } from '../../../ui/headerBar.js';
 
 /**
  * Creates the Tags dropdown with both direct tag options and nested Vial dropdowns
@@ -110,6 +111,7 @@ export function createTagsDropdown() {
   optInTag.className = "tag-btn";
   optInTag.textContent = "Opt-in";
   optInTag.addEventListener("click", () => {
+    // The Opt-in button doesn't need the cleanup operation
     selectTagOption("opt-in");
     dropdown.classList.remove("show"); // Close dropdown after selection
   });
@@ -121,7 +123,8 @@ export function createTagsDropdown() {
   semaRefillTag.className = "tag-btn";
   semaRefillTag.textContent = "Refill-Sema-Inj";
   semaRefillTag.addEventListener("click", () => {
-    selectTagOption("refill-sema-inj");
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("refill-sema-inj");
     dropdown.classList.remove("show"); // Close dropdown after selection
   });
   dropdownContent.appendChild(semaRefillTag);
@@ -131,7 +134,8 @@ export function createTagsDropdown() {
   tirzRefillTag.className = "tag-btn";
   tirzRefillTag.textContent = "Refill-Tirz-Inj";
   tirzRefillTag.addEventListener("click", () => {
-    selectTagOption("refill-tirz-inj");
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("refill-tirz-inj");
     dropdown.classList.remove("show"); // Close dropdown after selection
   });
   dropdownContent.appendChild(tirzRefillTag);
@@ -161,9 +165,8 @@ export function createTagsDropdown() {
   vialSemaB12Item.addEventListener("click", (e) => {
     e.stopPropagation(); // Prevent event from bubbling up
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("vial-sema-b12");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("vial-sema-b12");
   });
   vialSemaNestedContent.appendChild(vialSemaB12Item);
 
@@ -174,9 +177,8 @@ export function createTagsDropdown() {
   vialSemaB6Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("vial-sema-b6");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("vial-sema-b6");
   });
   vialSemaNestedContent.appendChild(vialSemaB6Item);
 
@@ -187,9 +189,8 @@ export function createTagsDropdown() {
   vialSemaLipoItem.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("vial-sema-lipo");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("vial-sema-lipo");
   });
   vialSemaNestedContent.appendChild(vialSemaLipoItem);
 
@@ -200,9 +201,8 @@ export function createTagsDropdown() {
   vialSemaNADItem.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("vial-sema-nad+");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("vial-sema-nad+");
   });
   vialSemaNestedContent.appendChild(vialSemaNADItem);
 
@@ -238,9 +238,8 @@ export function createTagsDropdown() {
   vialTirzCyanoItem.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("vial-tirz-cyano");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("vial-tirz-cyano");
   });
   vialTirzNestedContent.appendChild(vialTirzCyanoItem);
 
@@ -251,9 +250,8 @@ export function createTagsDropdown() {
   vialTirzNADItem.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("vial-tirz-nad+");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("vial-tirz-nad+");
   });
   vialTirzNestedContent.appendChild(vialTirzNADItem);
 
@@ -264,9 +262,8 @@ export function createTagsDropdown() {
   vialTirzPyrItem.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("vial-tirz-pyridoxine");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("vial-tirz-pyridoxine");
   });
   vialTirzNestedContent.appendChild(vialTirzPyrItem);
 
@@ -303,9 +300,8 @@ export function createTagsDropdown() {
   npSema0125Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-sema-0.125ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-sema-0.125ml-inj");
   });
   npSemaNestedContent.appendChild(npSema0125Item);
 
@@ -315,9 +311,8 @@ export function createTagsDropdown() {
   npSema025Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-sema-0.25ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-sema-0.25ml-inj");
   });
   npSemaNestedContent.appendChild(npSema025Item);
 
@@ -327,9 +322,8 @@ export function createTagsDropdown() {
   npSema05Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-sema-0.5ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-sema-0.5ml-inj");
   });
   npSemaNestedContent.appendChild(npSema05Item);
 
@@ -339,9 +333,8 @@ export function createTagsDropdown() {
   npSema075Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-sema-0.75ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-sema-0.75ml-inj");
   });
   npSemaNestedContent.appendChild(npSema075Item);
 
@@ -352,9 +345,8 @@ export function createTagsDropdown() {
   npSema10Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-sema-1.0ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-sema-1.0ml-inj");
   });
   npSemaNestedContent.appendChild(npSema10Item);
 
@@ -364,9 +356,8 @@ export function createTagsDropdown() {
   npSema125Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-sema-1.25ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-sema-1.25ml-inj");
   });
   npSemaNestedContent.appendChild(npSema125Item);
 
@@ -376,9 +367,8 @@ export function createTagsDropdown() {
   npSema15Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-sema-1.5ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-sema-1.5ml-inj");
   });
   npSemaNestedContent.appendChild(npSema15Item);
 
@@ -388,9 +378,8 @@ export function createTagsDropdown() {
   npSema20Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-sema-2.0ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-sema-2.0ml-inj");
   });
   npSemaNestedContent.appendChild(npSema20Item);
 
@@ -427,9 +416,8 @@ export function createTagsDropdown() {
   npTirz025Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-tirz-0.25ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-tirz-0.25ml-inj");
   });
   npTirzNestedContent.appendChild(npTirz025Item);
 
@@ -439,9 +427,8 @@ export function createTagsDropdown() {
   npTirz05Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-tirz-0.5ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-tirz-0.5ml-inj");
   });
   npTirzNestedContent.appendChild(npTirz05Item);
 
@@ -451,9 +438,8 @@ export function createTagsDropdown() {
   npTirz075Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-tirz-0.75ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-tirz-0.75ml-inj");
   });
   npTirzNestedContent.appendChild(npTirz075Item);
 
@@ -463,9 +449,8 @@ export function createTagsDropdown() {
   npTirz10Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-tirz-1.0ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-tirz-1.0ml-inj");
   });
   npTirzNestedContent.appendChild(npTirz10Item);
 
@@ -476,9 +461,8 @@ export function createTagsDropdown() {
   npTirz125Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-tirz-1.25ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-tirz-1.25ml-inj");
   });
   npTirzNestedContent.appendChild(npTirz125Item);
 
@@ -488,9 +472,8 @@ export function createTagsDropdown() {
   npTirz15Item.addEventListener("click", (e) => {
     e.stopPropagation();
     closeAllDropdowns();
-    setTimeout(() => {
-      selectTagOption("np-tirz-1.5ml-inj");
-    }, 300);
+    // Run cleanup operations first, then select tag
+    cleanupAndSelectTag("np-tirz-1.5ml-inj");
   });
   npTirzNestedContent.appendChild(npTirz15Item);
 
@@ -514,6 +497,30 @@ export function createTagsDropdown() {
 function closeAllDropdowns() {
   document.querySelectorAll('.dropdown.show').forEach(d => d.classList.remove('show'));
   document.querySelectorAll('.nested-dropdown.open').forEach(d => d.classList.remove('open'));
+}
+
+/**
+ * Run cleanup operations (remove tags and automations) and then select the new tag
+ * @param {string} tagText - Tag to select after cleanup
+ */
+async function cleanupAndSelectTag(tagText) {
+  try {
+    // Run tag and automation removal in parallel for speed
+    const [tagResult, automationResult] = await Promise.all([
+      removeAllTags(),
+      removeAllAutomations()
+    ]);
+    
+    console.log('[CRM Extension] Cleanup completed:');
+    console.log(`- Tags: ${tagResult.removed}/${tagResult.total} removed`);
+    console.log(`- Automations: ${automationResult.removed}/${automationResult.total} removed`);
+    
+    // Now proceed with selecting the new tag
+    selectTagOption(tagText);
+  } catch (error) {
+    console.error('[CRM Extension] Error during cleanup:', error);
+    showToast('Error during cleanup. Please try again.');
+  }
 }
 
 /**

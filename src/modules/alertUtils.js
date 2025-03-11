@@ -4,6 +4,10 @@
 // Track the current state of alert banners
 let alertsInitialized = false;
 let currentAlerts = new Set();
+let lastPatientUrl = '';
+let alertShownForCurrentPatient = false;
+let tagObserver = null;
+let urlCheckInterval = null;
 
 /**
  * Initialize the alert system
@@ -68,21 +72,6 @@ function createAlertStyles() {
       flex-grow: 0; /* Don't grow to fill space */
     }
     
-    .crm-alert-banner .alert-close {
-      margin-left: 10px;
-      cursor: pointer;
-      opacity: 0.7;
-      font-size: 16px;
-      background: none;
-      border: none;
-      color: inherit;
-      padding: 0 5px;
-    }
-    
-    .crm-alert-banner .alert-close:hover {
-      opacity: 1;
-    }
-    
     /* Provider Paid specific alert styling */
     .crm-alert-banner.provider-paid {
       background-color: #FFAB40; /* Orange */
@@ -126,17 +115,51 @@ function createAlertStyles() {
 }
 
 /**
+ * Extract patient ID from URL to track current patient
+ * @returns {string} The extracted patient ID or empty string
+ */
+function extractPatientIdFromUrl() {
+  const url = window.location.href;
+  
+  // Common URL patterns for patient IDs
+  const patterns = [
+    /\/patient\/(\d+)/i,
+    /\/contact\/(\d+)/i,
+    /\/profile\/(\d+)/i,
+    /[?&]patient_id=(\d+)/i,
+    /[?&]contact_id=(\d+)/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  return '';
+}
+
+/**
  * Starts monitoring for specific tags like provider-paid
  */
 function startTagMonitoring() {
+  // Save current URL for change detection
+  lastPatientUrl = extractPatientIdFromUrl();
+  
   // Check tags initially
   checkForProviderPaidTag();
   
+  // If we already have an observer, disconnect it first
+  if (tagObserver) {
+    tagObserver.disconnect();
+  }
+  
   // Set up a MutationObserver to watch for changes to tags
-  const tagObserver = new MutationObserver((mutations) => {
+  tagObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
-      // Look for added nodes that might contain tags
-      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+      // Look for added or removed nodes that might contain tags
+      if (mutation.type === 'childList') {
         checkForProviderPaidTag();
       }
       
@@ -158,15 +181,28 @@ function startTagMonitoring() {
     attributeFilter: ['class', 'data-tag']
   });
   
-  // Also check periodically and on URL changes
-  setInterval(checkForProviderPaidTag, 3000);
+  // Clear any existing interval
+  if (urlCheckInterval) {
+    clearInterval(urlCheckInterval);
+  }
   
-  // Check when URL changes
-  let lastUrl = window.location.href;
-  setInterval(() => {
-    if (lastUrl !== window.location.href) {
-      lastUrl = window.location.href;
-      setTimeout(checkForProviderPaidTag, 1000); // Check after a delay to allow page to load
+  // Check URL changes to detect navigation to different patients
+  urlCheckInterval = setInterval(() => {
+    const currentPatientId = extractPatientIdFromUrl();
+    
+    // If patient ID changes or we navigate away from a patient page
+    if (currentPatientId !== lastPatientUrl) {
+      console.log('[CRM Extension] Navigation detected, patient changed from', lastPatientUrl, 'to', currentPatientId);
+      
+      // Reset tracking for the new patient
+      lastPatientUrl = currentPatientId;
+      alertShownForCurrentPatient = false;
+      
+      // Hide any existing alert
+      hideAlert('provider-paid');
+      
+      // Check for provider-paid tag on the new page after a delay
+      setTimeout(checkForProviderPaidTag, 1000);
     }
   }, 1000);
 }
@@ -175,14 +211,25 @@ function startTagMonitoring() {
  * Checks if the provider-paid tag is present in the current page
  */
 function checkForProviderPaidTag() {
+  // Check if provider-paid alerts are enabled in settings (default to true if setting doesn't exist)
+  const alertsEnabled = localStorage.getItem("crmplus_showProviderPaidAlerts") !== "false";
+  
+  // If alerts are disabled, hide any existing alert and don't show new ones
+  if (!alertsEnabled) {
+    hideAlert('provider-paid');
+    return;
+  }
+  
   // Search for provider-paid tag using multiple selectors
   const providerPaidTag = findProviderPaidTag();
   
   if (providerPaidTag) {
-    // Tag found, show alert
-    showProviderPaidAlert();
+    // Tag found, show alert (only if we haven't already shown it for this patient)
+    if (!alertShownForCurrentPatient) {
+      showProviderPaidAlert();
+    }
   } else {
-    // Tag not found, hide alert
+    // Tag no longer found, hide alert
     hideAlert('provider-paid');
   }
 }
@@ -231,6 +278,9 @@ export function showProviderPaidAlert() {
   // Don't show duplicate alerts
   if (currentAlerts.has('provider-paid')) return;
   
+  // Set flag to track that we've shown the alert for this patient
+  alertShownForCurrentPatient = true;
+  
   // Create the alert banner
   const alert = document.createElement('div');
   alert.className = 'crm-alert-banner provider-paid';
@@ -251,20 +301,10 @@ export function showProviderPaidAlert() {
   // Create countdown timer element
   const countdownTimer = document.createElement('span');
   countdownTimer.className = 'countdown-timer';
-  countdownTimer.textContent = '60';
+  countdownTimer.textContent = '30';
   alertMessage.appendChild(countdownTimer);
   
   alert.appendChild(alertMessage);
-  
-  // Add close button
-  const closeButton = document.createElement('button');
-  closeButton.className = 'alert-close';
-  closeButton.innerHTML = '✕';
-  closeButton.setAttribute('aria-label', 'Close alert');
-  closeButton.addEventListener('click', () => {
-    hideAlert('provider-paid');
-  });
-  alert.appendChild(closeButton);
   
   // Add alert to the page
   document.body.appendChild(alert);
@@ -291,8 +331,8 @@ export function showProviderPaidAlert() {
   
   console.log('[CRM Extension] Provider Paid alert shown');
   
-  // Start the countdown timer - automatically disappear after 60 seconds
-  let secondsLeft = 60;
+  // Start the countdown timer - automatically disappear after 30 seconds
+  let secondsLeft = 15;
   const countdownInterval = setInterval(() => {
     secondsLeft--;
     
@@ -410,16 +450,6 @@ export function showCustomAlert(message, type, id) {
   alertMessage.className = 'alert-message';
   alertMessage.textContent = message;
   alert.appendChild(alertMessage);
-  
-  // Add close button
-  const closeButton = document.createElement('button');
-  closeButton.className = 'alert-close';
-  closeButton.innerHTML = '✕';
-  closeButton.setAttribute('aria-label', 'Close alert');
-  closeButton.addEventListener('click', () => {
-    hideAlert(id);
-  });
-  alert.appendChild(closeButton);
   
   // Add alert to the page
   document.body.appendChild(alert);

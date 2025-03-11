@@ -326,19 +326,64 @@ function createSettingsDropdown() {
   settingsBody.className = "settings-body";
   settingsDropdown.appendChild(settingsBody);
   
-  // Add feature sections
+  // Add collapsible section styles if not already added
+  if (!document.getElementById('collapsible-settings-styles')) {
+    const style = document.createElement('style');
+    style.id = 'collapsible-settings-styles';
+    style.textContent = `
+      .setting-section {
+        margin-bottom: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 0; /* No bottom padding when collapsed */
+      }
+      
+      .setting-section-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        font-weight: bold;
+        color: #e6e6e6;
+        padding: 8px 0;
+        cursor: pointer;
+        user-select: none;
+      }
+      
+      .setting-section-title:after {
+        content: "▼";
+        font-size: 8px;
+        color: #e6e6e6;
+        transition: transform 0.2s ease;
+      }
+      
+      .setting-section.collapsed .setting-section-title:after {
+        transform: rotate(-90deg);
+      }
+      
+      .setting-section-content {
+        max-height: 500px;
+        overflow: hidden;
+        transition: max-height 0.3s ease, opacity 0.2s ease, margin-bottom 0.3s ease;
+        opacity: 1;
+        margin-bottom: 10px;
+      }
+      
+      .setting-section.collapsed .setting-section-content {
+        max-height: 0;
+        opacity: 0;
+        margin-bottom: 0;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  // Add feature sections as collapsible dropdowns
   
   // Section 1: General Settings
-  const generalSection = document.createElement("div");
-  generalSection.className = "setting-section";
-  
-  const generalTitle = document.createElement("div");
-  generalTitle.className = "setting-section-title";
-  generalTitle.textContent = "General Settings";
-  generalSection.appendChild(generalTitle);
+  const generalSection = createCollapsibleSection("General Settings");
   
   // Add header visibility setting
-  generalSection.appendChild(createSettingItem(
+  generalSection.content.appendChild(createSettingItem(
     "Show Header Bar",
     "crmplus_headerBarVisible",
     (enabled) => {
@@ -354,20 +399,25 @@ function createSettingsDropdown() {
     true // default to true
   ));
   
+  // Add provider-paid alert setting
+  generalSection.content.appendChild(createSettingItem(
+    "Show Provider-Paid Alerts",
+    "crmplus_showProviderPaidAlerts",
+    (enabled) => {
+      // Just update the setting - the alert system will check this when needed
+      showToast(`Provider-Paid alerts: ${enabled ? "Enabled" : "Disabled"}`);
+    },
+    true // default to true - alerts enabled by default
+  ));
+  
   // Add to body
-  settingsBody.appendChild(generalSection);
+  settingsBody.appendChild(generalSection.section);
   
   // Section 2: Toolbar Links
-  const linksSection = document.createElement("div");
-  linksSection.className = "setting-section";
-  
-  const linksTitle = document.createElement("div");
-  linksTitle.className = "setting-section-title";
-  linksTitle.textContent = "External Links";
-  linksSection.appendChild(linksTitle);
+  const linksSection = createCollapsibleSection("External Links");
   
   // Add ShipStation link visibility setting
-  linksSection.appendChild(createSettingItem(
+  linksSection.content.appendChild(createSettingItem(
     "Show ShipStation Link",
     "crmplus_showShipStation",
     (enabled) => {
@@ -383,7 +433,7 @@ function createSettingsDropdown() {
   ));
   
   // Add Stripe link visibility setting
-  linksSection.appendChild(createSettingItem(
+  linksSection.content.appendChild(createSettingItem(
     "Show Stripe Link",
     "crmplus_showStripe",
     (enabled) => {
@@ -399,7 +449,7 @@ function createSettingsDropdown() {
   ));
   
   // Add Webmail link visibility setting
-  linksSection.appendChild(createSettingItem(
+  linksSection.content.appendChild(createSettingItem(
     "Show Webmail Link",
     "crmplus_showWebmail",
     (enabled) => {
@@ -415,19 +465,13 @@ function createSettingsDropdown() {
   ));
   
   // Add to body
-  settingsBody.appendChild(linksSection);
+  settingsBody.appendChild(linksSection.section);
   
   // Section 3: Feature Settings
-  const featureSection = document.createElement("div");
-  featureSection.className = "setting-section";
-  
-  const featureTitle = document.createElement("div");
-  featureTitle.className = "setting-section-title";
-  featureTitle.textContent = "Features";
-  featureSection.appendChild(featureTitle);
+  const featureSection = createCollapsibleSection("Features");
   
   // Add auto-copy setting
-  featureSection.appendChild(createSettingItem(
+  featureSection.content.appendChild(createSettingItem(
     "Auto-copy phone number on page load",
     "crmplus_autoCopyPhone",
     (enabled) => {
@@ -437,7 +481,7 @@ function createSettingsDropdown() {
   ));
   
   // Add automation options setting
-  featureSection.appendChild(createSettingItem(
+  featureSection.content.appendChild(createSettingItem(
     "CRM Automation",
     "crmplus_automationEnabled",
     (enabled) => {
@@ -464,13 +508,41 @@ function createSettingsDropdown() {
   ));
   
   // Add to body
-  settingsBody.appendChild(featureSection);
+  settingsBody.appendChild(featureSection.section);
   
   // Add version information section
   const versionInfo = createVersionInfoSection();
   settingsBody.appendChild(versionInfo);
   
   return settingsDropdown;
+}
+
+/**
+ * Creates a collapsible settings section
+ * 
+ * @param {string} title - The section title
+ * @param {boolean} startCollapsed - Whether the section should start collapsed
+ * @returns {Object} The section and content elements
+ */
+function createCollapsibleSection(title, startCollapsed = false) {
+  const section = document.createElement("div");
+  section.className = "setting-section" + (startCollapsed ? " collapsed" : "");
+  
+  // Create title element with click handler
+  const titleElem = document.createElement("div");
+  titleElem.className = "setting-section-title";
+  titleElem.textContent = title;
+  titleElem.addEventListener("click", () => {
+    section.classList.toggle("collapsed");
+  });
+  section.appendChild(titleElem);
+  
+  // Create content container
+  const content = document.createElement("div");
+  content.className = "setting-section-content";
+  section.appendChild(content);
+  
+  return { section, content };
 }
 
 /**

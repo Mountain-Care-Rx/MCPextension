@@ -8,7 +8,9 @@ import { initNameMonitoring } from '../modules/nameUtils.js';
 import { initDOBMonitoring } from '../modules/dobUtils.js';
 import { initPhoneMonitoring } from '../modules/phoneUtils.js';
 import { initSRxIDMonitoring } from '../modules/srxIdUtils.js';
-import { initAlertSystem } from '../modules/alertUtils.js'; // New import for alert system
+import { initAlertSystem } from '../modules/alertUtils.js'; // Alert system
+import { initTagRemoval } from '../modules/tagRemoveUtils.js'; // Tag removal system
+import { initAutomationRemoval } from '../modules/automationRemoveUtils.js'; // Automation removal system
 
 console.log('[CRM Extension] Content script injected.');
 
@@ -99,6 +101,22 @@ function initializeHeader() {
     initAlertSystem();
   } catch (error) {
     console.error('[CRM Extension] Error initializing alert system:', error);
+  }
+  
+  // Initialize the tag removal system
+  try {
+    // Start the tag removal system
+    initTagRemoval();
+  } catch (error) {
+    console.error('[CRM Extension] Error initializing tag removal system:', error);
+  }
+  
+  // Initialize the automation removal system
+  try {
+    // Start the automation removal system
+    initAutomationRemoval();
+  } catch (error) {
+    console.error('[CRM Extension] Error initializing automation removal system:', error);
   }
   
   // Make sure phone display is cleared (redundant safety)

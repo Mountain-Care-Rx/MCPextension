@@ -17,6 +17,9 @@ import {
 import { updateNameDisplay, detectName, initNameMonitoring } from '../nameUtils.js';
 import { updateDOBDisplay, detectDOB, initDOBMonitoring, formatDateDisplay } from '../dobUtils.js';
 import { detectSRxID, initSRxIDMonitoring } from '../srxIdUtils.js';
+// Keep imports but won't create the buttons directly in the header
+import { removeAllTags } from '../tagRemoveUtils.js'; 
+import { removeAllAutomations } from '../automationRemoveUtils.js'; 
 
 // Import required UI components
 import { createClickableDisplay, updateClickableDisplayValue } from './components/clickableDisplay.js';
@@ -358,6 +361,9 @@ export function toggleHeaderVisibility(isVisible) {
 export function isHeaderInitialized() {
   return headerInitialized;
 }
+
+// Export the removeAllTags and removeAllAutomations functions for external use
+export { removeAllTags, removeAllAutomations };
 
 // Export updateClickableDisplayValue for use by other modules
 export { updateClickableDisplayValue };

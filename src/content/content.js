@@ -8,6 +8,7 @@ import { initNameMonitoring } from '../modules/nameUtils.js';
 import { initDOBMonitoring } from '../modules/dobUtils.js';
 import { initPhoneMonitoring } from '../modules/phoneUtils.js';
 import { initSRxIDMonitoring } from '../modules/srxIdUtils.js';
+import { initAlertSystem } from '../modules/alertUtils.js'; // New import for alert system
 
 console.log('[CRM Extension] Content script injected.');
 
@@ -90,6 +91,14 @@ function initializeHeader() {
     autoCopyPhone();
   } catch (error) {
     console.error('[CRM Extension] Error initializing auto phone copy:', error);
+  }
+  
+  // Initialize the alert system for provider-paid notifications
+  try {
+    // Start the alert system for provider-paid and other tag-based alerts
+    initAlertSystem();
+  } catch (error) {
+    console.error('[CRM Extension] Error initializing alert system:', error);
   }
   
   // Make sure phone display is cleared (redundant safety)

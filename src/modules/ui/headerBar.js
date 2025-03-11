@@ -323,8 +323,16 @@ export function toggleHeaderVisibility(isVisible) {
       // Update visibility
       header.style.display = isVisible ? "flex" : "none";
       
-      // Update body padding
-      document.body.style.paddingTop = isVisible ? "32px" : "0";
+      // Update body padding - consider if alerts are present
+      const hasAlerts = document.body.classList.contains('has-alert');
+      
+      if (isVisible) {
+        document.body.style.paddingTop = hasAlerts ? "72px" : "32px"; // 32px for header, 72px if alert is present
+        document.body.classList.remove('no-header');
+      } else {
+        document.body.style.paddingTop = hasAlerts ? "40px" : "0"; // 40px if alert is present, 0 if not
+        document.body.classList.add('no-header');
+      }
       
       // Store in localStorage for persistence, not browser.storage
       localStorage.setItem("crmplus_headerBarVisible", isVisible.toString());

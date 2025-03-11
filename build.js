@@ -204,32 +204,33 @@ function createBrowserSpecificBuild(browser) {
     }
   });
 
-  // Copy the modules files
-  const moduleFilesToCopy = [
-    // Core utilities
-    { src: "src/modules/phoneUtils.js", dest: "modules/phoneUtils.js" },
-    { src: "src/modules/nameUtils.js", dest: "modules/nameUtils.js" },
-    { src: "src/modules/dobUtils.js", dest: "modules/dobUtils.js" },
-    { src: "src/modules/srxIdUtils.js", dest: "modules/srxIdUtils.js" },
-    { src: "src/modules/consoleMonitor.js", dest: "modules/consoleMonitor.js" },
-    { src: "src/modules/autoPhoneCopy.js", dest: "modules/autoPhoneCopy.js" },
-    
-    // UI Components
-    { src: "src/modules/ui/headerBar.js", dest: "modules/ui/headerBar.js" },
-    { src: "src/modules/ui/styles/headerStyles.js", dest: "modules/ui/styles/headerStyles.js" },
-    { src: "src/modules/ui/components/clickableDisplay.js", dest: "modules/ui/components/clickableDisplay.js" },
-    { src: "src/modules/ui/components/actionsGroup.js", dest: "modules/ui/components/actionsGroup.js" },
-    { src: "src/modules/ui/components/dropdownsGroup.js", dest: "modules/ui/components/dropdownsGroup.js" },
-    { src: "src/modules/ui/components/settingsGroup.js", dest: "modules/ui/components/settingsGroup.js" },
-    
-    // Dropdown Components
-    { src: "src/modules/ui/components/dropdowns/semaDropdown.js", dest: "modules/ui/components/dropdowns/semaDropdown.js" },
-    { src: "src/modules/ui/components/dropdowns/vialSemaDropdown.js", dest: "modules/ui/components/dropdowns/vialSemaDropdown.js" },
-    { src: "src/modules/ui/components/dropdowns/tirzDropdown.js", dest: "modules/ui/components/dropdowns/tirzDropdown.js" },
-    { src: "src/modules/ui/components/dropdowns/vialTirzDropdown.js", dest: "modules/ui/components/dropdowns/vialTirzDropdown.js" },
-    { src: "src/modules/ui/components/dropdowns/tagsDropdown.js", dest: "modules/ui/components/dropdowns/tagsDropdown.js" },
-    { src: "src/modules/ui/components/dropdowns/automationDropdown.js", dest: "modules/ui/components/dropdowns/automationDropdown.js" }
-  ];
+// Copy the modules files
+const moduleFilesToCopy = [
+  // Core utilities
+  { src: "src/modules/phoneUtils.js", dest: "modules/phoneUtils.js" },
+  { src: "src/modules/nameUtils.js", dest: "modules/nameUtils.js" },
+  { src: "src/modules/dobUtils.js", dest: "modules/dobUtils.js" },
+  { src: "src/modules/srxIdUtils.js", dest: "modules/srxIdUtils.js" },
+  { src: "src/modules/consoleMonitor.js", dest: "modules/consoleMonitor.js" },
+  { src: "src/modules/autoPhoneCopy.js", dest: "modules/autoPhoneCopy.js" },
+  { src: "src/modules/alertUtils.js", dest: "modules/alertUtils.js" }, // New alert system module
+  
+  // UI Components
+  { src: "src/modules/ui/headerBar.js", dest: "modules/ui/headerBar.js" },
+  { src: "src/modules/ui/styles/headerStyles.js", dest: "modules/ui/styles/headerStyles.js" },
+  { src: "src/modules/ui/components/clickableDisplay.js", dest: "modules/ui/components/clickableDisplay.js" },
+  { src: "src/modules/ui/components/actionsGroup.js", dest: "modules/ui/components/actionsGroup.js" },
+  { src: "src/modules/ui/components/dropdownsGroup.js", dest: "modules/ui/components/dropdownsGroup.js" },
+  { src: "src/modules/ui/components/settingsGroup.js", dest: "modules/ui/components/settingsGroup.js" },
+  
+  // Dropdown Components
+  { src: "src/modules/ui/components/dropdowns/semaDropdown.js", dest: "modules/ui/components/dropdowns/semaDropdown.js" },
+  { src: "src/modules/ui/components/dropdowns/vialSemaDropdown.js", dest: "modules/ui/components/dropdowns/vialSemaDropdown.js" },
+  { src: "src/modules/ui/components/dropdowns/tirzDropdown.js", dest: "modules/ui/components/dropdowns/tirzDropdown.js" },
+  { src: "src/modules/ui/components/dropdowns/vialTirzDropdown.js", dest: "modules/ui/components/dropdowns/vialTirzDropdown.js" },
+  { src: "src/modules/ui/components/dropdowns/tagsDropdown.js", dest: "modules/ui/components/dropdowns/tagsDropdown.js" },
+  { src: "src/modules/ui/components/dropdowns/automationDropdown.js", dest: "modules/ui/components/dropdowns/automationDropdown.js" }
+];
 
   // Copy each module file
   moduleFilesToCopy.forEach(({ src, dest }) => {

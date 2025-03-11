@@ -5,10 +5,10 @@ const path = require('path');
 
 const version = require('./package.json').version;
 
-// Create packages directory if it doesn't exist
-const packagesDir = path.join(__dirname, 'packages');
+// Create packages directory in the new location
+const packagesDir = path.join(__dirname, 'dist');
 if (!fs.existsSync(packagesDir)) {
-  fs.mkdirSync(packagesDir);
+  fs.mkdirSync(packagesDir, { recursive: true });
 }
 
 // Package for Chrome

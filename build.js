@@ -5,9 +5,9 @@ const fs = require("fs");
 const path = require("path");
 const archiver = require('archiver');
 
-// Configure paths
-const GITHUB_REPO_PATH = path.join("C:", "Users", "mcpadmin", "Desktop", "Other", "MCPextension", "MCPextension");
-const PROJECT_PATH = path.join("C:", "Users", "mcpadmin", "Desktop", "Other", "BrowserExt");
+// Configure paths - UPDATED to new locations
+const PROJECT_PATH = path.join("C:", "Users", "mcpadmin", "Desktop", "Other", "MCPextension");
+const DIST_PATH = path.join(PROJECT_PATH, "dist");
 
 // Helper function to get current date in YYYY.MM.DD format
 function getDateVersion() {
@@ -74,27 +74,27 @@ function updateVersions() {
     console.error(`❌ Error updating manifest files: ${error.message}`);
   }
 
-  // Create or update chrome-updates.xml
+  // Create or update chrome-updates.xml with updated URLs
   const chromeUpdatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
   <app appid="[YOUR_CHROME_EXTENSION_ID]">
-    <updatecheck codebase="https://latteralus.github.io/MCPextension/dist-chrome.zip" version="${newVersion}" />
+    <updatecheck codebase="https://latteralus.github.io/MCPextension/dist/dist-chrome.zip" version="${newVersion}" />
   </app>
 </gupdate>`;
 
-  createOrUpdateFile(path.join(GITHUB_REPO_PATH, 'chrome-updates.xml'), chromeUpdatesXml);
+  createOrUpdateFile(path.join(PROJECT_PATH, 'chrome-updates.xml'), chromeUpdatesXml);
 
-  // Create or update edge-updates.xml
+  // Create or update edge-updates.xml with updated URLs
   const edgeUpdatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
   <app appid="[YOUR_EDGE_EXTENSION_ID]">
-    <updatecheck codebase="https://latteralus.github.io/MCPextension/dist-edge.zip" version="${newVersion}" />
+    <updatecheck codebase="https://latteralus.github.io/MCPextension/dist/dist-edge.zip" version="${newVersion}" />
   </app>
 </gupdate>`;
 
-  createOrUpdateFile(path.join(GITHUB_REPO_PATH, 'edge-updates.xml'), edgeUpdatesXml);
+  createOrUpdateFile(path.join(PROJECT_PATH, 'edge-updates.xml'), edgeUpdatesXml);
 
-  // Create or update updates.xml
+  // Create or update updates.xml with updated URLs
   const updatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <updates>
   <browser id="chrome">
@@ -112,16 +112,16 @@ function updateVersions() {
   </default>
 </updates>`;
 
-  createOrUpdateFile(path.join(GITHUB_REPO_PATH, 'updates.xml'), updatesXml);
+  createOrUpdateFile(path.join(PROJECT_PATH, 'updates.xml'), updatesXml);
 
-  // Create or update firefox-updates.json
+  // Create or update firefox-updates.json with updated URLs
   const firefoxUpdatesJson = `{
   "addons": {
     "crm-plus@example.com": {
       "updates": [
         {
           "version": "${newVersion}",
-          "update_link": "https://latteralus.github.io/MCPextension/dist-firefox.zip",
+          "update_link": "https://latteralus.github.io/MCPextension/dist/dist-firefox.zip",
           "applications": {
             "gecko": {
               "strict_min_version": "109.0"
@@ -133,7 +133,7 @@ function updateVersions() {
   }
 }`;
 
-  createOrUpdateFile(path.join(GITHUB_REPO_PATH, 'firefox-updates.json'), firefoxUpdatesJson);
+  createOrUpdateFile(path.join(PROJECT_PATH, 'firefox-updates.json'), firefoxUpdatesJson);
 
   return newVersion;
 }
@@ -271,14 +271,19 @@ function createBrowserSpecificBuild(browser) {
 
   console.log(`✅ ${browser} build complete! Your bundled extension is in the 'dist-${browser.toLowerCase()}' folder.`);
 
-  // Create ZIP archive directly in the GitHub repo
-  const repoZipPath = path.join(GITHUB_REPO_PATH, `dist-${browser.toLowerCase()}.zip`);
-  const output = fs.createWriteStream(repoZipPath);
+  // Create ZIP archive directly in the new dist directory
+  // Make sure the dist directory exists
+  if (!fs.existsSync(DIST_PATH)) {
+    fs.mkdirSync(DIST_PATH, { recursive: true });
+  }
+  
+  const zipPath = path.join(DIST_PATH, `dist-${browser.toLowerCase()}.zip`);
+  const output = fs.createWriteStream(zipPath);
   const archive = archiver('zip', { zlib: { level: 9 } });
 
   // Log when archive is finalized
   output.on('close', () => {
-    console.log(`✅ ${browser} archive created: ${repoZipPath} (${archive.pointer()} total bytes)`);
+    console.log(`✅ ${browser} archive created: ${zipPath} (${archive.pointer()} total bytes)`);
   });
 
   archive.on('error', (err) => {

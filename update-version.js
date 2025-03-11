@@ -57,7 +57,7 @@ function updateVersions() {
     newVersion
   );
 
-  // Update update manifests
+  // Update update manifests with new GitHub URLs
   updateVersionInFile(
     path.join(__dirname, 'chrome-updates.xml'),
     /(version=")([^"]+)(")/,

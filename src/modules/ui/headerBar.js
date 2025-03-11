@@ -57,49 +57,67 @@ export function createFixedHeader() {
     // Set initial visibility
     header.style.display = isHeaderVisible ? "flex" : "none";
 
-    // Create logo section
+    // Detect browser environment for asset URLs
+    const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+    
+    // Get extension URL for assets
+    const getExtensionAssetUrl = (path) => {
+      return browserAPI.runtime.getURL(path);
+    };
+
+    // Create logo section with link and icon
     const logoGroup = document.createElement("div");
     logoGroup.className = "group";
     
-    const logo = document.createElement("div");
-    logo.className = "logo";
-    logo.textContent = "CRM+";
-    logoGroup.appendChild(logo);
+    // Create logo link
+    const logoLink = document.createElement("a");
+    logoLink.href = "https://app.mtncarerx.com/";
+    logoLink.className = "logo-link";
+    
+    // Create logo icon
+    const logoIcon = document.createElement("img");
+    logoIcon.src = getExtensionAssetUrl("assets/mcp-favicon.ico");
+    logoIcon.alt = "";
+    logoIcon.className = "logo-icon";
+    logoLink.appendChild(logoIcon);
+    
+    // Create logo text
+    const logoText = document.createElement("span");
+    logoText.className = "logo";
+    logoText.textContent = "CRM+";
+    logoLink.appendChild(logoText);
+    
+    logoGroup.appendChild(logoLink);
     
     // Create external links group
     const externalLinksGroup = document.createElement("div");
     externalLinksGroup.className = "group external-links";
     
-    // Detect browser environment
-  const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
-  
-  // Get extension URL for assets
-  const getExtensionAssetUrl = (path) => {
-    return browserAPI.runtime.getURL(path);
-  };
-  
-  // 1. ShipStation link
-  const shipStationLink = createTextLink(
-    "ShipStation",
-    "https://ship15.shipstation.com/onboard",
-    "shipstation-link"
-  );
-  externalLinksGroup.appendChild(shipStationLink);
-  
-  // 2. Stripe link
-  const stripeLink = createTextLink(
-    "Stripe",
-    "https://dashboard.stripe.com/login",
-    "stripe-link"
-  );
-  externalLinksGroup.appendChild(stripeLink);
-  
-  // 3. Webmail link
-  const webmailLink = createTextLink(
-    "Webmail",
-    "https://p3plzcpnl506102.prod.phx3.secureserver.net:2096/cpsess5640910985/webmail/jupiter/index.html?login=1&post_login=89371011642013",
-    "webmail-link"
-  );
+    // 1. ShipStation link with icon
+    const shipStationLink = createTextLinkWithIcon(
+      "ShipStation",
+      "https://ship15.shipstation.com/onboard",
+      "shipstation-link",
+      getExtensionAssetUrl("assets/shipstation-favicon.ico")
+    );
+    externalLinksGroup.appendChild(shipStationLink);
+    
+    // 2. Stripe link with icon
+    const stripeLink = createTextLinkWithIcon(
+      "Stripe",
+      "https://dashboard.stripe.com/login",
+      "stripe-link",
+      getExtensionAssetUrl("assets/stripe-favicon.ico")
+    );
+    externalLinksGroup.appendChild(stripeLink);
+    
+    // 3. Webmail link with icon
+    const webmailLink = createTextLinkWithIcon(
+      "Webmail",
+      "https://p3plzcpnl506102.prod.phx3.secureserver.net:2096/cpsess5640910985/webmail/jupiter/index.html?login=1&post_login=89371011642013",
+      "webmail-link",
+      getExtensionAssetUrl("assets/webmail-favicon.ico")
+    );
     externalLinksGroup.appendChild(webmailLink);
     
     // Create various clickable displays for patient info
@@ -209,21 +227,46 @@ export function createFixedHeader() {
 }
 
 /**
- * Creates a text link for external resources
+ * Creates a text link with an icon for external resources
  * 
  * @param {string} text - Text to display on the link
  * @param {string} url - URL to navigate to
  * @param {string} customClass - Optional custom class for specific styling
+ * @param {string} iconUrl - URL to icon image
  * @returns {HTMLElement} The created link element
  */
-function createTextLink(text, url, customClass = "") {
+function createTextLinkWithIcon(text, url, customClass = "", iconUrl = "") {
   const link = document.createElement("a");
   link.href = url;
   link.target = "_blank"; // Open in new tab
   link.className = `text-link btn ${customClass}`; // Added custom class
-  link.textContent = text;
   link.rel = "noopener noreferrer"; // Security best practice for external links
   
+  // Create container to center content
+  const contentWrapper = document.createElement("div");
+  contentWrapper.style.display = "flex";
+  contentWrapper.style.alignItems = "center";
+  contentWrapper.style.justifyContent = "center";
+  contentWrapper.style.width = "100%";
+  
+  // Create and add icon if provided
+  if (iconUrl) {
+    const icon = document.createElement("img");
+    icon.src = iconUrl;
+    icon.alt = "";
+    icon.className = "link-icon";
+    icon.style.width = "16px";
+    icon.style.height = "16px";
+    icon.style.marginRight = "4px";
+    contentWrapper.appendChild(icon);
+  }
+  
+  // Add text
+  const textSpan = document.createElement("span");
+  textSpan.textContent = text;
+  contentWrapper.appendChild(textSpan);
+  
+  link.appendChild(contentWrapper);
   return link;
 }
 

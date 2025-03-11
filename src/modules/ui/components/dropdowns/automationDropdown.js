@@ -71,23 +71,24 @@ export function createAutomationDropdown() {
         width: 100%;
         text-align: left;
         padding: 8px 12px;
-        background-color: #f1f1f1;
-        border: 1px solid #ddd;
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
         border-radius: 3px;
         cursor: pointer;
         font-weight: bold;
         font-size: 13px;
-        color: #333;
+        color: #e6e6e6;
         display: flex;
         justify-content: space-between;
         align-items: center;
       }
       .nested-dropdown-btn:hover {
-        background-color: #e1e1e1;
+        background-color: rgba(255, 255, 255, 0.2);
       }
       .nested-dropdown-btn:after {
         content: "▼";
         font-size: 8px;
+        color: #e6e6e6;
       }
       .nested-dropdown-content {
         display: none;
@@ -104,21 +105,22 @@ export function createAutomationDropdown() {
         width: 100%;
         padding: 8px 12px;
         margin-bottom: 8px;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
+        background-color: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 4px;
         text-align: left;
         font-size: 13px;
-        color: #0d6efd;
+        color: #e6e6e6;
         cursor: pointer;
         transition: all 0.2s ease;
+        font-weight: normal;
       }
       .automation-btn:hover {
-        background-color: #f1f8ff;
-        border-color: #0d6efd;
+        background-color: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.2);
       }
       .automation-btn:active {
-        background-color: #e2e6ea;
+        background-color: rgba(255, 255, 255, 0.2);
       }
     `;
     document.head.appendChild(style);

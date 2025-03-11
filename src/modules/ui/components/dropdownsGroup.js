@@ -60,15 +60,16 @@ function addCustomDropdownCSS() {
     
     .dropdown-content {
       position: absolute !important;
-      background-color: #f9f9f9;
+      background-color: #2F3A4B; /* Match toolbar background color */
       min-width: 220px !important; /* Increased width */
-      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.3);
       z-index: 999;
       border-radius: 4px;
       margin-top: 5px !important; /* Add space between button and dropdown */
       left: 0;
       top: 100% !important; /* Position below the button */
       display: none;
+      border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
     }
     
     .dropdown.show .dropdown-content {
@@ -78,27 +79,39 @@ function addCustomDropdownCSS() {
     /* Improved nested dropdown positioning */
     .nested-dropdown-content {
       margin-top: 3px !important;
+      background-color: #2F3A4B; /* Match toolbar background color */
+      border-radius: 4px;
+      padding: 5px !important;
     }
     
     /* Style dropdown items */
     .dropdown-item {
-      color: #333;
+      color: #e6e6e6; /* White text for visibility */
       padding: 10px 14px !important; /* Increased padding */
       text-decoration: none;
       display: block;
       font-size: 14px;
       cursor: pointer;
       border-radius: 3px;
+      font-weight: normal;
     }
     
     .dropdown-item:hover {
-      background-color: #f1f1f1;
+      background-color: rgba(255, 255, 255, 0.1);
     }
     
     /* Fix for Vial-Sema and Vial-Tirz nested dropdowns */
     .nested-dropdown-btn {
       text-align: left !important;
       padding: 8px 12px !important;
+      background-color: rgba(255, 255, 255, 0.1) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #e6e6e6 !important;
+      font-weight: bold !important;
+    }
+    
+    .nested-dropdown-btn:hover {
+      background-color: rgba(255, 255, 255, 0.2) !important;
     }
     
     /* Force visibility for Tags dropdown */

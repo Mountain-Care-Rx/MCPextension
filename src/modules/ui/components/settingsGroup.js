@@ -57,9 +57,10 @@ export function createSettingsGroup() {
         right: 0;
         z-index: 1000;
         min-width: 230px;
-        background-color: #fff;
+        background-color: #2F3A4B;
         border-radius: 4px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         overflow: hidden;
       }
       
@@ -69,14 +70,15 @@ export function createSettingsGroup() {
       
       .settings-header {
         padding: 10px;
-        background-color: #f5f5f5;
-        border-bottom: 1px solid #ddd;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         font-weight: bold;
-        color: #333;
+        color: #e6e6e6;
       }
       
       .settings-body {
         padding: 10px;
+        color: #e6e6e6;
       }
       
       .setting-item {
@@ -85,10 +87,19 @@ export function createSettingsGroup() {
         align-items: center;
         margin-bottom: 10px;
         font-size: 13px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 10px;
       }
       
       .setting-item:last-child {
         margin-bottom: 0;
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+      
+      .setting-label {
+        color: #e6e6e6;
+        font-weight: normal;
       }
       
       /* Toggle switch styles */
@@ -112,7 +123,7 @@ export function createSettingsGroup() {
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: #ccc;
+        background-color: #555;
         transition: .4s;
         border-radius: 34px;
       }
@@ -143,25 +154,26 @@ export function createSettingsGroup() {
       
       /* Version info styles */
       .version-info {
-        border-top: 1px solid #eee;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
         margin-top: 10px;
         padding-top: 10px;
         font-size: 12px;
-        color: #777;
+        color: #e6e6e6;
       }
       
       .version-info p {
         margin: 5px 0;
+        color: #e6e6e6;
       }
       
       .version-number {
         font-weight: 600;
-        color: #333;
+        color: #e6e6e6;
       }
       
       .check-updates-btn {
-        background-color: #f1f1f1;
-        border: 1px solid #ddd;
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 3px;
         padding: 4px 8px;
         margin-top: 5px;
@@ -170,10 +182,11 @@ export function createSettingsGroup() {
         transition: background-color 0.2s;
         width: 100%;
         text-align: center;
+        color: #e6e6e6;
       }
       
       .check-updates-btn:hover {
-        background-color: #e1e1e1;
+        background-color: rgba(255, 255, 255, 0.2);
       }
       
       .check-updates-btn:disabled {
@@ -186,9 +199,10 @@ export function createSettingsGroup() {
         padding: 3px 6px;
         font-size: 11px;
         border-radius: 3px;
-        background-color: #f9f9f9;
+        background-color: rgba(255, 255, 255, 0.05);
         text-align: center;
         transition: all 0.3s ease;
+        color: #e6e6e6;
       }
       
       #last-update-check {
@@ -197,6 +211,7 @@ export function createSettingsGroup() {
         display: flex;
         align-items: center;
         flex-wrap: wrap;
+        color: #e6e6e6;
       }
       
       .check-status {
@@ -209,7 +224,7 @@ export function createSettingsGroup() {
       
       .loading-text {
         font-style: italic;
-        color: #999;
+        color: #aaa;
       }
     `;
     document.head.appendChild(style);
@@ -417,7 +432,7 @@ function createVersionInfoSection() {
       statusElement.id = "crm-update-status";
       statusElement.style.fontSize = "11px";
       statusElement.style.marginTop = "5px";
-      statusElement.style.color = "#666";
+      statusElement.style.color = "#e6e6e6";
       statusElement.textContent = ""; // Empty initially
       versionInfo.appendChild(statusElement);
     }
@@ -443,7 +458,7 @@ function createVersionInfoSection() {
             statusElement.style.color = "#F44336"; // Red color
           } else {
             statusElement.textContent = "Update check initiated";
-            statusElement.style.color = "#666"; // Default color
+            statusElement.style.color = "#e6e6e6"; // Default color
           }
           
           // Update the last check display
@@ -488,7 +503,7 @@ function createVersionInfoSection() {
         console.error("[CRM Extension] Error sending update check message:", error);
         showToast("Error checking for updates");
         statusElement.textContent = "Connection failed";
-        statusElement.style.colorstatusElement.style.color = "#F44336"; // Red color
+        statusElement.style.color = "#F44336"; // Red color
         
         // Re-enable the button
         checkUpdatesBtn.disabled = false;

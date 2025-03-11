@@ -122,7 +122,7 @@ function updateVersions() {
   const chromeUpdatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
   <app appid="[YOUR_CHROME_EXTENSION_ID]">
-    <updatecheck codebase="https://latteralus.github.io/MCPextension/dist-chrome.zip" version="${newVersion}" />
+    <updatecheck codebase="https://latteralus.github.io/MCPextension/dist/dist-chrome.zip" version="${newVersion}" />
   </app>
 </gupdate>`;
 
@@ -132,7 +132,7 @@ function updateVersions() {
   const edgeUpdatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
   <app appid="[YOUR_EDGE_EXTENSION_ID]">
-    <updatecheck codebase="https://latteralus.github.io/MCPextension/dist-edge.zip" version="${newVersion}" />
+    <updatecheck codebase="https://latteralus.github.io/MCPextension/dist/dist-edge.zip" version="${newVersion}" />
   </app>
 </gupdate>`;
 
@@ -165,7 +165,7 @@ function updateVersions() {
       "updates": [
         {
           "version": "${newVersion}",
-          "update_link": "https://latteralus.github.io/MCPextension/dist-firefox.zip",
+          "update_link": "https://latteralus.github.io/MCPextension/dist/dist-firefox.zip",
           "applications": {
             "gecko": {
               "strict_min_version": "109.0"
@@ -325,7 +325,14 @@ function createBrowserSpecificBuild(browser) {
     console.log(`✅ ${browser} archive created: ${zipPath} (${archive.pointer()} total bytes)`);
     
     // Copy ZIP to GitHub repo
-    const repoZipPath = path.join(GITHUB_REPO_PATH, `dist-${browser.toLowerCase()}.zip`);
+    const repoZipPath = path.join(GITHUB_REPO_PATH, `dist/dist-${browser.toLowerCase()}.zip`);
+    
+    // Make sure the dist directory exists in the repo
+    const repoDistDir = path.join(GITHUB_REPO_PATH, 'dist');
+    if (!fs.existsSync(repoDistDir)) {
+      fs.mkdirSync(repoDistDir, { recursive: true });
+    }
+    
     fs.copyFileSync(zipPath, repoZipPath);
     console.log(`✅ Copied ${browser} archive to GitHub repo: ${repoZipPath}`);
   });

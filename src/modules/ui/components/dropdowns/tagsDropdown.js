@@ -133,7 +133,7 @@ export function createTagsDropdown() {
 
   const vialSemaNestedBtn = document.createElement("button");
   vialSemaNestedBtn.className = "nested-dropdown-btn";
-  vialSemaNestedBtn.textContent = "Vial-Sema";
+  vialSemaNestedBtn.textContent = "Vial-Semaglutide";
 
   const vialSemaNestedContent = document.createElement("div");
   vialSemaNestedContent.className = "nested-dropdown-content";
@@ -210,7 +210,7 @@ export function createTagsDropdown() {
 
   const vialTirzNestedBtn = document.createElement("button");
   vialTirzNestedBtn.className = "nested-dropdown-btn";
-  vialTirzNestedBtn.textContent = "Vial-Tirz";
+  vialTirzNestedBtn.textContent = "Vial-Tirzepatide";
 
   const vialTirzNestedContent = document.createElement("div");
   vialTirzNestedContent.className = "nested-dropdown-content";
@@ -266,6 +266,230 @@ export function createTagsDropdown() {
 
   // Add to main dropdown
   dropdownContent.appendChild(vialTirzNestedDropdown);
+  
+  // ============ NP-SEMAGLUTIDE DROPDOWN ITEMS ============
+  // Create NP-Semaglutide nested dropdown
+  const npSemaNestedDropdown = document.createElement("div");
+  npSemaNestedDropdown.className = "nested-dropdown";
+
+  const npSemaNestedBtn = document.createElement("button");
+  npSemaNestedBtn.className = "nested-dropdown-btn";
+  npSemaNestedBtn.textContent = "NP-Semaglutide";
+
+  const npSemaNestedContent = document.createElement("div");
+  npSemaNestedContent.className = "nested-dropdown-content";
+
+  // Toggle nested dropdown when button is clicked
+  npSemaNestedBtn.addEventListener("click", (e) => {
+    e.stopPropagation(); // Prevent event from bubbling up
+    npSemaNestedDropdown.classList.toggle("open");
+  });
+
+  // NP-Semaglutide dosage options, arranged from smallest to largest
+  // First set of dosages (0.125ml to 0.75ml)
+  const npSema0125Item = document.createElement("button");
+  npSema0125Item.className = "tag-btn";
+  npSema0125Item.textContent = "NP-Sema 0.125";
+  npSema0125Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-sema-0.125ml-inj");
+    }, 300);
+  });
+  npSemaNestedContent.appendChild(npSema0125Item);
+
+  const npSema025Item = document.createElement("button");
+  npSema025Item.className = "tag-btn";
+  npSema025Item.textContent = "NP-Sema 0.25";
+  npSema025Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-sema-0.25ml-inj");
+    }, 300);
+  });
+  npSemaNestedContent.appendChild(npSema025Item);
+
+  const npSema05Item = document.createElement("button");
+  npSema05Item.className = "tag-btn";
+  npSema05Item.textContent = "NP-Sema 0.5";
+  npSema05Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-sema-0.5ml-inj");
+    }, 300);
+  });
+  npSemaNestedContent.appendChild(npSema05Item);
+
+  const npSema075Item = document.createElement("button");
+  npSema075Item.className = "tag-btn";
+  npSema075Item.textContent = "NP-Sema 0.75";
+  npSema075Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-sema-0.75ml-inj");
+    }, 300);
+  });
+  npSemaNestedContent.appendChild(npSema075Item);
+
+  // Second set of dosages (1.0ml to 2.0ml)
+  const npSema10Item = document.createElement("button");
+  npSema10Item.className = "tag-btn";
+  npSema10Item.textContent = "NP-Sema 1.0";
+  npSema10Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-sema-1.0ml-inj");
+    }, 300);
+  });
+  npSemaNestedContent.appendChild(npSema10Item);
+
+  const npSema125Item = document.createElement("button");
+  npSema125Item.className = "tag-btn";
+  npSema125Item.textContent = "NP-Sema 1.25";
+  npSema125Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-sema-1.25ml-inj");
+    }, 300);
+  });
+  npSemaNestedContent.appendChild(npSema125Item);
+
+  const npSema15Item = document.createElement("button");
+  npSema15Item.className = "tag-btn";
+  npSema15Item.textContent = "NP-Sema 1.5";
+  npSema15Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-sema-1.5ml-inj");
+    }, 300);
+  });
+  npSemaNestedContent.appendChild(npSema15Item);
+
+  const npSema20Item = document.createElement("button");
+  npSema20Item.className = "tag-btn";
+  npSema20Item.textContent = "NP-Sema 2.0";
+  npSema20Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-sema-2.0ml-inj");
+    }, 300);
+  });
+  npSemaNestedContent.appendChild(npSema20Item);
+
+  // Assemble NP-Semaglutide nested dropdown
+  npSemaNestedDropdown.appendChild(npSemaNestedBtn);
+  npSemaNestedDropdown.appendChild(npSemaNestedContent);
+
+  // Add to main dropdown
+  dropdownContent.appendChild(npSemaNestedDropdown);
+  
+  // ============ NP-TIRZEPATIDE DROPDOWN ITEMS ============
+  // Create NP-Tirzepatide nested dropdown
+  const npTirzNestedDropdown = document.createElement("div");
+  npTirzNestedDropdown.className = "nested-dropdown";
+
+  const npTirzNestedBtn = document.createElement("button");
+  npTirzNestedBtn.className = "nested-dropdown-btn";
+  npTirzNestedBtn.textContent = "NP-Tirzepatide";
+
+  const npTirzNestedContent = document.createElement("div");
+  npTirzNestedContent.className = "nested-dropdown-content";
+
+  // Toggle nested dropdown when button is clicked
+  npTirzNestedBtn.addEventListener("click", (e) => {
+    e.stopPropagation(); // Prevent event from bubbling up
+    npTirzNestedDropdown.classList.toggle("open");
+  });
+
+  // NP-Tirzepatide dosage options, arranged from smallest to largest
+  // First set of dosages (0.25ml to 1.0ml)
+  const npTirz025Item = document.createElement("button");
+  npTirz025Item.className = "tag-btn";
+  npTirz025Item.textContent = "NP-Tirz 0.25";
+  npTirz025Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-tirz-0.25ml-inj");
+    }, 300);
+  });
+  npTirzNestedContent.appendChild(npTirz025Item);
+
+  const npTirz05Item = document.createElement("button");
+  npTirz05Item.className = "tag-btn";
+  npTirz05Item.textContent = "NP-Tirz 0.5";
+  npTirz05Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-tirz-0.5ml-inj");
+    }, 300);
+  });
+  npTirzNestedContent.appendChild(npTirz05Item);
+
+  const npTirz075Item = document.createElement("button");
+  npTirz075Item.className = "tag-btn";
+  npTirz075Item.textContent = "NP-Tirz 0.75";
+  npTirz075Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-tirz-0.75ml-inj");
+    }, 300);
+  });
+  npTirzNestedContent.appendChild(npTirz075Item);
+
+  const npTirz10Item = document.createElement("button");
+  npTirz10Item.className = "tag-btn";
+  npTirz10Item.textContent = "NP-Tirz 1.0";
+  npTirz10Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-tirz-1.0ml-inj");
+    }, 300);
+  });
+  npTirzNestedContent.appendChild(npTirz10Item);
+
+  // Second set of dosages (1.25ml to 1.5ml)
+  const npTirz125Item = document.createElement("button");
+  npTirz125Item.className = "tag-btn";
+  npTirz125Item.textContent = "NP-Tirz 1.25";
+  npTirz125Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-tirz-1.25ml-inj");
+    }, 300);
+  });
+  npTirzNestedContent.appendChild(npTirz125Item);
+
+  const npTirz15Item = document.createElement("button");
+  npTirz15Item.className = "tag-btn";
+  npTirz15Item.textContent = "NP-Tirz 1.5";
+  npTirz15Item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    setTimeout(() => {
+      selectTagOption("np-tirz-1.5ml-inj");
+    }, 300);
+  });
+  npTirzNestedContent.appendChild(npTirz15Item);
+
+  // Assemble NP-Tirzepatide nested dropdown
+  npTirzNestedDropdown.appendChild(npTirzNestedBtn);
+  npTirzNestedDropdown.appendChild(npTirzNestedContent);
+
+  // Add to main dropdown
+  dropdownContent.appendChild(npTirzNestedDropdown);
   
   // Assemble the main dropdown
   dropdown.appendChild(dropdownBtn);

@@ -60,20 +60,20 @@ function updateVersions() {
   // Update update manifests with new GitHub URLs
   updateVersionInFile(
     path.join(__dirname, 'chrome-updates.xml'),
-    /(version=")([^"]+)(")/,
-    newVersion
+    /(codebase="https:\/\/latteralus\.github\.io\/MCPextension\/)[^"]*?(dist-chrome\.zip" version=")([^"]+)(")/,
+    `$1dist/dist-chrome.zip" version="${newVersion}$4`
   );
   
   updateVersionInFile(
     path.join(__dirname, 'edge-updates.xml'),
-    /(version=")([^"]+)(")/,
-    newVersion
+    /(codebase="https:\/\/latteralus\.github\.io\/MCPextension\/)[^"]*?(dist-edge\.zip" version=")([^"]+)(")/,
+    `$1dist/dist-edge.zip" version="${newVersion}$4`
   );
   
   updateVersionInFile(
     path.join(__dirname, 'firefox-updates.json'),
-    /("version"\s*:\s*")([^"]+)(")/,
-    newVersion
+    /("update_link"\s*:\s*"https:\/\/latteralus\.github\.io\/MCPextension\/)[^"]*?(dist-firefox\.zip")/,
+    `$1dist/$2`
   );
 
   console.log('✅ Version update complete!');

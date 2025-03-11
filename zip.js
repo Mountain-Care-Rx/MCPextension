@@ -13,36 +13,36 @@ if (!fs.existsSync(packagesDir)) {
 
 // Package for Chrome
 zipdir(path.join(__dirname, 'dist-chrome'), { 
-  saveTo: path.join(packagesDir, `crm-plus-chrome-v${version}.zip`),
+  saveTo: path.join(packagesDir, `dist-chrome.zip`),
   filter: (path, stat) => !path.includes('node_modules')
 }, (err) => {
   if (err) {
     console.error('Error creating Chrome package:', err);
     return;
   }
-  console.log(`✅ Chrome package created: crm-plus-chrome-v${version}.zip`);
+  console.log(`✅ Chrome package created: dist/dist-chrome.zip`);
 });
 
 // Package for Edge
 zipdir(path.join(__dirname, 'dist-edge'), {
-  saveTo: path.join(packagesDir, `crm-plus-edge-v${version}.zip`),
+  saveTo: path.join(packagesDir, `dist-edge.zip`),
   filter: (path, stat) => !path.includes('node_modules')
 }, (err) => {
   if (err) {
     console.error('Error creating Edge package:', err);
     return;
   }
-  console.log(`✅ Edge package created: crm-plus-edge-v${version}.zip`);
+  console.log(`✅ Edge package created: dist/dist-edge.zip`);
 });
 
 // Package for Firefox
 zipdir(path.join(__dirname, 'dist-firefox'), {
-  saveTo: path.join(packagesDir, `crm-plus-firefox-v${version}.xpi`),
+  saveTo: path.join(packagesDir, `dist-firefox.zip`),
   filter: (path, stat) => !path.includes('node_modules')
 }, (err) => {
   if (err) {
     console.error('Error creating Firefox package:', err);
     return;
   }
-  console.log(`✅ Firefox package created: crm-plus-firefox-v${version}.xpi`);
+  console.log(`✅ Firefox package created: dist/dist-firefox.zip`);
 });

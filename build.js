@@ -6,7 +6,7 @@ const path = require("path");
 const archiver = require('archiver');
 
 // Configure paths - UPDATED to new locations
-const PROJECT_PATH = path.join("C:", "Users", "mcpadmin", "Desktop", "Other", "MCPextension");
+const PROJECT_PATH = path.join("C:", "Users", "cbarnett", "Desktop", "Other", "MCPextension");
 const DIST_PATH = path.join(PROJECT_PATH, "dist");
 
 // Helper function to get current date in YYYY.MM.DD format

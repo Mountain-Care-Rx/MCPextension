@@ -5,9 +5,10 @@ const fs = require("fs");
 const path = require("path");
 const archiver = require('archiver');
 
-// Configure paths - UPDATED to new locations
+// Configure paths
 const PROJECT_PATH = path.join("C:", "Users", "cbarnett", "Desktop", "Other", "MCPextension");
 const DIST_PATH = path.join(PROJECT_PATH, "dist");
+const GITHUB_REPO_PATH = PROJECT_PATH; // Using the same directory as project path for GitHub files
 
 // Helper function to get current date in YYYY.MM.DD format
 function getDateVersion() {
@@ -16,6 +17,70 @@ function getDateVersion() {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}.${month}.${day}`;
+}
+
+// Helper function to update version in a file
+function updateVersionInFile(filePath, versionPattern, newVersion) {
+  try {
+    if (!fs.existsSync(filePath)) {
+      console.warn(`File not found: ${filePath}`);
+      return false;
+    }
+
+    let content = fs.readFileSync(filePath, 'utf8');
+    
+    // Validate JSON for manifest files before updating
+    if (filePath.endsWith('manifest.json') || filePath.endsWith('manifest-firefox.json')) {
+      try {
+        JSON.parse(content);
+      } catch (jsonError) {
+        console.error(`❌ File ${filePath} is not valid JSON before updating. Skipping.`);
+        return false;
+      }
+    }
+    
+    // For manifest files, use a more specific pattern to ensure we only replace the version field
+    if (filePath.endsWith('manifest.json') || filePath.endsWith('manifest-firefox.json')) {
+      const regex = /"version"\s*:\s*"([^"]+)"/;
+      const updatedContent = content.replace(regex, `"version": "${newVersion}"`);
+      
+      if (content !== updatedContent) {
+        fs.writeFileSync(filePath, updatedContent, 'utf8');
+        
+        // Validate the updated JSON
+        try {
+          JSON.parse(updatedContent);
+          console.log(`✅ Updated version in ${filePath} to ${newVersion}`);
+          return true;
+        } catch (jsonError) {
+          console.error(`❌ Error: Updated file ${filePath} is not valid JSON after version update.`);
+          // Restore the original content
+          fs.writeFileSync(filePath, content, 'utf8');
+          return false;
+        }
+      } else {
+        console.log(`ℹ️ No version update needed in ${filePath}`);
+        return false;
+      }
+    } else {
+      // For non-manifest files, use the provided pattern
+      const updatedContent = content.replace(versionPattern, (match, prefix, version, suffix) => {
+        return `${prefix}${newVersion}${suffix}`;
+      });
+
+      if (content !== updatedContent) {
+        fs.writeFileSync(filePath, updatedContent, 'utf8');
+        console.log(`✅ Updated version in ${filePath} to ${newVersion}`);
+        return true;
+      } else {
+        console.log(`ℹ️ No version update needed in ${filePath}`);
+        return false;
+      }
+    }
+  } catch (error) {
+    console.error(`❌ Error updating version in ${filePath}:`, error);
+    return false;
+  }
 }
 
 // Helper function to create or update file
@@ -41,40 +106,20 @@ function updateVersions() {
   const newVersion = getDateVersion();
   console.log(`🔄 Updating versions to ${newVersion}`);
 
-  // For manifest files, use JSON parsing/stringifying to safely update
-  try {
-    // Update main manifest.json
-    const manifestPath = path.join(PROJECT_PATH, 'src/manifest.json');
-    if (fs.existsSync(manifestPath)) {
-      const manifestContent = fs.readFileSync(manifestPath, 'utf8');
-      try {
-        const manifest = JSON.parse(manifestContent);
-        manifest.version = newVersion;
-        fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
-        console.log(`✅ Updated version in ${manifestPath} to ${newVersion}`);
-      } catch (error) {
-        console.error(`❌ Error parsing/updating manifest.json: ${error.message}`);
-      }
-    }
+  // Update manifest.json files
+  updateVersionInFile(
+    path.join(PROJECT_PATH, 'src/manifest.json'),
+    /"version"\s*:\s*"([^"]+)"/,
+    newVersion
+  );
+  
+  updateVersionInFile(
+    path.join(PROJECT_PATH, 'src/manifest-firefox.json'),
+    /"version"\s*:\s*"([^"]+)"/,
+    newVersion
+  );
 
-    // Update Firefox manifest
-    const ffManifestPath = path.join(PROJECT_PATH, 'src/manifest-firefox.json');
-    if (fs.existsSync(ffManifestPath)) {
-      const ffManifestContent = fs.readFileSync(ffManifestPath, 'utf8');
-      try {
-        const ffManifest = JSON.parse(ffManifestContent);
-        ffManifest.version = newVersion;
-        fs.writeFileSync(ffManifestPath, JSON.stringify(ffManifest, null, 2), 'utf8');
-        console.log(`✅ Updated version in ${ffManifestPath} to ${newVersion}`);
-      } catch (error) {
-        console.error(`❌ Error parsing/updating manifest-firefox.json: ${error.message}`);
-      }
-    }
-  } catch (error) {
-    console.error(`❌ Error updating manifest files: ${error.message}`);
-  }
-
-  // Create or update chrome-updates.xml with updated URLs
+  // Create or update chrome-updates.xml
   const chromeUpdatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
   <app appid="[YOUR_CHROME_EXTENSION_ID]">
@@ -82,9 +127,9 @@ function updateVersions() {
   </app>
 </gupdate>`;
 
-  createOrUpdateFile(path.join(PROJECT_PATH, 'chrome-updates.xml'), chromeUpdatesXml);
+  createOrUpdateFile(path.join(GITHUB_REPO_PATH, 'chrome-updates.xml'), chromeUpdatesXml);
 
-  // Create or update edge-updates.xml with updated URLs
+  // Create or update edge-updates.xml
   const edgeUpdatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
   <app appid="[YOUR_EDGE_EXTENSION_ID]">
@@ -92,9 +137,9 @@ function updateVersions() {
   </app>
 </gupdate>`;
 
-  createOrUpdateFile(path.join(PROJECT_PATH, 'edge-updates.xml'), edgeUpdatesXml);
+  createOrUpdateFile(path.join(GITHUB_REPO_PATH, 'edge-updates.xml'), edgeUpdatesXml);
 
-  // Create or update updates.xml with updated URLs
+  // Create or update updates.xml
   const updatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <updates>
   <browser id="chrome">
@@ -112,9 +157,9 @@ function updateVersions() {
   </default>
 </updates>`;
 
-  createOrUpdateFile(path.join(PROJECT_PATH, 'updates.xml'), updatesXml);
+  createOrUpdateFile(path.join(GITHUB_REPO_PATH, 'updates.xml'), updatesXml);
 
-  // Create or update firefox-updates.json with updated URLs
+  // Create or update firefox-updates.json
   const firefoxUpdatesJson = `{
   "addons": {
     "crm-plus@example.com": {
@@ -133,7 +178,7 @@ function updateVersions() {
   }
 }`;
 
-  createOrUpdateFile(path.join(PROJECT_PATH, 'firefox-updates.json'), firefoxUpdatesJson);
+  createOrUpdateFile(path.join(GITHUB_REPO_PATH, 'firefox-updates.json'), firefoxUpdatesJson);
 
   return newVersion;
 }
@@ -213,7 +258,10 @@ const moduleFilesToCopy = [
   { src: "src/modules/srxIdUtils.js", dest: "modules/srxIdUtils.js" },
   { src: "src/modules/consoleMonitor.js", dest: "modules/consoleMonitor.js" },
   { src: "src/modules/autoPhoneCopy.js", dest: "modules/autoPhoneCopy.js" },
-  { src: "src/modules/alertUtils.js", dest: "modules/alertUtils.js" }, // New alert system module
+  { src: "src/modules/alertUtils.js", dest: "modules/alertUtils.js" }, // Alert system module
+  { src: "src/modules/historyUtils.js", dest: "modules/historyUtils.js" }, // New history module
+  { src: "src/modules/tagRemoveUtils.js", dest: "modules/tagRemoveUtils.js" }, // Tag removal utility
+  { src: "src/modules/automationRemoveUtils.js", dest: "modules/automationRemoveUtils.js" }, // Automation removal utility
   
   // UI Components
   { src: "src/modules/ui/headerBar.js", dest: "modules/ui/headerBar.js" },
@@ -229,7 +277,8 @@ const moduleFilesToCopy = [
   { src: "src/modules/ui/components/dropdowns/tirzDropdown.js", dest: "modules/ui/components/dropdowns/tirzDropdown.js" },
   { src: "src/modules/ui/components/dropdowns/vialTirzDropdown.js", dest: "modules/ui/components/dropdowns/vialTirzDropdown.js" },
   { src: "src/modules/ui/components/dropdowns/tagsDropdown.js", dest: "modules/ui/components/dropdowns/tagsDropdown.js" },
-  { src: "src/modules/ui/components/dropdowns/automationDropdown.js", dest: "modules/ui/components/dropdowns/automationDropdown.js" }
+  { src: "src/modules/ui/components/dropdowns/automationDropdown.js", dest: "modules/ui/components/dropdowns/automationDropdown.js" },
+  { src: "src/modules/ui/components/dropdowns/historyDropdown.js", dest: "modules/ui/components/dropdowns/historyDropdown.js" } // New history dropdown
 ];
 
   // Copy each module file
@@ -272,19 +321,25 @@ const moduleFilesToCopy = [
 
   console.log(`✅ ${browser} build complete! Your bundled extension is in the 'dist-${browser.toLowerCase()}' folder.`);
 
-  // Create ZIP archive directly in the new dist directory
-  // Make sure the dist directory exists
-  if (!fs.existsSync(DIST_PATH)) {
-    fs.mkdirSync(DIST_PATH, { recursive: true });
-  }
-  
-  const zipPath = path.join(DIST_PATH, `dist-${browser.toLowerCase()}.zip`);
+  // Create ZIP archive for distribution
+  const zipPath = path.join(PROJECT_PATH, `dist-${browser.toLowerCase()}.zip`);
   const output = fs.createWriteStream(zipPath);
   const archive = archiver('zip', { zlib: { level: 9 } });
 
   // Log when archive is finalized
   output.on('close', () => {
     console.log(`✅ ${browser} archive created: ${zipPath} (${archive.pointer()} total bytes)`);
+    
+    // Copy ZIP to distribution directory
+    const distZipPath = path.join(DIST_PATH, `dist-${browser.toLowerCase()}.zip`);
+    
+    // Make sure the dist directory exists
+    if (!fs.existsSync(DIST_PATH)) {
+      fs.mkdirSync(DIST_PATH, { recursive: true });
+    }
+    
+    fs.copyFileSync(zipPath, distZipPath);
+    console.log(`✅ Copied ${browser} archive to dist directory: ${distZipPath}`);
   });
 
   archive.on('error', (err) => {

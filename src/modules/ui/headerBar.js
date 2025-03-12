@@ -20,6 +20,7 @@ import { detectSRxID, initSRxIDMonitoring } from '../srxIdUtils.js';
 // Keep imports but won't create the buttons directly in the header
 import { removeAllTags } from '../tagRemoveUtils.js'; 
 import { removeAllAutomations } from '../automationRemoveUtils.js'; 
+import { initHistoryTracking } from '../historyUtils.js';
 
 // Import required UI components
 import { createClickableDisplay, updateClickableDisplayValue } from './components/clickableDisplay.js';
@@ -27,6 +28,7 @@ import { createActionsGroup } from './components/actionsGroup.js';
 import { createDropdownsGroup } from './components/dropdownsGroup.js';
 import { createSettingsGroup } from './components/settingsGroup.js';
 import { createHeaderStyles } from './styles/headerStyles.js';
+import { createHistoryDropdown } from './components/dropdowns/historyDropdown.js';
 
 // Track if the header has been initialized
 let headerInitialized = false;
@@ -146,6 +148,11 @@ export function createFixedHeader() {
     const spacer = document.createElement("div");
     spacer.className = "spacer";
     
+    // Create history group (new)
+    const historyGroup = document.createElement("div");
+    historyGroup.className = "group";
+    historyGroup.appendChild(createHistoryDropdown());
+    
     // Create settings section
     const settingsGroup = createSettingsGroup();
     
@@ -159,6 +166,7 @@ export function createFixedHeader() {
     header.appendChild(dropdownsGroup); // Automation and Tags dropdowns right after SRx ID
     header.appendChild(actionsGroup);
     header.appendChild(spacer); // Spacer to push Settings to the far right
+    header.appendChild(historyGroup); // Add History group before Settings
     header.appendChild(settingsGroup); // Settings stays at the far right
     
     // Add header to body
@@ -198,6 +206,7 @@ export function createFixedHeader() {
     initDOBMonitoring();
     initPhoneMonitoring();
     initSRxIDMonitoring();
+    initHistoryTracking(); // Initialize history tracking
     
     // Additional check to clear phone display when URL changes
     window.addEventListener('popstate', function() {

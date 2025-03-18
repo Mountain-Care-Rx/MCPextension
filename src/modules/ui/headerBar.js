@@ -22,6 +22,9 @@ import { removeAllTags } from '../tagRemoveUtils.js';
 import { removeAllAutomations } from '../automationRemoveUtils.js'; 
 import { initHistoryTracking } from '../historyUtils.js';
 
+// Import chat utilities from the new modular structure
+import { initChatMonitoring, createChatButton, onNewMessages } from '../chat/index.js';
+
 // Import required UI components
 import { createClickableDisplay, updateClickableDisplayValue } from './components/clickableDisplay.js';
 import { createActionsGroup } from './components/actionsGroup.js';
@@ -38,6 +41,8 @@ let headerInitialized = false;
  * - Clickable displays for patient info (Phone, DOB, Name, SRx ID)
  * - Action buttons for automation
  * - Multiple dropdown menus for specialized tasks
+ * - Chat integration
+ * - History tracking
  * - Settings menu
  */
 export function createFixedHeader() {
@@ -144,14 +149,27 @@ export function createFixedHeader() {
     // Create dropdowns group
     const dropdownsGroup = createDropdownsGroup();
     
-    // Add spacer to push settings to the right
+    // Add spacer to push right-side buttons to the right
     const spacer = document.createElement("div");
     spacer.className = "spacer";
     
-    // Create history group (new)
-    const historyGroup = document.createElement("div");
-    historyGroup.className = "group";
-    historyGroup.appendChild(createHistoryDropdown());
+    // Create right-side buttons group to contain Chat and History
+    const rightButtonsGroup = document.createElement("div");
+    rightButtonsGroup.className = "group right-buttons";
+    rightButtonsGroup.style.borderRight = "none"; // Remove right border for consistent look
+    rightButtonsGroup.style.display = "flex";
+    rightButtonsGroup.style.marginRight = "0";
+    
+    // Create chat button that matches history style
+    const chatButton = createChatButton();
+    chatButton.style.marginRight = "8px"; // Space between chat and history
+    
+    // Create history dropdown
+    const historyDropdown = createHistoryDropdown();
+    
+    // Add chat and history to right buttons group
+    rightButtonsGroup.appendChild(chatButton);
+    rightButtonsGroup.appendChild(historyDropdown);
     
     // Create settings section
     const settingsGroup = createSettingsGroup();
@@ -165,8 +183,8 @@ export function createFixedHeader() {
     header.appendChild(srxIdGroup);
     header.appendChild(dropdownsGroup); // Automation and Tags dropdowns right after SRx ID
     header.appendChild(actionsGroup);
-    header.appendChild(spacer); // Spacer to push Settings to the far right
-    header.appendChild(historyGroup); // Add History group before Settings
+    header.appendChild(spacer); // Spacer to push buttons to the right
+    header.appendChild(rightButtonsGroup); // Add the right buttons group (Chat and History)
     header.appendChild(settingsGroup); // Settings stays at the far right
     
     // Add header to body
@@ -207,6 +225,18 @@ export function createFixedHeader() {
     initPhoneMonitoring();
     initSRxIDMonitoring();
     initHistoryTracking(); // Initialize history tracking
+    
+    // Initialize chat monitoring
+    initChatMonitoring();
+    
+    // Handle new chat messages
+    onNewMessages(messages => {
+      if (messages.length > 0) {
+        const latestMessage = messages[0];
+        // Show a toast notification for the latest message
+        showToast(`New message from ${latestMessage.sender}: ${latestMessage.text.substring(0, 30)}${latestMessage.text.length > 30 ? '...' : ''}`, 3000);
+      }
+    });
     
     // Additional check to clear phone display when URL changes
     window.addEventListener('popstate', function() {

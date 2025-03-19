@@ -104,7 +104,6 @@ class AppContainer {
   constructor(container) {
     this.container = container;
     this.appElement = null;
-    this.wrapperDiv = null;
     
     // Component references
     this.headerComponent = null;
@@ -116,7 +115,6 @@ class AppContainer {
     this.currentView = 'chat'; // 'chat', 'admin', 'settings'
     this.showUserList = true;
     this.selectedChannel = 'general';
-    this.isVisible = false; // Track visibility state
     
     // Mock data for rendering
     this.mockData = {};
@@ -145,30 +143,35 @@ class AppContainer {
   async initialize() {
     try {
       // Create a wrapper div that will hold the chat window
-      this.wrapperDiv = document.createElement('div');
-      this.wrapperDiv.className = 'mcp-chat-wrapper';
+      const wrapperDiv = document.createElement('div');
+      wrapperDiv.className = 'hipaa-chat-wrapper';
       
       // Position the wrapper in the bottom-right corner of the viewport
-      this.applyStyles(this.wrapperDiv, {
+      this.applyStyles(wrapperDiv, {
         position: 'fixed',
         bottom: '20px',
         right: '20px',
         zIndex: '9999', // High z-index to appear above other elements
         width: '700px', // Fixed width for the chat window
         height: '500px', // Fixed height for the chat window
-        boxSizing: 'border-box',
-        display: 'none' // Initially hidden
+        boxSizing: 'border-box'
       });
       
-      // Append to body to ensure it's at the root level
-      document.body.appendChild(this.wrapperDiv);
+      // If the existing container has a parent, replace it with our wrapper
+      if (this.container && this.container.parentNode) {
+        this.container.parentNode.replaceChild(wrapperDiv, this.container);
+      } 
+      // Otherwise, append the wrapper to the body
+      else {
+        document.body.appendChild(wrapperDiv);
+      }
       
       // Use the wrapper as our new container
-      this.container = this.wrapperDiv;
+      this.container = wrapperDiv;
       
       // Create main app element
       this.appElement = document.createElement('div');
-      this.appElement.className = 'mcp-chat-app';
+      this.appElement.className = 'hipaa-chat-app';
       this.applyStyles(this.appElement, {
         display: 'flex',
         flexDirection: 'column',
@@ -182,7 +185,7 @@ class AppContainer {
         backgroundColor: '#fff'
       });
       
-      // Add to wrapper
+      // Add to container
       this.container.appendChild(this.appElement);
       
       // Setup mock data for demo
@@ -217,8 +220,6 @@ class AppContainer {
       
       // Log initialization
       logChatEvent('system', 'Application initialized');
-      
-      console.log('[CRM Extension] Chat application initialized successfully');
     } catch (error) {
       console.error('[AppContainer] Initialization error:', error);
       this.renderErrorState(error);
@@ -316,29 +317,20 @@ class AppContainer {
    * to allow the header bar's chat button to access it.
    */
   toggleChatVisibility() {
+    if (!this.container) return;
+    
     console.log('[CRM Extension] toggleChatVisibility called');
     
-    try {
-      if (!this.wrapperDiv) {
-        console.error('[CRM Extension] Chat wrapper not initialized');
-        return;
-      }
-      
-      // Toggle visibility state
-      this.isVisible = !this.isVisible;
-      
-      // Set display based on visibility state
-      this.wrapperDiv.style.display = this.isVisible ? 'block' : 'none';
-      
-      // If showing, ensure content is up to date
-      if (this.isVisible) {
-        this.render();
-      }
-      
-      console.log(`[CRM Extension] Chat container toggled to: ${this.isVisible ? 'visible' : 'hidden'}`);
-    } catch (error) {
-      console.error('[CRM Extension] Error toggling chat visibility:', error);
+    // Toggle display between 'none' and 'flex'
+    const currentDisplay = this.container.style.display;
+    this.container.style.display = currentDisplay === 'none' ? 'flex' : 'none';
+    
+    // If we're showing the container, make sure its content is up to date
+    if (this.container.style.display === 'flex') {
+      this.render();
     }
+    
+    console.log(`[CRM Extension] Chat container toggled to: ${this.container.style.display}`);
   }
   
   /**
@@ -498,9 +490,7 @@ class AppContainer {
           activeView: this.currentView,
           onViewSwitch: this.switchView,
           onToggleUserList: this.toggleUserList,
-          onLogout: this.handleLogout,
-          // Pass MCP Chat as the title instead of HIPAA Chat
-          chatTitle: 'MCP Chat'
+          onLogout: this.handleLogout
         });
       } catch (headerError) {
         console.warn('[AppContainer] Error using createCustomHeader, falling back to Header component:', headerError);
@@ -511,9 +501,7 @@ class AppContainer {
           connectionStatus: this.connectionStatus,
           activeView: this.currentView,
           onViewSwitch: this.switchView,
-          onToggleUserList: this.toggleUserList,
-          // Pass MCP Chat as the title instead of HIPAA Chat
-          chatTitle: 'MCP Chat'
+          onToggleUserList: this.toggleUserList
         });
         headerElement = this.headerComponent.render();
       }
@@ -593,8 +581,8 @@ class AppContainer {
       }
       
       // Remove from DOM
-      if (this.wrapperDiv && this.wrapperDiv.parentNode) {
-        this.wrapperDiv.parentNode.removeChild(this.wrapperDiv);
+      if (this.appElement && this.appElement.parentNode) {
+        this.appElement.parentNode.removeChild(this.appElement);
       }
       
       // Remove global reference

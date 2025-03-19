@@ -1,0 +1,29 @@
+{
+    "name": "hipaa-chat-server",
+    "version": "1.0.0",
+    "description": "HIPAA-Compliant WebSocket Chat Server for CRM+ Extension",
+    "main": "chatServer.js",
+    "scripts": {
+      "start": "node chatServer.js",
+      "start:dev": "nodemon chatServer.js",
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+      "hipaa",
+      "websocket",
+      "chat",
+      "local",
+      "secure"
+    ],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+      "ws": "^8.13.0"
+    },
+    "devDependencies": {
+      "nodemon": "^2.0.22"
+    },
+    "engines": {
+      "node": ">=14.0.0"
+    }
+  }

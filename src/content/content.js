@@ -12,6 +12,9 @@ import { initAlertSystem } from '../modules/alertUtils.js'; // Alert system
 import { initTagRemoval } from '../modules/tagRemoveUtils.js'; // Tag removal system
 import { initAutomationRemoval } from '../modules/automationRemoveUtils.js'; // Automation removal system
 
+// Import initChat and initChatUI from the chat module
+import { initChat, initChatUI } from '../modules/chat/index.js';
+
 console.log('[CRM Extension] Content script injected.');
 
 // Detect browser environment
@@ -121,7 +124,64 @@ function initializeHeader() {
   
   // Make sure phone display is cleared (redundant safety)
   clearPhoneDisplay();
+  
+  // Initialize chat system and UI
+  try {
+    // Initialize chat system
+    initChat().then(() => {
+      console.log('[CRM Extension] Chat system initialized successfully');
+      
+      // Explicitly initialize the chat UI after a short delay
+      setTimeout(() => {
+        if (typeof initChatUI === 'function') {
+          initChatUI();
+          console.log('[CRM Extension] Explicitly initialized Chat UI');
+        } else {
+          console.error('[CRM Extension] initChatUI function not found');
+        }
+      }, 500);
+    });
+  } catch (error) {
+    console.error('[CRM Extension] Error initializing chat system:', error);
+  }
 }
+
+// Add debugging for chat button clicks
+document.addEventListener('click', function(event) {
+  const chatButton = event.target.closest('.chat-button');
+  if (chatButton) {
+    console.log('[CRM Extension] Chat button clicked (global event listener)');
+    
+    // Debug info
+    console.log('window.toggleChatUI exists:', typeof window.toggleChatUI === 'function');
+    console.log('Chat container exists:', !!document.getElementById('hipaa-chat-container'));
+    
+    // As a fallback, try to ensure the chat UI is available
+    if (!document.getElementById('hipaa-chat-container')) {
+      console.log('[CRM Extension] Chat container not found, initializing chat UI...');
+      
+      try {
+        if (typeof initChatUI === 'function') {
+          initChatUI();
+          
+          // Try to toggle the chat UI after a short delay
+          setTimeout(() => {
+            if (typeof window.toggleChatUI === 'function') {
+              window.toggleChatUI();
+            } else {
+              const container = document.getElementById('hipaa-chat-container');
+              if (container) {
+                container.style.display = container.style.display === 'none' ? 'flex' : 'none';
+              }
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('[CRM Extension] Error initializing chat UI:', error);
+      }
+    }
+  }
+});
 
 // Listen for messages from popup and background
 browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -146,10 +206,29 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     return true;
   }
+  
+  // Add handler for explicit chat initialization
+  if (message.action === 'initializeChat') {
+    try {
+      initChat().then(() => {
+        if (typeof initChatUI === 'function') {
+          initChatUI();
+          sendResponse({ success: true });
+        } else {
+          sendResponse({ success: false, error: 'initChatUI function not found' });
+        }
+      });
+    } catch (error) {
+      console.error('[CRM Extension] Error initializing chat:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true;
+  }
+  
   return false;
 });
 
-// Added: Listen for DOMContentLoaded to ensure header is initialized
+// Listen for DOMContentLoaded to ensure header is initialized
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[CRM Extension] DOM fully loaded, checking visibility setting');
   // Check if header is already initialized
@@ -167,4 +246,31 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeHeader();
       });
   }
+  
+  // Also ensure chat system is initialized
+  if (!document.getElementById('hipaa-chat-container')) {
+    try {
+      initChat().then(() => {
+        if (typeof initChatUI === 'function') {
+          initChatUI();
+        }
+      });
+    } catch (error) {
+      console.error('[CRM Extension] Error initializing chat on DOMContentLoaded:', error);
+    }
+  }
 });
+
+// Initialize chat explicitly for good measure
+try {
+  window.addEventListener('load', () => {
+    console.log('[CRM Extension] Window loaded, initializing chat...');
+    initChat().then(() => {
+      if (typeof initChatUI === 'function') {
+        initChatUI();
+      }
+    });
+  });
+} catch (error) {
+  console.error('[CRM Extension] Critical error initializing chat on window.load:', error);
+}

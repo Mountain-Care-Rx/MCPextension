@@ -8,8 +8,11 @@ import { initAuth } from './services/authService.js';
 import { initMessageService, connectToServer, disconnectFromServer } from './services/messageService.js';
 import { initUserService } from './services/userService.js';
 import { initChannelService } from './services/channelService.js';
-import authContext from './components/auth/AuthContext.js'; // Fixed path: './components/auth/AuthContext.js'
+import { getChannelMessages } from './utils/storage.js';
+import { getActiveChannel } from './services/messageService.js';
+import authContext from './components/auth/authContext.js'; // Fixed path: './components/auth/AuthContext.js'
 import config from './config.js';
+import { initChatUI, destroyChatUI } from './initChatUI.js';
 
 // Flag to track initialization status
 let isInitialized = false;
@@ -62,6 +65,9 @@ export async function initChat() {
     if (!messageInit) {
       throw new Error('Failed to initialize message service');
     }
+    
+    // Initialize chat UI
+    initChatUI();
     
     // Log initialization success
     logChatEvent('system', 'HIPAA-compliant chat system initialized');
@@ -140,6 +146,9 @@ export async function shutdownChat() {
   }
   
   try {
+    // Destroy the chat UI
+    destroyChatUI();
+    
     // Disconnect from server
     await disconnectFromServer();
     
@@ -217,9 +226,11 @@ export function createChatButton(container) {
   
   // Add click handler
   button.addEventListener('click', () => {
-    // This would typically show/hide the chat UI
+    // This ensures the global toggleChatUI function is called
     if (typeof window.toggleChatUI === 'function') {
       window.toggleChatUI();
+    } else {
+      console.error('[CRM Extension] toggleChatUI function not available');
     }
   });
   
@@ -244,7 +255,7 @@ export function createChatButton(container) {
 
 // Export all public services and components for use by other modules
 // Auth components
-export { default as authContext } from './components/auth/AuthContext.js';
+export { default as authContext } from './components/auth/authContext.js';
 export { default as LoginForm } from './components/auth/LoginForm.js';
 
 // Admin components
@@ -283,6 +294,7 @@ export { default as ModalBase } from './components/common/ModalBase.js';
 export { default as NotificationSystem } from './components/app/NotificationSystem.js';
 export { default as Header } from './components/app/Header.js';
 export { default as AppContainer } from './components/app/AppContainer.js';
+export { initChatUI, destroyChatUI };
 
 // Auth service exports
 export {

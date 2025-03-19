@@ -35,7 +35,7 @@ Here's the updated structure.md:
 │   │   ├── ChannelManager.js                # ✅ Channel management container
 │   │   └── RoleManager.js                   # ✅ Role and permission management
 │   ├── auth/
-│   │   ├── AuthContext.js                   # ✅ Authentication state management
+│   │   ├── authContext.js                   # ✅ Authentication state management
 │   │   └── LoginForm.js                     # ✅ User login interface
 │   ├── channels/
 │   │   ├── ChannelList.js                   # ✅ Channel list with grouping
@@ -151,7 +151,7 @@ Here's the updated structure.md:
 
 ### UI Components
 
-1. **AuthContext.js**
+1. **authContext.js**
    - Authentication state management
    - Context provider for auth data
    - Session persistence

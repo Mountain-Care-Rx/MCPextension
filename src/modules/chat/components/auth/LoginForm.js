@@ -1,24 +1,37 @@
 // chat/components/auth/LoginForm.js
-// Login form component for HIPAA-compliant chat
+// Modified login form component for HIPAA-compliant chat
 
-import authContext from './AuthContext.js';
 import { logChatEvent } from '../../utils/logger.js';
 
+// Header bar colors
+const HEADER_COLORS = {
+  primary: '#343a40',      // Dark gray/blue - main header color
+  secondary: '#3a444f',    // Slightly lighter shade for hover effects
+  text: '#ffffff',         // White text
+  accent: '#2196F3'        // Blue accent color
+};
+
+/**
+ * Login Form Component
+ * Provides user authentication interface with demo bypass
+ */
 class LoginForm {
-  constructor(container, onLoginSuccess = null) {
+  /**
+   * Create a new LoginForm
+   * @param {HTMLElement} container - Container element
+   * @param {Function} onLoginSuccess - Callback for successful login
+   */
+  constructor(container, onLoginSuccess) {
     this.container = container;
-    this.onLoginSuccess = onLoginSuccess;
+    this.onLoginSuccess = onLoginSuccess || (() => {});
     this.formElement = null;
-    this.isLoading = false;
     
     // Bind methods
+    this.render = this.render.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
-    this.showRegistration = this.showRegistration.bind(this);
-    this.showLogin = this.showLogin.bind(this);
-    this.showError = this.showError.bind(this);
-    this.clearError = this.clearError.bind(this);
+    this.handleDemoLogin = this.handleDemoLogin.bind(this);
     
-    // Render the form
+    // Initialize component
     this.render();
   }
   
@@ -26,471 +39,338 @@ class LoginForm {
    * Render the login form
    */
   render() {
-    if (!this.container) return;
+    // Create login container
+    const loginContainer = document.createElement('div');
+    loginContainer.className = 'login-container';
+    this.applyStyles(loginContainer, {
+      maxWidth: '380px',
+      width: '100%',
+      margin: '40px auto 0',
+      padding: '20px',
+      backgroundColor: 'white',
+      borderRadius: '8px',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+      textAlign: 'center'
+    });
+    
+    // Create logo/title
+    const title = document.createElement('h2');
+    title.textContent = 'Mountain Care Pharmacy';
+    this.applyStyles(title, {
+      color: HEADER_COLORS.primary,
+      fontSize: '24px',
+      margin: '0 0 8px',
+      fontWeight: 'bold'
+    });
+    
+    // Create subtitle
+    const subtitle = document.createElement('p');
+    subtitle.textContent = 'Please log in to continue';
+    this.applyStyles(subtitle, {
+      color: '#666',
+      margin: '0 0 20px',
+      fontSize: '14px'
+    });
     
     // Create form element
-    this.formElement = document.createElement('div');
-    this.formElement.className = 'hipaa-login-form';
-    this.formElement.style.width = '100%';
-    this.formElement.style.maxWidth = '400px';
-    this.formElement.style.margin = '0 auto';
-    this.formElement.style.padding = '20px';
-    this.formElement.style.backgroundColor = '#ffffff';
-    this.formElement.style.borderRadius = '4px';
-    this.formElement.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
+    this.formElement = document.createElement('form');
+    this.formElement.className = 'login-form';
+    this.applyStyles(this.formElement, {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px'
+    });
     
-    // Set initial content to login form
-    this.renderLoginForm();
+    // Add submit event listener
+    this.formElement.addEventListener('submit', this.handleSubmit);
     
-    // Add to container
-    this.container.appendChild(this.formElement);
+    // Username field
+    const usernameGroup = this.createFormGroup('Username', 'username', 'text');
+    
+    // Password field
+    const passwordGroup = this.createFormGroup('Password', 'password', 'password');
+    
+    // Remember me checkbox
+    const rememberGroup = document.createElement('div');
+    this.applyStyles(rememberGroup, {
+      display: 'flex',
+      alignItems: 'center',
+      marginTop: '-8px'
+    });
+    
+    const rememberCheckbox = document.createElement('input');
+    rememberCheckbox.type = 'checkbox';
+    rememberCheckbox.id = 'remember-me';
+    rememberCheckbox.name = 'remember';
+    
+    const rememberLabel = document.createElement('label');
+    rememberLabel.htmlFor = 'remember-me';
+    rememberLabel.textContent = 'Remember me';
+    this.applyStyles(rememberLabel, {
+      fontSize: '14px',
+      color: '#666',
+      marginLeft: '8px',
+      cursor: 'pointer'
+    });
+    
+    rememberGroup.appendChild(rememberCheckbox);
+    rememberGroup.appendChild(rememberLabel);
+    
+    // Submit button
+    const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
+    submitButton.textContent = 'Login';
+    this.applyStyles(submitButton, {
+      backgroundColor: HEADER_COLORS.primary,
+      color: HEADER_COLORS.text,
+      border: 'none',
+      padding: '10px',
+      borderRadius: '4px',
+      fontSize: '16px',
+      cursor: 'pointer',
+      fontWeight: 'bold'
+    });
+    
+    // Add hover effect for submit button
+    submitButton.addEventListener('mouseover', () => {
+      submitButton.style.backgroundColor = HEADER_COLORS.secondary;
+    });
+    submitButton.addEventListener('mouseout', () => {
+      submitButton.style.backgroundColor = HEADER_COLORS.primary;
+    });
+    
+    // Demo button
+    const demoButton = document.createElement('button');
+    demoButton.type = 'button';
+    demoButton.textContent = 'Demo';
+    demoButton.id = 'demo-login-button';
+    this.applyStyles(demoButton, {
+      backgroundColor: '#4CAF50',
+      color: 'white',
+      border: 'none',
+      padding: '10px',
+      borderRadius: '4px',
+      fontSize: '16px',
+      cursor: 'pointer',
+      fontWeight: 'bold',
+      marginTop: '8px'
+    });
+    demoButton.addEventListener('click', this.handleDemoLogin);
+    
+    // Add hover effect for demo button
+    demoButton.addEventListener('mouseover', () => {
+      demoButton.style.backgroundColor = '#45a049';
+    });
+    demoButton.addEventListener('mouseout', () => {
+      demoButton.style.backgroundColor = '#4CAF50';
+    });
+    
+    // Compliance text
+    const complianceText = document.createElement('p');
+    complianceText.textContent = 'This system complies with HIPAA security requirements';
+    this.applyStyles(complianceText, {
+      fontSize: '12px',
+      color: '#666',
+      margin: '16px 0 0'
+    });
+    
+    // Encryption notice
+    const encryptionText = document.createElement('p');
+    encryptionText.textContent = 'All communication is encrypted';
+    this.applyStyles(encryptionText, {
+      fontSize: '12px',
+      color: '#666',
+      margin: '8px 0 0'
+    });
+    
+    // Add all elements to form
+    this.formElement.appendChild(usernameGroup);
+    this.formElement.appendChild(passwordGroup);
+    this.formElement.appendChild(rememberGroup);
+    this.formElement.appendChild(submitButton);
+    this.formElement.appendChild(demoButton);
+    
+    // Add form to container
+    loginContainer.appendChild(title);
+    loginContainer.appendChild(subtitle);
+    loginContainer.appendChild(this.formElement);
+    loginContainer.appendChild(complianceText);
+    loginContainer.appendChild(encryptionText);
+    
+    // Add login container to main container
+    this.container.innerHTML = '';
+    this.container.appendChild(loginContainer);
   }
   
   /**
-   * Render the login form
+   * Create a form group with label and input
+   * @param {string} labelText - Label text
+   * @param {string} name - Input name
+   * @param {string} type - Input type
+   * @returns {HTMLElement} Form group element
    */
-  renderLoginForm() {
-    if (!this.formElement) return;
+  createFormGroup(labelText, name, type) {
+    const group = document.createElement('div');
+    this.applyStyles(group, {
+      display: 'flex',
+      flexDirection: 'column',
+      textAlign: 'left'
+    });
     
-    this.formElement.innerHTML = `
-      <div class="login-header" style="text-align: center; margin-bottom: 20px;">
-        <h2 style="margin: 0; color: #2196F3;">HIPAA Secure Chat</h2>
-        <p style="margin: 10px 0 0; color: #666;">Please log in to continue</p>
-      </div>
-      
-      <div class="login-error" style="display: none; background-color: #ffebee; color: #d32f2f; padding: 10px; border-radius: 4px; margin-bottom: 15px;"></div>
-      
-      <form id="login-form">
-        <div class="form-group" style="margin-bottom: 15px;">
-          <label for="username" style="display: block; margin-bottom: 5px; font-weight: bold;">Username</label>
-          <input 
-            type="text" 
-            id="username" 
-            name="username" 
-            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
-            required
-          />
-        </div>
-        
-        <div class="form-group" style="margin-bottom: 15px;">
-          <label for="password" style="display: block; margin-bottom: 5px; font-weight: bold;">Password</label>
-          <input 
-            type="password" 
-            id="password" 
-            name="password" 
-            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
-            required
-          />
-        </div>
-        
-        <div class="form-group" style="margin-bottom: 15px;">
-          <div style="display: flex; align-items: center;">
-            <input type="checkbox" id="remember" name="remember" style="margin-right: 8px;" />
-            <label for="remember">Remember me</label>
-          </div>
-        </div>
-        
-        <div class="form-actions" style="display: flex; justify-content: space-between; align-items: center;">
-          <button 
-            type="submit" 
-            class="login-button" 
-            style="padding: 8px 16px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;"
-          >
-            Login
-          </button>
-          
-          <a 
-            href="#" 
-            class="register-link" 
-            style="color: #2196F3; text-decoration: none;"
-          >
-            Create account
-          </a>
-        </div>
-      </form>
-      
-      <div class="login-footer" style="margin-top: 20px; text-align: center; font-size: 12px; color: #666;">
-        <p>This system complies with HIPAA security requirements</p>
-        <p>All communication is encrypted and secure</p>
-      </div>
-    `;
+    const label = document.createElement('label');
+    label.htmlFor = name;
+    label.textContent = labelText;
+    this.applyStyles(label, {
+      fontSize: '14px',
+      color: '#666',
+      marginBottom: '4px'
+    });
     
-    // Add event listeners
-    const form = this.formElement.querySelector('#login-form');
-    if (form) {
-      form.addEventListener('submit', this.handleSubmit);
-    }
+    const inputWrapper = document.createElement('div');
+    this.applyStyles(inputWrapper, {
+      position: 'relative'
+    });
     
-    const registerLink = this.formElement.querySelector('.register-link');
-    if (registerLink) {
-      registerLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.showRegistration();
+    const input = document.createElement('input');
+    input.type = type;
+    input.id = name;
+    input.name = name;
+    input.required = true;
+    this.applyStyles(input, {
+      padding: '10px',
+      border: '1px solid #ddd',
+      borderRadius: '4px',
+      width: '100%',
+      boxSizing: 'border-box',
+      fontSize: '14px'
+    });
+    
+    // Add visibility toggle for password fields
+    if (type === 'password') {
+      const toggleButton = document.createElement('button');
+      toggleButton.type = 'button';
+      toggleButton.textContent = '👁️';
+      this.applyStyles(toggleButton, {
+        position: 'absolute',
+        right: '8px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        backgroundColor: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '16px',
+        color: '#f44336'
       });
-    }
-  }
-  
-  /**
-   * Render the registration form
-   */
-  renderRegistrationForm() {
-    if (!this.formElement) return;
-    
-    this.formElement.innerHTML = `
-      <div class="login-header" style="text-align: center; margin-bottom: 20px;">
-        <h2 style="margin: 0; color: #2196F3;">Create Account</h2>
-        <p style="margin: 10px 0 0; color: #666;">Register for HIPAA Secure Chat</p>
-      </div>
       
-      <div class="login-error" style="display: none; background-color: #ffebee; color: #d32f2f; padding: 10px; border-radius: 4px; margin-bottom: 15px;"></div>
-      
-      <form id="register-form">
-        <div class="form-group" style="margin-bottom: 15px;">
-          <label for="reg-username" style="display: block; margin-bottom: 5px; font-weight: bold;">Username</label>
-          <input 
-            type="text" 
-            id="reg-username" 
-            name="username" 
-            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
-            required
-          />
-        </div>
-        
-        <div class="form-group" style="margin-bottom: 15px;">
-          <label for="display-name" style="display: block; margin-bottom: 5px; font-weight: bold;">Display Name</label>
-          <input 
-            type="text" 
-            id="display-name" 
-            name="displayName" 
-            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
-            required
-          />
-        </div>
-        
-        <div class="form-group" style="margin-bottom: 15px;">
-          <label for="reg-password" style="display: block; margin-bottom: 5px; font-weight: bold;">Password</label>
-          <input 
-            type="password" 
-            id="reg-password" 
-            name="password" 
-            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
-            required
-            minlength="8"
-          />
-          <small style="display: block; margin-top: 5px; color: #666;">Must be at least 8 characters</small>
-        </div>
-        
-        <div class="form-group" style="margin-bottom: 15px;">
-          <label for="confirm-password" style="display: block; margin-bottom: 5px; font-weight: bold;">Confirm Password</label>
-          <input 
-            type="password" 
-            id="confirm-password" 
-            name="confirmPassword" 
-            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
-            required
-          />
-        </div>
-        
-        <div class="form-actions" style="display: flex; justify-content: space-between; align-items: center;">
-          <button 
-            type="submit" 
-            class="register-button" 
-            style="padding: 8px 16px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;"
-          >
-            Create Account
-          </button>
-          
-          <a 
-            href="#" 
-            class="login-link" 
-            style="color: #2196F3; text-decoration: none;"
-          >
-            Back to login
-          </a>
-        </div>
-      </form>
-      
-      <div class="login-footer" style="margin-top: 20px; text-align: center; font-size: 12px; color: #666;">
-        <p>This system complies with HIPAA security requirements</p>
-        <p>All communication is encrypted and secure</p>
-      </div>
-    `;
-    
-    // Add event listeners
-    const form = this.formElement.querySelector('#register-form');
-    if (form) {
-      form.addEventListener('submit', this.handleRegistration.bind(this));
-    }
-    
-    const loginLink = this.formElement.querySelector('.login-link');
-    if (loginLink) {
-      loginLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.showLogin();
+      toggleButton.addEventListener('click', () => {
+        input.type = input.type === 'password' ? 'text' : 'password';
       });
-    }
-  }
-  
-  /**
-   * Set loading state of the form
-   * @param {boolean} isLoading - Whether the form is loading
-   */
-  setLoading(isLoading) {
-    this.isLoading = isLoading;
-    
-    // Find submit buttons
-    const loginButton = this.formElement.querySelector('.login-button');
-    const registerButton = this.formElement.querySelector('.register-button');
-    
-    if (isLoading) {
-      // Disable buttons
-      if (loginButton) {
-        loginButton.disabled = true;
-        loginButton.textContent = 'Loading...';
-      }
       
-      if (registerButton) {
-        registerButton.disabled = true;
-        registerButton.textContent = 'Loading...';
-      }
-    } else {
-      // Enable buttons
-      if (loginButton) {
-        loginButton.disabled = false;
-        loginButton.textContent = 'Login';
-      }
-      
-      if (registerButton) {
-        registerButton.disabled = false;
-        registerButton.textContent = 'Create Account';
-      }
-    }
-  }
-  
-  /**
-   * Show an error message
-   * @param {string} message - Error message to display
-   */
-  showError(message) {
-    const errorElement = this.formElement.querySelector('.login-error');
-    if (errorElement) {
-      errorElement.textContent = message;
-      errorElement.style.display = 'block';
-    }
-  }
-  
-  /**
-   * Clear any error messages
-   */
-  clearError() {
-    const errorElement = this.formElement.querySelector('.login-error');
-    if (errorElement) {
-      errorElement.textContent = '';
-      errorElement.style.display = 'none';
-    }
-  }
-  
-  /**
-   * Show the login form
-   */
-  showLogin() {
-    this.clearError();
-    this.renderLoginForm();
-  }
-  
-  /**
-   * Show the registration form
-   */
-  showRegistration() {
-    this.clearError();
-    this.renderRegistrationForm();
-  }
-  
-  /**
-   * Handle login form submission
-   * @param {Event} e - Form submission event
-   */
-  async handleSubmit(e) {
-    e.preventDefault();
-    
-    // If already loading, do nothing
-    if (this.isLoading) return;
-    
-    this.clearError();
-    
-    // Get form data
-    const usernameInput = this.formElement.querySelector('#username');
-    const passwordInput = this.formElement.querySelector('#password');
-    const rememberInput = this.formElement.querySelector('#remember');
-    
-    if (!usernameInput || !passwordInput) return;
-    
-    const username = usernameInput.value.trim();
-    const password = passwordInput.value;
-    const remember = rememberInput?.checked || false;
-    
-    // Validate
-    if (!username || !password) {
-      this.showError('Please enter both username and password');
-      return;
+      inputWrapper.appendChild(toggleButton);
     }
     
-    // Show loading state
-    this.setLoading(true);
+    inputWrapper.appendChild(input);
+    group.appendChild(label);
+    group.appendChild(inputWrapper);
+    
+    return group;
+  }
+  
+  /**
+   * Handle form submission
+   * @param {Event} event - Submit event
+   */
+  async handleSubmit(event) {
+    event.preventDefault();
     
     try {
-      // Attempt login
-      const result = await authContext.login(username, password);
+      const username = event.target.username.value;
+      const password = event.target.password.value;
+      const remember = event.target.remember?.checked || false;
       
-      if (result.success) {
-        // Save remember me preference
-        if (remember) {
-          localStorage.setItem('crmplus_chat_username', username);
-        }
+      // Disable form fields and button during login
+      const submitButton = event.target.querySelector('button[type="submit"]');
+      const inputs = event.target.querySelectorAll('input');
+      
+      submitButton.disabled = true;
+      submitButton.textContent = 'Logging in...';
+      inputs.forEach(input => input.disabled = true);
+      
+      // Alert the user about server not being available
+      setTimeout(() => {
+        alert('Server connection not available. Please use the Demo button to explore the UI.');
         
-        // Log successful login
-        logChatEvent('auth', 'Login successful via form');
-        
-        // Call success callback if provided
-        if (this.onLoginSuccess && typeof this.onLoginSuccess === 'function') {
-          this.onLoginSuccess(result.user);
-        }
-      } else {
-        // Show error
-        this.showError(result.error || 'Invalid username or password');
-        
-        // Log failed login
-        logChatEvent('auth', 'Login failed via form', { error: result.error });
-      }
+        // Re-enable form
+        submitButton.disabled = false;
+        submitButton.textContent = 'Login';
+        inputs.forEach(input => input.disabled = false);
+      }, 1000);
     } catch (error) {
       console.error('[CRM Extension] Login error:', error);
-      this.showError('An error occurred while logging in. Please try again.');
+      alert('An error occurred during login. Please try again or use the Demo button.');
       
-      // Log error
-      logChatEvent('auth', 'Login error', { error: error.message });
-    } finally {
-      // Remove loading state
-      this.setLoading(false);
+      // Re-enable form
+      const submitButton = event.target.querySelector('button[type="submit"]');
+      const inputs = event.target.querySelectorAll('input');
+      
+      submitButton.disabled = false;
+      submitButton.textContent = 'Login';
+      inputs.forEach(input => input.disabled = false);
     }
   }
   
   /**
-   * Handle registration form submission
-   * @param {Event} e - Form submission event
+   * Handle demo login button click - Bypasses server connection entirely
    */
-  async handleRegistration(e) {
-    e.preventDefault();
-    
-    // If already loading, do nothing
-    if (this.isLoading) return;
-    
-    this.clearError();
-    
-    // Get form data
-    const usernameInput = this.formElement.querySelector('#reg-username');
-    const displayNameInput = this.formElement.querySelector('#display-name');
-    const passwordInput = this.formElement.querySelector('#reg-password');
-    const confirmPasswordInput = this.formElement.querySelector('#confirm-password');
-    
-    if (!usernameInput || !displayNameInput || !passwordInput || !confirmPasswordInput) return;
-    
-    const username = usernameInput.value.trim();
-    const displayName = displayNameInput.value.trim();
-    const password = passwordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
-    
-    // Validate
-    if (!username || !displayName || !password || !confirmPassword) {
-      this.showError('Please fill out all fields');
-      return;
-    }
-    
-    if (password.length < 8) {
-      this.showError('Password must be at least 8 characters');
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      this.showError('Passwords do not match');
-      return;
-    }
-    
-    // Show loading state
-    this.setLoading(true);
-    
+  handleDemoLogin() {
     try {
-      // Attempt registration
-      const result = await authContext.register({
-        username,
-        displayName,
-        password
-      });
+      console.log('[CRM Extension] Demo login button clicked - Direct UI access');
       
-      if (result.success) {
-        // Log successful registration
-        logChatEvent('auth', 'Registration successful');
-        
-        // Show login form with success message
-        this.showLogin();
-        
-        // Show success message
-        const successElement = document.createElement('div');
-        successElement.className = 'login-success';
-        successElement.style.backgroundColor = '#e8f5e9';
-        successElement.style.color = '#388e3c';
-        successElement.style.padding = '10px';
-        successElement.style.borderRadius = '4px';
-        successElement.style.marginBottom = '15px';
-        successElement.textContent = 'Account created successfully! You can now log in.';
-        
-        // Insert before form
-        const form = this.formElement.querySelector('#login-form');
-        if (form) {
-          form.parentElement.insertBefore(successElement, form);
-        }
-        
-        // Pre-fill username
-        const usernameInput = this.formElement.querySelector('#username');
-        if (usernameInput) {
-          usernameInput.value = username;
-        }
-      } else {
-        // Show error
-        this.showError(result.error || 'Failed to create account');
-        
-        // Log failed registration
-        logChatEvent('auth', 'Registration failed', { error: result.error });
-      }
+      // Create demo user
+      const demoUser = {
+        id: 'demo_user_' + Date.now(),
+        username: 'DemoUser',
+        displayName: 'Demo User',
+        role: 'user',
+        isDemo: true
+      };
+      
+      // Store in localStorage to simulate authentication
+      localStorage.setItem('crmplus_chat_auth_token', 'demo_token_' + Date.now());
+      localStorage.setItem('crmplus_chat_user_info', JSON.stringify(demoUser));
+      
+      // Log the demo login
+      logChatEvent('system', 'Demo UI access - no server connection', { username: demoUser.username });
+      
+      // Call success callback after a small delay to show button feedback
+      setTimeout(() => {
+        this.onLoginSuccess(demoUser);
+      }, 100);
     } catch (error) {
-      console.error('[CRM Extension] Registration error:', error);
-      this.showError('An error occurred while creating your account. Please try again.');
-      
-      // Log error
-      logChatEvent('auth', 'Registration error', { error: error.message });
-    } finally {
-      // Remove loading state
-      this.setLoading(false);
+      console.error('[CRM Extension] Demo login error:', error);
+      alert('An error occurred. Please try again.');
     }
   }
   
   /**
-   * Destroy the login form
+   * Apply CSS styles to an element
+   * @param {HTMLElement} element - Element to style
+   * @param {Object} styles - Styles to apply
+   */
+  applyStyles(element, styles) {
+    Object.assign(element.style, styles);
+  }
+  
+  /**
+   * Clean up resources
    */
   destroy() {
-    // Remove event listeners
-    const form = this.formElement.querySelector('#login-form');
-    if (form) {
-      form.removeEventListener('submit', this.handleSubmit);
+    if (this.formElement) {
+      this.formElement.removeEventListener('submit', this.handleSubmit);
     }
     
-    const registerForm = this.formElement.querySelector('#register-form');
-    if (registerForm) {
-      registerForm.removeEventListener('submit', this.handleRegistration);
-    }
-    
-    // Remove from DOM
-    if (this.formElement && this.formElement.parentElement) {
-      this.formElement.parentElement.removeChild(this.formElement);
+    if (this.container) {
+      this.container.innerHTML = '';
     }
   }
 }

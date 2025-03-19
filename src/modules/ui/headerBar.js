@@ -166,9 +166,61 @@ export function createFixedHeader() {
     rightButtonsGroup.style.display = "flex";
     rightButtonsGroup.style.marginRight = "0";
     
-    // Create chat button that matches history style
-    const chatButton = createChatButton();
-    chatButton.style.marginRight = "8px"; // Space between chat and history
+    // Create chat button with explicit click handler
+    const chatButton = document.createElement("button");
+    chatButton.className = "chat-button btn";
+    chatButton.innerHTML = '<span class="icon">💬</span><span class="badge" style="display:none">0</span>';
+    chatButton.title = "HIPAA-Compliant Chat";
+    chatButton.style.marginRight = "8px";
+      
+    // Apply badge styles
+    const badge = chatButton.querySelector('.badge');
+    Object.assign(badge.style, {
+      position: 'absolute',
+      top: '0',
+      right: '0',
+      backgroundColor: '#f44336',
+      color: 'white',
+      fontSize: '12px',
+      fontWeight: 'bold',
+      padding: '2px 6px',
+      borderRadius: '50%',
+      display: 'none'
+    });
+
+    // Add explicit click handler
+    chatButton.addEventListener("click", function() {
+      console.log('[CRM Extension] Chat button clicked');
+      
+      // Call the global toggleChatUI function if available
+      if (typeof window.toggleChatUI === 'function') {
+        window.toggleChatUI();
+      } else {
+        console.error('[CRM Extension] toggleChatUI function not available');
+        
+        // Fallback: Try to toggle visibility directly
+        const chatContainer = document.getElementById('hipaa-chat-container');
+        if (chatContainer) {
+          chatContainer.style.display = chatContainer.style.display === 'none' ? 'flex' : 'none';
+          console.log('[CRM Extension] Toggled chat container visibility as fallback');
+        } else {
+          console.error('[CRM Extension] Chat container not found');
+          
+          // As a last resort, try to initialize the chat UI explicitly
+          try {
+            if (typeof initChat === 'function') {
+              initChat().then(() => {
+                if (typeof window.toggleChatUI === 'function') {
+                  window.toggleChatUI();
+                }
+              });
+            }
+          } catch (chatError) {
+            console.error('[CRM Extension] Failed to initialize chat:', chatError);
+          }
+        }
+      }
+    });
     
     // Create history dropdown
     const historyDropdown = createHistoryDropdown();
@@ -233,7 +285,7 @@ export function createFixedHeader() {
     initHistoryTracking(); // Initialize history tracking
     
     // Initialize HIPAA-compliant chat system
-    initChatSystem();
+    initChat();
     
     // Initialize chat monitoring
     initChatMonitoring();

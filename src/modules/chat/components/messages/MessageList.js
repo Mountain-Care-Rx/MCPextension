@@ -473,6 +473,187 @@ class MessageList {
       
       bubbleElement.appendChild(phiIndicator);
     }
+    
+    // Return the bubble element
+    return bubbleElement;
+  }
+  
+  /**
+   * Format time for display
+   * @param {Date} date - Date object
+   * @returns {string} Formatted time
+   */
+  formatTime(date) {
+    if (!date || isNaN(date.getTime())) {
+      return '';
+    }
+    
+    // Format as HH:MM AM/PM
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = hours % 12 || 12; // Convert 0 to 12 for 12 AM
+    const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+    
+    return `${formattedHours}:${formattedMinutes} ${ampm}`;
+  }
+  
+  /**
+   * Calculate time difference between messages in minutes
+   * @param {Object} message1 - First message
+   * @param {Object} message2 - Second message
+   * @returns {number} Time difference in minutes
+   */
+  messageTimeDiff(message1, message2) {
+    const time1 = new Date(message1.timestamp).getTime();
+    const time2 = new Date(message2.timestamp).getTime();
+    
+    // Calculate difference in minutes
+    return Math.abs(time2 - time1) / (60 * 1000);
+  }
+  
+  /**
+   * Group messages by date
+   * @param {Array} messages - Messages to group
+   * @returns {Object} Messages grouped by date
+   */
+  groupMessagesByDate(messages) {
+    const groups = {};
+    
+    messages.forEach(message => {
+      // Get date in YYYY-MM-DD format
+      const date = new Date(message.timestamp);
+      const dateKey = date.toISOString().split('T')[0];
+      
+      // Create group if it doesn't exist
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      
+      // Add message to group
+      groups[dateKey].push(message);
+    });
+    
+    return groups;
+  }
+  
+  /**
+   * Create a date separator
+   * @param {string} dateString - Date string (YYYY-MM-DD)
+   * @returns {HTMLElement} Date separator element
+   */
+  createDateSeparator(dateString) {
+    const separator = document.createElement('div');
+    separator.className = 'date-separator';
+    this.applyStyles(separator, {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      margin: '16px 0',
+      position: 'relative'
+    });
+    
+    // Create line
+    const line = document.createElement('div');
+    this.applyStyles(line, {
+      width: '100%',
+      height: '1px',
+      backgroundColor: '#e0e0e0'
+    });
+    
+    // Create date label
+    const dateLabel = document.createElement('div');
+    dateLabel.className = 'date-label';
+    
+    // Format date display
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    let dateText;
+    
+    // Check if date is today, yesterday, or other
+    if (date.toDateString() === today.toDateString()) {
+      dateText = 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      dateText = 'Yesterday';
+    } else {
+      // Format as Month Day, Year
+      dateText = date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+    
+    dateLabel.textContent = dateText;
+    this.applyStyles(dateLabel, {
+      backgroundColor: '#fff',
+      padding: '0 10px',
+      fontSize: '12px',
+      color: '#888',
+      position: 'absolute'
+    });
+    
+    separator.appendChild(line);
+    separator.appendChild(dateLabel);
+    
+    return separator;
+  }
+  
+  /**
+   * Scroll to the bottom of the message list
+   */
+  scrollToBottom() {
+    if (this.messageListElement) {
+      this.messageListElement.scrollTop = this.messageListElement.scrollHeight;
+    }
+  }
+  
+  /**
+   * Generate a color from a string (for user avatars)
+   * @param {string} str - Input string
+   * @returns {number} Hue value (0-360)
+   */
+  generateColorFromString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return hash % 360;
+  }
+  
+  /**
+   * Apply CSS styles to an element
+   * @param {HTMLElement} element - Element to style
+   * @param {Object} styles - Styles to apply
+   */
+  applyStyles(element, styles) {
+    Object.assign(element.style, styles);
+  }
+  
+  /**
+   * Cleanup resources
+   */
+  destroy() {
+    // Remove event listeners
+    if (this.messageListElement) {
+      this.messageListElement.removeEventListener('scroll', this.handleScroll);
+    }
+    
+    // Unsubscribe from message updates
+    if (this.unsubscribeMessageListener) {
+      this.unsubscribeMessageListener();
+    }
+    
+    // Remove from DOM
+    if (this.messageListElement && this.messageListElement.parentNode) {
+      this.messageListElement.parentNode.removeChild(this.messageListElement);
+    }
+    
+    // Log destruction
+    logChatEvent('ui', 'Message list component destroyed');
   }
 }
 

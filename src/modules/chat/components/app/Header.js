@@ -70,7 +70,7 @@ class Header {
     
     // App title
     const title = document.createElement('h1');
-    title.textContent = 'HIPAA Chat';
+    title.textContent = 'MCP Chat';
     this.applyStyles(title, {
       margin: '0 20px 0 0',
       fontSize: '18px',

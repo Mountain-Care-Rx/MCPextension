@@ -69,7 +69,7 @@ export function createCustomHeader(container, options = {}) {
   
     // Title
     const title = document.createElement('h1');
-    title.textContent = 'HIPAA Chat';
+    title.textContent = 'MCP Chat';
     applyStyles(title, {
       margin: '0',
       fontSize: '20px',

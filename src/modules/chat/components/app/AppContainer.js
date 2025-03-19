@@ -17,82 +17,6 @@ import { renderAdminView } from './appcontainer/AdminViewRenderer.js';
 import { renderSettingsView } from './appcontainer/SettingsViewRenderer.js';
 
 /**
- * Set up mock data for demo purposes
- * @returns {Object} Mock data object with channels and users
- */
-function setupMockData() {
-  return {
-    channels: [
-      {
-        id: 'general',
-        name: 'General',
-        description: 'General chat for team discussions',
-        type: 'public',
-        unread: 0
-      },
-      {
-        id: 'announcements',
-        name: 'Announcements',
-        description: 'Important team announcements',
-        type: 'public',
-        unread: 2
-      },
-      {
-        id: 'hipaa-compliance',
-        name: 'HIPAA Compliance',
-        description: 'Discussions about HIPAA compliance',
-        type: 'public',
-        unread: 0
-      },
-      {
-        id: 'pharmacy-staff',
-        name: 'Pharmacy Staff',
-        description: 'Private channel for pharmacy staff',
-        type: 'private',
-        unread: 5
-      }
-    ],
-    users: [
-      {
-        id: 'user1',
-        username: 'john.smith',
-        displayName: 'John Smith',
-        role: 'admin',
-        status: 'online'
-      },
-      {
-        id: 'user2',
-        username: 'sarah.johnson',
-        displayName: 'Sarah Johnson',
-        role: 'user',
-        status: 'online'
-      },
-      {
-        id: 'user3',
-        username: 'michael.brown',
-        displayName: 'Michael Brown',
-        role: 'moderator',
-        status: 'away'
-      },
-      {
-        id: 'user4',
-        username: 'lisa.davis',
-        displayName: 'Lisa Davis',
-        role: 'user',
-        status: 'dnd'
-      },
-      {
-        id: 'user5',
-        username: 'robert.wilson',
-        displayName: 'Robert Wilson',
-        role: 'user',
-        status: 'offline'
-      }
-    ]
-  };
-}
-
-/**
  * Main Application Container Component
  * Orchestrates the entire chat application
  */
@@ -145,6 +69,7 @@ class AppContainer {
       // Create a wrapper div that will hold the chat window
       const wrapperDiv = document.createElement('div');
       wrapperDiv.className = 'hipaa-chat-wrapper';
+      wrapperDiv.id = 'hipaa-chat-container';
       
       // Position the wrapper in the bottom-right corner of the viewport
       this.applyStyles(wrapperDiv, {
@@ -154,7 +79,8 @@ class AppContainer {
         zIndex: '9999', // High z-index to appear above other elements
         width: '700px', // Fixed width for the chat window
         height: '500px', // Fixed height for the chat window
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        display: 'none' // Start hidden by default
       });
       
       // If the existing container has a parent, replace it with our wrapper
@@ -323,10 +249,11 @@ class AppContainer {
     
     // Toggle display between 'none' and 'flex'
     const currentDisplay = this.container.style.display;
-    this.container.style.display = currentDisplay === 'none' ? 'flex' : 'none';
+    const newDisplay = currentDisplay === 'none' || currentDisplay === '' ? 'flex' : 'none';
+    this.container.style.display = newDisplay;
     
     // If we're showing the container, make sure its content is up to date
-    if (this.container.style.display === 'flex') {
+    if (newDisplay === 'flex') {
       this.render();
     }
     

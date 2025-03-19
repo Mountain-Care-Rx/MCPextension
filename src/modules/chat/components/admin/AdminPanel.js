@@ -117,7 +117,7 @@ class AdminPanel {
     });
     
     const headerTitle = document.createElement('h2');
-    headerTitle.textContent = 'HIPAA Chat Administration';
+    headerTitle.textContent = 'MCP Chat Administration';
     this.applyStyles(headerTitle, {
       margin: '0',
       fontSize: '18px',

@@ -144,7 +144,7 @@ function createSimpleUI() {
       try {
         const notifier = require('node-notifier');
         notifier.notify({
-          title: 'HIPAA Chat Server',
+          title: 'MCP Chat Server',
           message: `Server running on ws://localhost:${serverPort}`,
           wait: true
         });
@@ -164,7 +164,7 @@ function createSimpleUI() {
     <html>
     <head>
       <meta http-equiv="refresh" content="5;url=http://localhost:${serverPort}">
-      <title>HIPAA Chat Server</title>
+      <title>MCP Chat Server</title>
       <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
         h1 { color: #2196F3; }
@@ -175,7 +175,7 @@ function createSimpleUI() {
       </style>
     </head>
     <body>
-      <h1>HIPAA Chat Server</h1>
+      <h1>MCP Chat Server</h1>
       <div class="card">
         <h2>Server is running!</h2>
         <p>The HIPAA-compliant chat server is now running on your computer.</p>
@@ -222,7 +222,7 @@ const server = http.createServer((req, res) => {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>HIPAA Chat Server</title>
+      <title>MCP Chat Server</title>
       <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
         h1 { color: #2196F3; }

@@ -23,7 +23,13 @@ import { removeAllAutomations } from '../automationRemoveUtils.js';
 import { initHistoryTracking } from '../historyUtils.js';
 
 // Import chat utilities from the new modular structure
-import { initChatMonitoring, createChatButton, onNewMessages } from '../chat/index.js';
+import { 
+  initChat,
+  initChatMonitoring, 
+  createChatButton, 
+  onNewMessages,
+  toggleChatUI
+} from '../chat/index.js';
 
 // Import required UI components
 import { createClickableDisplay, updateClickableDisplayValue } from './components/clickableDisplay.js';
@@ -225,6 +231,9 @@ export function createFixedHeader() {
     initPhoneMonitoring();
     initSRxIDMonitoring();
     initHistoryTracking(); // Initialize history tracking
+    
+    // Initialize HIPAA-compliant chat system
+    initChatSystem();
     
     // Initialize chat monitoring
     initChatMonitoring();

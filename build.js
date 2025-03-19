@@ -5,8 +5,27 @@ const fs = require("fs");
 const path = require("path");
 const archiver = require('archiver');
 
-// Configure paths
-const PROJECT_PATH = path.join("C:", "Users", "cbarnett", "Desktop", "Other", "MCPextension");
+// Fallback directory configuration
+const primaryProjectPath = path.join("C:", "Users", "cbarnett", "Desktop", "Other", "MCPextension");
+const secondaryProjectPath = path.join("C:", "Users", "Chris", "Desktop", "Projects", "MCPextension");
+
+// Function to test if a directory is writable (or can be created)
+function testWriteAccess(directory) {
+  try {
+    fs.mkdirSync(directory, { recursive: true });
+    fs.accessSync(directory, fs.constants.W_OK);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Use the primary project path if possible; otherwise, fallback to the secondary.
+const PROJECT_PATH = testWriteAccess(primaryProjectPath) ? primaryProjectPath : secondaryProjectPath;
+if (PROJECT_PATH === secondaryProjectPath) {
+  console.warn(`Primary project path ${primaryProjectPath} not accessible. Falling back to ${secondaryProjectPath}`);
+}
+
 const DIST_PATH = path.join(PROJECT_PATH, "dist");
 const GITHUB_REPO_PATH = PROJECT_PATH; // Using the same directory as project path for GitHub files
 
@@ -249,37 +268,37 @@ function createBrowserSpecificBuild(browser) {
     }
   });
 
-// Copy the modules files
-const moduleFilesToCopy = [
-  // Core utilities
-  { src: "src/modules/phoneUtils.js", dest: "modules/phoneUtils.js" },
-  { src: "src/modules/nameUtils.js", dest: "modules/nameUtils.js" },
-  { src: "src/modules/dobUtils.js", dest: "modules/dobUtils.js" },
-  { src: "src/modules/srxIdUtils.js", dest: "modules/srxIdUtils.js" },
-  { src: "src/modules/consoleMonitor.js", dest: "modules/consoleMonitor.js" },
-  { src: "src/modules/autoPhoneCopy.js", dest: "modules/autoPhoneCopy.js" },
-  { src: "src/modules/alertUtils.js", dest: "modules/alertUtils.js" }, // Alert system module
-  { src: "src/modules/historyUtils.js", dest: "modules/historyUtils.js" }, // New history module
-  { src: "src/modules/tagRemoveUtils.js", dest: "modules/tagRemoveUtils.js" }, // Tag removal utility
-  { src: "src/modules/automationRemoveUtils.js", dest: "modules/automationRemoveUtils.js" }, // Automation removal utility
-  
-  // UI Components
-  { src: "src/modules/ui/headerBar.js", dest: "modules/ui/headerBar.js" },
-  { src: "src/modules/ui/styles/headerStyles.js", dest: "modules/ui/styles/headerStyles.js" },
-  { src: "src/modules/ui/components/clickableDisplay.js", dest: "modules/ui/components/clickableDisplay.js" },
-  { src: "src/modules/ui/components/actionsGroup.js", dest: "modules/ui/components/actionsGroup.js" },
-  { src: "src/modules/ui/components/dropdownsGroup.js", dest: "modules/ui/components/dropdownsGroup.js" },
-  { src: "src/modules/ui/components/settingsGroup.js", dest: "modules/ui/components/settingsGroup.js" },
-  
-  // Dropdown Components
-  { src: "src/modules/ui/components/dropdowns/semaDropdown.js", dest: "modules/ui/components/dropdowns/semaDropdown.js" },
-  { src: "src/modules/ui/components/dropdowns/vialSemaDropdown.js", dest: "modules/ui/components/dropdowns/vialSemaDropdown.js" },
-  { src: "src/modules/ui/components/dropdowns/tirzDropdown.js", dest: "modules/ui/components/dropdowns/tirzDropdown.js" },
-  { src: "src/modules/ui/components/dropdowns/vialTirzDropdown.js", dest: "modules/ui/components/dropdowns/vialTirzDropdown.js" },
-  { src: "src/modules/ui/components/dropdowns/tagsDropdown.js", dest: "modules/ui/components/dropdowns/tagsDropdown.js" },
-  { src: "src/modules/ui/components/dropdowns/automationDropdown.js", dest: "modules/ui/components/dropdowns/automationDropdown.js" },
-  { src: "src/modules/ui/components/dropdowns/historyDropdown.js", dest: "modules/ui/components/dropdowns/historyDropdown.js" } // New history dropdown
-];
+  // Copy the modules files
+  const moduleFilesToCopy = [
+    // Core utilities
+    { src: "src/modules/phoneUtils.js", dest: "modules/phoneUtils.js" },
+    { src: "src/modules/nameUtils.js", dest: "modules/nameUtils.js" },
+    { src: "src/modules/dobUtils.js", dest: "modules/dobUtils.js" },
+    { src: "src/modules/srxIdUtils.js", dest: "modules/srxIdUtils.js" },
+    { src: "src/modules/consoleMonitor.js", dest: "modules/consoleMonitor.js" },
+    { src: "src/modules/autoPhoneCopy.js", dest: "modules/autoPhoneCopy.js" },
+    { src: "src/modules/alertUtils.js", dest: "modules/alertUtils.js" }, // Alert system module
+    { src: "src/modules/historyUtils.js", dest: "modules/historyUtils.js" }, // New history module
+    { src: "src/modules/tagRemoveUtils.js", dest: "modules/tagRemoveUtils.js" }, // Tag removal utility
+    { src: "src/modules/automationRemoveUtils.js", dest: "modules/automationRemoveUtils.js" }, // Automation removal utility
+    
+    // UI Components
+    { src: "src/modules/ui/headerBar.js", dest: "modules/ui/headerBar.js" },
+    { src: "src/modules/ui/styles/headerStyles.js", dest: "modules/ui/styles/headerStyles.js" },
+    { src: "src/modules/ui/components/clickableDisplay.js", dest: "modules/ui/components/clickableDisplay.js" },
+    { src: "src/modules/ui/components/actionsGroup.js", dest: "modules/ui/components/actionsGroup.js" },
+    { src: "src/modules/ui/components/dropdownsGroup.js", dest: "modules/ui/components/dropdownsGroup.js" },
+    { src: "src/modules/ui/components/settingsGroup.js", dest: "modules/ui/components/settingsGroup.js" },
+    
+    // Dropdown Components
+    { src: "src/modules/ui/components/dropdowns/semaDropdown.js", dest: "modules/ui/components/dropdowns/semaDropdown.js" },
+    { src: "src/modules/ui/components/dropdowns/vialSemaDropdown.js", dest: "modules/ui/components/dropdowns/vialSemaDropdown.js" },
+    { src: "src/modules/ui/components/dropdowns/tirzDropdown.js", dest: "modules/ui/components/dropdowns/tirzDropdown.js" },
+    { src: "src/modules/ui/components/dropdowns/vialTirzDropdown.js", dest: "modules/ui/components/dropdowns/vialTirzDropdown.js" },
+    { src: "src/modules/ui/components/dropdowns/tagsDropdown.js", dest: "modules/ui/components/dropdowns/tagsDropdown.js" },
+    { src: "src/modules/ui/components/dropdowns/automationDropdown.js", dest: "modules/ui/components/dropdowns/automationDropdown.js" },
+    { src: "src/modules/ui/components/dropdowns/historyDropdown.js", dest: "modules/ui/components/dropdowns/historyDropdown.js" } // New history dropdown
+  ];
 
   // Copy each module file
   moduleFilesToCopy.forEach(({ src, dest }) => {

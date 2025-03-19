@@ -1,7 +1,7 @@
 // chat/components/admin/users/UserTable.js
 // User table component for displaying and interacting with users
 
-import { getCurrentUser } from '../../../services/authService.js';
+import { getCurrentUser } from '../../../services/auth';
 
 /**
  * User Table Component

@@ -3,7 +3,7 @@
 
 import { getChannelMessages, getDirectMessages } from '../../utils/storage.js';
 import { addMessageListener } from '../../services/messageService.js';
-import { getUserById, getCurrentUser } from '../../services/authService.js';
+import { getUserById, getCurrentUser } from '../../services/auth';
 import { logChatEvent } from '../../utils/logger.js';
 import { containsPotentialPHI, escapeHtml } from '../../utils/validation.js';
 

@@ -1,7 +1,7 @@
 // chat/components/admin/users/ResetPasswordModal.js
 // Modal for resetting user passwords
 
-import { resetUserPassword } from '../../../services/authService.js';
+import { resetUserPassword } from '../../../services/auth';
 import { logChatEvent } from '../../../utils/logger.js';
 import { validatePassword } from '../../../utils/validation.js';
 import ModalBase from '../../common/ModalBase.js';

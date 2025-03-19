@@ -9,7 +9,7 @@ import {
     createChannel,
     hasPermission
   } from '../../../services/channelService.js';
-  import { getCurrentUser, isAuthenticated } from '../../../services/authService.js';
+  import { getCurrentUser, isAuthenticated } from '../../../services/auth';
   import { logChatEvent } from '../../../utils/logger.js';
   
   class ChannelList {

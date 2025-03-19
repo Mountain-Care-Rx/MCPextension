@@ -1,7 +1,7 @@
 // chat/components/admin/channels/ChannelTable.js
 // Channel table component for displaying and interacting with channels
 
-import { getCurrentUser } from '../../../services/authService.js';
+import { getCurrentUser } from '../../../services/auth';
 
 /**
  * Channel Table Component

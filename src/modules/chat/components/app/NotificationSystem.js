@@ -4,7 +4,7 @@
 import { logChatEvent } from '../../utils/logger.js';
 import { getConfig } from '../../config.js';
 import { addMessageListener } from '../../services/messageService.js';
-import { getCurrentUser } from '../../services/authService.js';
+import { getCurrentUser } from '../../services/auth';
 
 /**
  * Notification System Component

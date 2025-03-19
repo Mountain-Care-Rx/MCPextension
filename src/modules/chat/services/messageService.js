@@ -3,139 +3,131 @@
 
 import { logChatEvent } from '../utils/logger.js';
 import { encryptMessage, decryptMessage } from '../utils/encryption.js';
-import { getCurrentUser, getAuthToken, isAuthenticated } from './authService.js';
+import { getCurrentUser, getAuthToken, isAuthenticated } from './auth';
 import { saveMessage } from '../utils/storage.js';
 
-// WebSocket connection
-let socket = null;
-
-// Connection status
-let connectionStatus = 'disconnected';
-
-// Server URL - will be configurable by the user
-let serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
-
-// Track reconnection attempts
-let reconnectAttempts = 0;
+// WebSocket connection configuration
+const WS_URL = 'ws://localhost:3000';
+const RECONNECT_INTERVAL = 5000; // 5 seconds
 const MAX_RECONNECT_ATTEMPTS = 5;
-const RECONNECT_DELAY = 5000; // 5 seconds
-
-// Heartbeat interval to ensure connection stays alive
-let heartbeatInterval = null;
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
-// Message listeners
+// Connection state management
+let socket = null;
+let connectionStatus = 'disconnected';
+let reconnectAttempts = 0;
+let heartbeatInterval = null;
+
+// Active channel tracking
+let activeChannel = localStorage.getItem('crmplus_chat_active_channel') || 'general';
+
+// Listeners
 let messageListeners = [];
+let connectionStatusListeners = [];
 let userListListeners = [];
 let channelListListeners = [];
-let connectionStatusListeners = [];
-
-// Currently active channel
-let activeChannel = 'general';
 
 /**
  * Initialize the message service
+ * @returns {boolean} Initialization success
  */
-export function initMessageService() {
-  // Load saved settings
-  loadSettings();
+function initMessageService() {
+  // Ensure active channel is set
+  activeChannel = localStorage.getItem('crmplus_chat_active_channel') || 'general';
   
-  // Log initialization
   logChatEvent('system', 'Message service initialized');
-  
-  console.log('[CRM Extension] Message service initialized');
-  
   return true;
 }
 
 /**
- * Load saved settings from localStorage
- */
-function loadSettings() {
-  serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
-  activeChannel = localStorage.getItem('crmplus_chat_active_channel') || 'general';
-}
-
-/**
  * Connect to the WebSocket server
- * @returns {Promise<boolean>} Success status
+ * @returns {Promise<boolean>} Connection success status
  */
-export function connectToServer() {
+function connectToServer() {
+  // Prevent multiple connection attempts
+  if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+    console.log('[MessageService] WebSocket already connected or connecting');
+    return Promise.resolve(true);
+  }
+
   return new Promise((resolve) => {
-    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
-      console.log('[CRM Extension] WebSocket is already connected or connecting');
-      updateConnectionStatus('connected');
-      resolve(true);
-      return;
-    }
-    
     try {
-      console.log(`[CRM Extension] Connecting to WebSocket server: ${serverUrl}`);
+      console.log(`[MessageService] Attempting to connect to ${WS_URL}`);
       
-      // Create new WebSocket connection
-      socket = new WebSocket(serverUrl);
-      
-      // Set connection status to connecting
+      // Update connection status
       updateConnectionStatus('connecting');
       
-      // Setup event handlers
+      // Create WebSocket connection
+      socket = new WebSocket(WS_URL);
+      
+      // Connection opened
       socket.onopen = () => {
-        console.log('[CRM Extension] WebSocket connection established');
-        updateConnectionStatus('connected');
+        console.log('[MessageService] WebSocket connection established');
+        
+        // Reset reconnect attempts
         reconnectAttempts = 0;
         
-        // Send authentication message
-        sendAuthMessage();
+        // Update connection status
+        updateConnectionStatus('connected');
         
         // Start heartbeat
         startHeartbeat();
         
-        // Log successful connection
-        logChatEvent('system', 'Connected to chat server');
+        // Authenticate connection
+        authenticateConnection();
         
+        // Resolve promise
         resolve(true);
       };
       
+      // Listen for messages
       socket.onmessage = (event) => {
-        handleMessage(event.data);
+        try {
+          const message = JSON.parse(event.data);
+          handleIncomingMessage(message);
+        } catch (parseError) {
+          console.error('[MessageService] Error parsing message:', parseError);
+        }
       };
       
+      // Connection closed
       socket.onclose = (event) => {
-        console.log(`[CRM Extension] WebSocket connection closed: ${event.code} - ${event.reason}`);
-        updateConnectionStatus('disconnected');
+        console.warn('[MessageService] WebSocket connection closed', event);
         
         // Stop heartbeat
-        if (heartbeatInterval) {
-          clearInterval(heartbeatInterval);
-          heartbeatInterval = null;
-        }
+        stopHeartbeat();
         
-        // Log disconnection
-        logChatEvent('system', `Disconnected from chat server: ${event.code}`);
+        // Update connection status
+        updateConnectionStatus('disconnected');
         
-        // Attempt to reconnect if not closed intentionally
-        if (event.code !== 1000 && event.code !== 1001) {
-          attemptReconnect();
+        // Attempt reconnection if not intentionally closed
+        if (event.code !== 1000) {
+          attemptReconnection();
         }
         
         resolve(false);
       };
       
+      // Connection error
       socket.onerror = (error) => {
-        console.error('[CRM Extension] WebSocket error:', error);
+        console.error('[MessageService] WebSocket error:', error);
+        
+        // Update connection status
         updateConnectionStatus('error');
         
-        // Log error
-        logChatEvent('system', 'WebSocket error occurred', { error: 'Connection error' });
+        // Attempt reconnection
+        attemptReconnection();
         
         resolve(false);
       };
     } catch (error) {
-      console.error('[CRM Extension] Error connecting to WebSocket server:', error);
+      console.error('[MessageService] Connection error:', error);
+      
+      // Update connection status
       updateConnectionStatus('error');
       
-      // Log error
-      logChatEvent('system', 'Failed to connect to chat server', { error: error.message });
+      // Attempt reconnection
+      attemptReconnection();
       
       resolve(false);
     }
@@ -143,261 +135,9 @@ export function connectToServer() {
 }
 
 /**
- * Update the connection status and notify listeners
- * @param {string} status - New connection status
- */
-function updateConnectionStatus(status) {
-  if (connectionStatus !== status) {
-    connectionStatus = status;
-    
-    // Notify listeners
-    notifyConnectionStatusListeners();
-  }
-}
-
-/**
- * Send authentication message to the server
- */
-function sendAuthMessage() {
-  if (!socket || socket.readyState !== WebSocket.OPEN) return;
-  
-  const authToken = getAuthToken();
-  const user = getCurrentUser();
-  
-  if (!authToken || !user) {
-    // Can't authenticate without credentials
-    return;
-  }
-  
-  const authMessage = {
-    type: 'auth',
-    token: authToken,
-    username: user.username,
-    timestamp: new Date().toISOString()
-  };
-  
-  socket.send(JSON.stringify(authMessage));
-  
-  // Log authentication attempt (without token for security)
-  logChatEvent('system', 'Sent authentication request');
-}
-
-/**
- * Start the heartbeat to keep the connection alive
- */
-function startHeartbeat() {
-  if (heartbeatInterval) {
-    clearInterval(heartbeatInterval);
-  }
-  
-  heartbeatInterval = setInterval(() => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      const heartbeatMessage = {
-        type: 'heartbeat',
-        timestamp: new Date().toISOString()
-      };
-      
-      socket.send(JSON.stringify(heartbeatMessage));
-    }
-  }, HEARTBEAT_INTERVAL);
-}
-
-/**
- * Attempt to reconnect to the server
- */
-function attemptReconnect() {
-  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-    console.log('[CRM Extension] Maximum reconnection attempts reached');
-    return;
-  }
-  
-  reconnectAttempts++;
-  
-  // Calculate delay with exponential backoff
-  const delay = RECONNECT_DELAY * Math.pow(1.5, reconnectAttempts - 1);
-  
-  console.log(`[CRM Extension] Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts})`);
-  
-  setTimeout(() => {
-    connectToServer();
-  }, delay);
-}
-
-/**
- * Handle incoming WebSocket messages
- * @param {string} data - The message data
- */
-function handleMessage(data) {
-  try {
-    const message = JSON.parse(data);
-    
-    switch (message.type) {
-      case 'chat':
-        handleChatMessage(message);
-        break;
-        
-      case 'user_list':
-        handleUserListUpdate(message.users);
-        break;
-        
-      case 'channel_list':
-        handleChannelListUpdate(message.channels);
-        break;
-        
-      case 'auth_response':
-        if (message.success) {
-          console.log('[CRM Extension] Authentication successful');
-          logChatEvent('system', 'Authentication successful');
-          
-          // Fetch initial data
-          requestChannelList();
-          switchChannel(activeChannel);
-        } else {
-          console.error('[CRM Extension] Authentication failed:', message.reason);
-          logChatEvent('system', 'Authentication failed', { reason: message.reason });
-        }
-        break;
-        
-      case 'error':
-        console.error('[CRM Extension] Server error:', message.message);
-        logChatEvent('error', `Server error: ${message.message}`);
-        break;
-        
-      case 'heartbeat_response':
-        // Server responded to our heartbeat, connection is alive
-        break;
-        
-      default:
-        console.log('[CRM Extension] Unknown message type:', message.type);
-    }
-  } catch (error) {
-    console.error('[CRM Extension] Error parsing WebSocket message:', error);
-  }
-}
-
-/**
- * Handle a chat message
- * @param {Object} message - The chat message
- */
-function handleChatMessage(message) {
-  // Decrypt the message if it's encrypted
-  let decryptedMessage = message;
-  if (message.encrypted) {
-    try {
-      decryptedMessage = decryptMessage(message);
-    } catch (error) {
-      console.error('[CRM Extension] Failed to decrypt message:', error);
-      // Still show the message but mark as encrypted
-      decryptedMessage = {
-        ...message,
-        text: '[Encrypted message - unable to decrypt]'
-      };
-    }
-  }
-  
-  // Save to local storage
-  saveMessage(decryptedMessage);
-  
-  // Log the message receipt (but not content for privacy)
-  logChatEvent('message', `Received message from ${message.sender}`, {
-    messageId: message.id,
-    channel: message.channel || 'general'
-  });
-  
-  // Notify message listeners
-  notifyMessageListeners([decryptedMessage]);
-}
-
-/**
- * Handle user list update
- * @param {Array} users - List of online users
- */
-function handleUserListUpdate(users) {
-  notifyUserListListeners(users);
-}
-
-/**
- * Handle channel list update
- * @param {Array} channels - List of available channels
- */
-function handleChannelListUpdate(channels) {
-  notifyChannelListListeners(channels);
-}
-
-/**
- * Send a message to the server
- * @param {Object} message - The message to send
- * @returns {boolean} Success status
- */
-function sendToServer(message) {
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    console.error('[CRM Extension] WebSocket is not connected');
-    return false;
-  }
-  
-  try {
-    socket.send(JSON.stringify(message));
-    return true;
-  } catch (error) {
-    console.error('[CRM Extension] Error sending message:', error);
-    return false;
-  }
-}
-
-/**
- * Send a chat message
- * @param {string} text - Message text
- * @param {string} channel - Target channel (default: active channel)
- * @param {string} recipient - Optional direct message recipient
- * @returns {boolean} Success status
- */
-export function sendChatMessage(text, channel = null, recipient = null) {
-  if (!text || !text.trim()) return false;
-  if (!isAuthenticated()) return false;
-  
-  const currentUser = getCurrentUser();
-  if (!currentUser) return false;
-  
-  const targetChannel = channel || activeChannel;
-  
-  const message = {
-    id: generateMessageId(),
-    sender: currentUser.username,
-    senderDisplayName: currentUser.displayName || currentUser.username,
-    text: text.trim(),
-    channel: targetChannel,
-    recipient: recipient,
-    timestamp: new Date().toISOString(),
-    type: 'chat'
-  };
-  
-  // Encrypt the message
-  const encryptedMessage = encryptMessage(message);
-  
-  // Send through the WebSocket
-  const success = sendToServer(encryptedMessage);
-  
-  if (success) {
-    // Save to local storage (use the unencrypted version)
-    saveMessage(message);
-    
-    // Log the message sending (but not content for privacy)
-    logChatEvent('message', `Sent message to ${recipient || targetChannel}`, {
-      messageId: message.id,
-      timestamp: message.timestamp
-    });
-    
-    // Also notify local listeners of the message
-    notifyMessageListeners([message]);
-  }
-  
-  return success;
-}
-
-/**
  * Disconnect from the server
  */
-export function disconnectFromServer() {
+function disconnectFromServer() {
   if (!socket) return;
   
   try {
@@ -407,43 +147,281 @@ export function disconnectFromServer() {
       timestamp: new Date().toISOString()
     };
     
-    socket.send(JSON.stringify(logoutMessage));
+    sendWebSocketMessage(logoutMessage);
     
     // Close connection
-    socket.close(1000, 'User disconnected');
+    socket.close(1000, 'User initiated disconnect');
+    
+    // Stop heartbeat
+    stopHeartbeat();
     
     // Update connection status
     updateConnectionStatus('disconnected');
     
-    // Stop heartbeat
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-      heartbeatInterval = null;
-    }
-    
-    // Log disconnection
-    logChatEvent('system', 'Disconnected from chat server');
-    
-    console.log('[CRM Extension] Disconnected from WebSocket server');
+    console.log('[MessageService] Disconnected from server');
   } catch (error) {
-    console.error('[CRM Extension] Error disconnecting from WebSocket server:', error);
+    console.error('[MessageService] Disconnect error:', error);
   }
 }
 
 /**
- * Get the current connection status
+ * Authenticate the WebSocket connection
+ */
+function authenticateConnection() {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  
+  const currentUser = getCurrentUser();
+  const authToken = getAuthToken();
+  
+  if (!currentUser || !authToken) {
+    console.warn('[MessageService] Cannot authenticate: No user or token');
+    return;
+  }
+  
+  const authMessage = {
+    type: 'authenticate',
+    payload: {
+      userId: currentUser.id,
+      username: currentUser.username,
+      token: authToken
+    }
+  };
+  
+  sendWebSocketMessage(authMessage);
+}
+
+/**
+ * Send a message via WebSocket
+ * @param {Object} message - Message to send
+ * @returns {boolean} Sending success status
+ */
+function sendWebSocketMessage(message) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    console.warn('[MessageService] WebSocket not connected');
+    return false;
+  }
+  
+  try {
+    socket.send(JSON.stringify(message));
+    return true;
+  } catch (error) {
+    console.error('[MessageService] Error sending message:', error);
+    return false;
+  }
+}
+
+/**
+ * Send a chat message
+ * @param {string} text - Message text
+ * @param {string} [channelId] - Optional channel ID
+ * @param {string} [recipientId] - Optional recipient ID for direct messages
+ * @returns {boolean} Sending success status
+ */
+function sendChatMessage(text, channelId = null, recipientId = null) {
+  // Validate input
+  if (!text || !text.trim()) return false;
+  if (!isAuthenticated()) return false;
+  
+  // Get current user
+  const currentUser = getCurrentUser();
+  if (!currentUser) return false;
+  
+  // Prepare message
+  const message = {
+    type: 'chat_message',
+    payload: {
+      text: text.trim(),
+      sender: currentUser.id,
+      senderUsername: currentUser.username,
+      timestamp: new Date().toISOString(),
+      channelId,
+      recipientId
+    }
+  };
+  
+  // Encrypt the message
+  const encryptedMessage = encryptMessage(message);
+  
+  // Send through WebSocket
+  const success = sendWebSocketMessage(encryptedMessage);
+  
+  if (success) {
+    // Log message sending
+    logChatEvent('message', 'Message sent', {
+      channelId,
+      recipientId
+    });
+  }
+  
+  return success;
+}
+
+/**
+ * Get current connection status
  * @returns {string} Connection status
  */
-export function getConnectionStatus() {
+function getConnectionStatus() {
   return connectionStatus;
 }
 
 /**
- * Add a connection status listener
- * @param {Function} listener - Function to call with status updates
- * @returns {Function} Function to remove the listener
+ * Start WebSocket heartbeat to keep connection alive
  */
-export function addConnectionStatusListener(listener) {
+function startHeartbeat() {
+  // Stop any existing heartbeat
+  stopHeartbeat();
+  
+  heartbeatInterval = setInterval(() => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      const heartbeatMessage = {
+        type: 'heartbeat',
+        timestamp: new Date().toISOString()
+      };
+      
+      sendWebSocketMessage(heartbeatMessage);
+    }
+  }, HEARTBEAT_INTERVAL);
+}
+
+/**
+ * Stop WebSocket heartbeat
+ */
+function stopHeartbeat() {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
+}
+
+/**
+ * Attempt to reconnect to the server
+ */
+function attemptReconnection() {
+  // Check if max reconnect attempts reached
+  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    console.error('[MessageService] Max reconnection attempts reached');
+    updateConnectionStatus('error');
+    return;
+  }
+  
+  // Increment reconnect attempts
+  reconnectAttempts++;
+  
+  // Calculate exponential backoff delay
+  const delay = RECONNECT_INTERVAL * Math.pow(2, reconnectAttempts);
+  
+  console.log(`[MessageService] Attempting reconnection in ${delay}ms (Attempt ${reconnectAttempts})`);
+  
+  // Schedule reconnection
+  setTimeout(() => {
+    connectToServer();
+  }, delay);
+}
+
+/**
+ * Handle incoming WebSocket messages
+ * @param {Object} message - Incoming message
+ */
+function handleIncomingMessage(message) {
+  try {
+    switch (message.type) {
+      case 'chat_message':
+        // Decrypt message
+        const decryptedMessage = decryptMessage(message);
+        
+        // Save message
+        saveMessage(decryptedMessage);
+        
+        // Notify listeners
+        notifyMessageListeners([decryptedMessage]);
+        break;
+      
+      case 'authentication_response':
+        handleAuthenticationResponse(message);
+        break;
+      
+      case 'user_list':
+        notifyUserListListeners(message.users);
+        break;
+      
+      case 'channel_list':
+        notifyChannelListListeners(message.channels);
+        break;
+      
+      case 'error':
+        console.error('[MessageService] Server error:', message.payload);
+        break;
+      
+      default:
+        console.warn('[MessageService] Unknown message type:', message.type);
+    }
+  } catch (error) {
+    console.error('[MessageService] Error handling message:', error);
+  }
+}
+
+/**
+ * Handle authentication response from server
+ * @param {Object} response - Authentication response
+ */
+function handleAuthenticationResponse(response) {
+  if (response.success) {
+    console.log('[MessageService] Authentication successful');
+    logChatEvent('auth', 'WebSocket authentication successful');
+  } else {
+    console.error('[MessageService] Authentication failed:', response.reason);
+    logChatEvent('auth', 'WebSocket authentication failed', { 
+      reason: response.reason 
+    });
+  }
+}
+
+/**
+ * Update connection status and notify listeners
+ * @param {string} status - New connection status
+ */
+function updateConnectionStatus(status) {
+  if (connectionStatus !== status) {
+    connectionStatus = status;
+    notifyConnectionStatusListeners(status);
+  }
+}
+
+/**
+ * Add a message listener
+ * @param {Function} listener - Callback for new messages
+ * @returns {Function} Unsubscribe function
+ */
+function addMessageListener(listener) {
+  if (typeof listener !== 'function') return () => {};
+  
+  messageListeners.push(listener);
+  
+  return () => {
+    messageListeners = messageListeners.filter(l => l !== listener);
+  };
+}
+
+/**
+ * Notify message listeners
+ * @param {Array} messages - New messages
+ */
+function notifyMessageListeners(messages) {
+  messageListeners.forEach(listener => {
+    try {
+      listener(messages);
+    } catch (error) {
+      console.error('[MessageService] Error in message listener:', error);
+    }
+  });
+}
+
+/**
+ * Add a connection status listener
+ * @param {Function} listener - Callback for connection status changes
+ * @returns {Function} Unsubscribe function
+ */
+function addConnectionStatusListener(listener) {
   if (typeof listener !== 'function') return () => {};
   
   connectionStatusListeners.push(listener);
@@ -457,53 +435,25 @@ export function addConnectionStatusListener(listener) {
 }
 
 /**
- * Notify all connection status listeners
+ * Notify connection status listeners
+ * @param {string} status - Current connection status
  */
-function notifyConnectionStatusListeners() {
+function notifyConnectionStatusListeners(status) {
   connectionStatusListeners.forEach(listener => {
     try {
-      listener(connectionStatus);
+      listener(status);
     } catch (error) {
-      console.error('[CRM Extension] Error in connection status listener:', error);
-    }
-  });
-}
-
-/**
- * Add a message listener
- * @param {Function} listener - Function to call with new messages
- * @returns {Function} Function to remove the listener
- */
-export function addMessageListener(listener) {
-  if (typeof listener !== 'function') return () => {};
-  
-  messageListeners.push(listener);
-  
-  return () => {
-    messageListeners = messageListeners.filter(l => l !== listener);
-  };
-}
-
-/**
- * Notify all message listeners
- * @param {Array} messages - Array of messages
- */
-function notifyMessageListeners(messages) {
-  messageListeners.forEach(listener => {
-    try {
-      listener(messages);
-    } catch (error) {
-      console.error('[CRM Extension] Error in message listener:', error);
+      console.error('[MessageService] Error in connection status listener:', error);
     }
   });
 }
 
 /**
  * Add a user list listener
- * @param {Function} listener - Function to call with user list updates
- * @returns {Function} Function to remove the listener
+ * @param {Function} listener - Callback for user list updates
+ * @returns {Function} Unsubscribe function
  */
-export function addUserListListener(listener) {
+function addUserListListener(listener) {
   if (typeof listener !== 'function') return () => {};
   
   userListListeners.push(listener);
@@ -514,25 +464,25 @@ export function addUserListListener(listener) {
 }
 
 /**
- * Notify all user list listeners
- * @param {Array} users - Array of users
+ * Notify user list listeners
+ * @param {Array} users - User list
  */
 function notifyUserListListeners(users) {
   userListListeners.forEach(listener => {
     try {
       listener(users);
     } catch (error) {
-      console.error('[CRM Extension] Error in user list listener:', error);
+      console.error('[MessageService] Error in user list listener:', error);
     }
   });
 }
 
 /**
  * Add a channel list listener
- * @param {Function} listener - Function to call with channel list updates
- * @returns {Function} Function to remove the listener
+ * @param {Function} listener - Callback for channel list updates
+ * @returns {Function} Unsubscribe function
  */
-export function addChannelListListener(listener) {
+function addChannelListListener(listener) {
   if (typeof listener !== 'function') return () => {};
   
   channelListListeners.push(listener);
@@ -543,31 +493,31 @@ export function addChannelListListener(listener) {
 }
 
 /**
- * Notify all channel list listeners
- * @param {Array} channels - Array of channels
+ * Notify channel list listeners
+ * @param {Array} channels - Channel list
  */
 function notifyChannelListListeners(channels) {
   channelListListeners.forEach(listener => {
     try {
       listener(channels);
     } catch (error) {
-      console.error('[CRM Extension] Error in channel list listener:', error);
+      console.error('[MessageService] Error in channel list listener:', error);
     }
   });
 }
 
 /**
- * Generate a unique message ID
- * @returns {string} Unique message ID
+ * Get the active channel
+ * @returns {string} Active channel ID
  */
-function generateMessageId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+function getActiveChannel() {
+  return activeChannel;
 }
 
 /**
- * Request the list of available channels
+ * Request the channel list from the server
  */
-export function requestChannelList() {
+function requestChannelList() {
   if (!isAuthenticated()) return;
   
   const requestMessage = {
@@ -575,75 +525,71 @@ export function requestChannelList() {
     timestamp: new Date().toISOString()
   };
   
-  sendToServer(requestMessage);
+  sendWebSocketMessage(requestMessage);
 }
 
 /**
  * Switch to a different channel
- * @param {string} channelId - ID of the channel to switch to
+ * @param {string} channelId - Channel ID to switch to
  */
-export function switchChannel(channelId) {
+function switchChannel(channelId) {
   if (!channelId || !isAuthenticated()) return;
   
   // Store active channel
   activeChannel = channelId;
   localStorage.setItem('crmplus_chat_active_channel', channelId);
   
-  // Request channel messages
   const requestMessage = {
     type: 'channel_join',
     channel: channelId,
     timestamp: new Date().toISOString()
   };
   
-  sendToServer(requestMessage);
+  sendWebSocketMessage(requestMessage);
   
-  // Log channel switch
   logChatEvent('system', `Switched to channel: ${channelId}`);
-}
-
-/**
- * Get the active channel
- * @returns {string} Active channel ID
- */
-export function getActiveChannel() {
-  return activeChannel;
-}
-
-/**
- * Create a new channel
- * @param {Object} channelData - Channel data
- * @returns {Promise<boolean>} Success status
- */
-export async function createChannel(channelData) {
-  if (!isAuthenticated()) return false;
-  
-  const createMessage = {
-    type: 'channel_create',
-    channel: channelData,
-    timestamp: new Date().toISOString()
-  };
-  
-  return sendToServer(createMessage);
 }
 
 /**
  * Update the server URL
  * @param {string} url - New server URL
  */
-export function updateServerUrl(url) {
+function updateServerUrl(url) {
   if (!url) return;
   
-  serverUrl = url;
   localStorage.setItem('crmplus_chat_server_url', url);
   
-  // If connected, reconnect to the new URL
+  // Disconnect and reconnect if currently connected
   if (connectionStatus === 'connected' || connectionStatus === 'connecting') {
     disconnectFromServer();
-    setTimeout(() => {
-      connectToServer();
-    }, 1000);
+    setTimeout(connectToServer, 1000);
   }
   
   logChatEvent('system', 'Server URL updated');
 }
+
+// Export all functions at the end of the file
+export {
+  // Core connection methods
+  connectToServer,
+  disconnectFromServer,
+  sendChatMessage,
+  getConnectionStatus,
+
+  // Listener management
+  addMessageListener,
+  addConnectionStatusListener,
+  addUserListListener,
+  addChannelListListener,
+
+  // Specific channel and initialization methods
+  initMessageService,
+  getActiveChannel,
+  requestChannelList,
+  switchChannel,
+  updateServerUrl,
+
+  // Utility methods
+  sendWebSocketMessage,
+  authenticateConnection
+};

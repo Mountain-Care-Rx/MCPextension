@@ -1,7 +1,7 @@
 // chat/components/admin/roles/RoleTable.js
 // Role table component for displaying and interacting with roles
 
-import { getCurrentUser } from '../../../services/authService.js';
+import { getCurrentUser } from '../../../services/auth';
 
 /**
  * Role Table Component

@@ -5,7 +5,7 @@ import {
     getAllRoles, 
     getCurrentUser, 
     hasPermission 
-  } from '../../services/authService.js';
+  } from '../../services/auth';
   import { logChatEvent } from '../../utils/logger.js';
   import RoleTable from './roles/RoleTable.js';
   import CreateRoleModal from './roles/CreateRoleModal.js';

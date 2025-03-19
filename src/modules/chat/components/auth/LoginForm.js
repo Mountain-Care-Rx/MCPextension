@@ -1,6 +1,7 @@
 // chat/components/auth/LoginForm.js
-// Modified login form component for HIPAA-compliant chat
+// Login form component for HIPAA-compliant chat
 
+import { login } from '../../services/auth';
 import { logChatEvent } from '../../utils/logger.js';
 
 // Header bar colors
@@ -13,7 +14,7 @@ const HEADER_COLORS = {
 
 /**
  * Login Form Component
- * Provides user authentication interface with demo bypass
+ * Provides user authentication interface
  */
 class LoginForm {
   /**
@@ -23,13 +24,22 @@ class LoginForm {
    */
   constructor(container, onLoginSuccess) {
     this.container = container;
-    this.onLoginSuccess = onLoginSuccess || (() => {});
+    
+    // Ensure onLoginSuccess is a function
+    this.onLoginSuccess = typeof onLoginSuccess === 'function' 
+      ? onLoginSuccess 
+      : () => {
+          console.warn('[LoginForm] No login success callback provided');
+        };
+    
     this.formElement = null;
+    this.usernameInput = null;
+    this.passwordInput = null;
+    this.submitButton = null;
     
     // Bind methods
     this.render = this.render.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
-    this.handleDemoLogin = this.handleDemoLogin.bind(this);
     
     // Initialize component
     this.render();
@@ -86,9 +96,11 @@ class LoginForm {
     
     // Username field
     const usernameGroup = this.createFormGroup('Username', 'username', 'text');
+    this.usernameInput = usernameGroup.querySelector('input');
     
     // Password field
     const passwordGroup = this.createFormGroup('Password', 'password', 'password');
+    this.passwordInput = passwordGroup.querySelector('input');
     
     // Remember me checkbox
     const rememberGroup = document.createElement('div');
@@ -117,10 +129,10 @@ class LoginForm {
     rememberGroup.appendChild(rememberLabel);
     
     // Submit button
-    const submitButton = document.createElement('button');
-    submitButton.type = 'submit';
-    submitButton.textContent = 'Login';
-    this.applyStyles(submitButton, {
+    this.submitButton = document.createElement('button');
+    this.submitButton.type = 'submit';
+    this.submitButton.textContent = 'Login';
+    this.applyStyles(this.submitButton, {
       backgroundColor: HEADER_COLORS.primary,
       color: HEADER_COLORS.text,
       border: 'none',
@@ -128,41 +140,16 @@ class LoginForm {
       borderRadius: '4px',
       fontSize: '16px',
       cursor: 'pointer',
-      fontWeight: 'bold'
+      fontWeight: 'bold',
+      width: '100%'
     });
     
     // Add hover effect for submit button
-    submitButton.addEventListener('mouseover', () => {
-      submitButton.style.backgroundColor = HEADER_COLORS.secondary;
+    this.submitButton.addEventListener('mouseover', () => {
+      this.submitButton.style.backgroundColor = HEADER_COLORS.secondary;
     });
-    submitButton.addEventListener('mouseout', () => {
-      submitButton.style.backgroundColor = HEADER_COLORS.primary;
-    });
-    
-    // Demo button
-    const demoButton = document.createElement('button');
-    demoButton.type = 'button';
-    demoButton.textContent = 'Demo';
-    demoButton.id = 'demo-login-button';
-    this.applyStyles(demoButton, {
-      backgroundColor: '#4CAF50',
-      color: 'white',
-      border: 'none',
-      padding: '10px',
-      borderRadius: '4px',
-      fontSize: '16px',
-      cursor: 'pointer',
-      fontWeight: 'bold',
-      marginTop: '8px'
-    });
-    demoButton.addEventListener('click', this.handleDemoLogin);
-    
-    // Add hover effect for demo button
-    demoButton.addEventListener('mouseover', () => {
-      demoButton.style.backgroundColor = '#45a049';
-    });
-    demoButton.addEventListener('mouseout', () => {
-      demoButton.style.backgroundColor = '#4CAF50';
+    this.submitButton.addEventListener('mouseout', () => {
+      this.submitButton.style.backgroundColor = HEADER_COLORS.primary;
     });
     
     // Compliance text
@@ -187,8 +174,7 @@ class LoginForm {
     this.formElement.appendChild(usernameGroup);
     this.formElement.appendChild(passwordGroup);
     this.formElement.appendChild(rememberGroup);
-    this.formElement.appendChild(submitButton);
-    this.formElement.appendChild(demoButton);
+    this.formElement.appendChild(this.submitButton);
     
     // Add form to container
     loginContainer.appendChild(title);
@@ -284,71 +270,46 @@ class LoginForm {
     event.preventDefault();
     
     try {
-      const username = event.target.username.value;
-      const password = event.target.password.value;
+      const username = this.usernameInput.value;
+      const password = this.passwordInput.value;
       const remember = event.target.remember?.checked || false;
       
       // Disable form fields and button during login
-      const submitButton = event.target.querySelector('button[type="submit"]');
-      const inputs = event.target.querySelectorAll('input');
+      this.submitButton.disabled = true;
+      this.submitButton.textContent = 'Logging in...';
+      this.usernameInput.disabled = true;
+      this.passwordInput.disabled = true;
       
-      submitButton.disabled = true;
-      submitButton.textContent = 'Logging in...';
-      inputs.forEach(input => input.disabled = true);
+      // Attempt login
+      const loginResult = await login(username, password);
       
-      // Alert the user about server not being available
-      setTimeout(() => {
-        alert('Server connection not available. Please use the Demo button to explore the UI.');
+      if (loginResult.success) {
+        // Log successful login attempt
+        logChatEvent('auth', 'Login successful', { username });
+        
+        // Call login success callback
+        this.onLoginSuccess(loginResult.user);
+      } else {
+        // Show error message
+        alert(loginResult.error || 'Login failed. Please try again.');
         
         // Re-enable form
-        submitButton.disabled = false;
-        submitButton.textContent = 'Login';
-        inputs.forEach(input => input.disabled = false);
-      }, 1000);
+        this.submitButton.disabled = false;
+        this.submitButton.textContent = 'Login';
+        this.usernameInput.disabled = false;
+        this.passwordInput.disabled = false;
+      }
     } catch (error) {
       console.error('[CRM Extension] Login error:', error);
-      alert('An error occurred during login. Please try again or use the Demo button.');
+      
+      // Show generic error message
+      alert('An unexpected error occurred. Please try again.');
       
       // Re-enable form
-      const submitButton = event.target.querySelector('button[type="submit"]');
-      const inputs = event.target.querySelectorAll('input');
-      
-      submitButton.disabled = false;
-      submitButton.textContent = 'Login';
-      inputs.forEach(input => input.disabled = false);
-    }
-  }
-  
-  /**
-   * Handle demo login button click - Bypasses server connection entirely
-   */
-  handleDemoLogin() {
-    try {
-      console.log('[CRM Extension] Demo login button clicked - Direct UI access');
-      
-      // Create demo user
-      const demoUser = {
-        id: 'demo_user_' + Date.now(),
-        username: 'DemoUser',
-        displayName: 'Demo User',
-        role: 'user',
-        isDemo: true
-      };
-      
-      // Store in localStorage to simulate authentication
-      localStorage.setItem('crmplus_chat_auth_token', 'demo_token_' + Date.now());
-      localStorage.setItem('crmplus_chat_user_info', JSON.stringify(demoUser));
-      
-      // Log the demo login
-      logChatEvent('system', 'Demo UI access - no server connection', { username: demoUser.username });
-      
-      // Call success callback after a small delay to show button feedback
-      setTimeout(() => {
-        this.onLoginSuccess(demoUser);
-      }, 100);
-    } catch (error) {
-      console.error('[CRM Extension] Demo login error:', error);
-      alert('An error occurred. Please try again.');
+      this.submitButton.disabled = false;
+      this.submitButton.textContent = 'Login';
+      this.usernameInput.disabled = false;
+      this.passwordInput.disabled = false;
     }
   }
   

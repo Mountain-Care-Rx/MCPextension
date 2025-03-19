@@ -1,7 +1,7 @@
 // chat/components/admin/AdminPanel.js
 // Admin panel component for HIPAA-compliant chat
 
-import { getCurrentUser, hasPermission } from '../../services/authService.js';
+import { getCurrentUser, hasPermission } from '../../services/auth';
 import { logChatEvent } from '../../utils/logger.js';
 import { getAuditLogStats, searchAuditLog, exportAuditLog } from '../../utils/logger.js';
 import { getStorageUsage, cleanupExpiredMessages } from '../../utils/storage.js';

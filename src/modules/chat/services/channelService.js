@@ -3,7 +3,7 @@
 
 import { logChatEvent } from '../utils/logger.js';
 import { getChannels, saveChannel, deleteChannel as deleteStoredChannel } from '../utils/storage.js';
-import { getCurrentUser, getAuthToken, isAuthenticated, hasPermission } from './authService.js';
+import { getCurrentUser, getAuthToken, isAuthenticated, hasPermission } from './auth';
 
 // Available channels
 let availableChannels = [];

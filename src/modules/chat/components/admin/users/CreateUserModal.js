@@ -1,7 +1,7 @@
 // chat/components/admin/users/CreateUserModal.js
 // Modal for creating new users
 
-import { createUser } from '../../../services/authService.js';
+import { createUser } from '../../../services/auth';
 import { logChatEvent } from '../../../utils/logger.js';
 import { validateUsername, validatePassword, validateEmail } from '../../../utils/validation.js';
 import ModalBase from '../../common/ModalBase.js';

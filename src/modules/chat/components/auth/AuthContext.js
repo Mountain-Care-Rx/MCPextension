@@ -12,7 +12,7 @@ import {
   hasPermission,
   addAuthListener,
   removeAuthListener
-} from '../../services/authService.js';
+} from '../../services/auth';
 
 class AuthContext {
   constructor() {

@@ -1,7 +1,7 @@
 // chat/components/admin/roles/EditRoleModal.js
 // Modal for editing existing roles
 
-import { updateRole } from '../../../services/authService.js';
+import { updateRole } from '../../../services/auth';
 import { logChatEvent } from '../../../utils/logger.js';
 import ModalBase from '../../common/ModalBase.js';
 import PermissionSelector from './PermissionSelector.js';

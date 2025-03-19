@@ -4,13 +4,13 @@
 import { logChatEvent } from './utils/logger.js';
 import { initStorage } from './utils/storage.js';
 import { generateSessionKeys } from './utils/encryption.js';
-import { initAuth } from './services/authService.js';
+import { initAuth } from './services/auth';
 import { initMessageService, connectToServer, disconnectFromServer } from './services/messageService.js';
 import { initUserService } from './services/userService.js';
 import { initChannelService } from './services/channelService.js';
 import { getChannelMessages } from './utils/storage.js';
 import { getActiveChannel } from './services/messageService.js';
-import authContext from './components/auth/authContext.js'; // Fixed path: './components/auth/AuthContext.js'
+import authContext from './components/auth/AuthContext.js'; // Fixed path: './components/auth/AuthContext.js'
 import config from './config.js';
 import { initChatUI, destroyChatUI } from './initChatUI.js';
 
@@ -255,7 +255,7 @@ export function createChatButton(container) {
 
 // Export all public services and components for use by other modules
 // Auth components
-export { default as authContext } from './components/auth/authContext.js';
+export { default as authContext } from './components/auth/AuthContext.js';
 export { default as LoginForm } from './components/auth/LoginForm.js';
 
 // Admin components
@@ -314,7 +314,7 @@ export {
   resetUserPassword,
   importUsers,
   forceLogoutUser
-} from './services/authService.js';
+} from './services/auth';
 
 // Message service exports
 export {

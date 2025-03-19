@@ -5,7 +5,7 @@ import {
     getAllUsers, 
     getCurrentUser, 
     hasPermission
-  } from '../../services/authService.js';
+  } from '../../services/auth';
   import { logChatEvent } from '../../utils/logger.js';
   import UserTable from './users/UserTable.js';
   import UserToolbar from './users/UserToolbar.js';

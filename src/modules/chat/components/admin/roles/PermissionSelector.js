@@ -1,7 +1,7 @@
 // chat/components/admin/roles/PermissionSelector.js
 // Permission selection component for role management
 
-import { getAvailablePermissions } from '../../../services/authService.js';
+import { getAvailablePermissions } from '../../../services/auth';
 
 /**
  * Permission Selector Component

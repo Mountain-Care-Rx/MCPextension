@@ -1,7 +1,7 @@
 // chat/components/admin/users/EditUserModal.js
 // Modal for editing existing users
 
-import { updateUser, updateUserRole, getCurrentUser } from '../../../services/authService.js';
+import { updateUser, updateUserRole, getCurrentUser } from '../../../services/auth';
 import { logChatEvent } from '../../../utils/logger.js';
 import { validateEmail } from '../../../utils/validation.js';
 import ModalBase from '../../common/ModalBase.js';

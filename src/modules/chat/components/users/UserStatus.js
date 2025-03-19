@@ -1,7 +1,7 @@
 // chat/components/users/UserStatus.js
 // User status component for HIPAA-compliant chat
 
-import { getCurrentUser, isAuthenticated } from '../../services/authService.js';
+import { getCurrentUser, isAuthenticated } from '../../services/auth';
 import { setUserStatus } from '../../services/userService.js';
 import { logChatEvent } from '../../utils/logger.js';
 

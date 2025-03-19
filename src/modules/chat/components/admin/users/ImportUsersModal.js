@@ -1,7 +1,7 @@
 // chat/components/admin/users/ImportUsersModal.js
 // Modal for importing multiple users
 
-import { importUsers } from '../../../services/authService.js';
+import { importUsers } from '../../../services/auth';
 import { logChatEvent } from '../../../utils/logger.js';
 import ModalBase from '../../common/ModalBase.js';
 

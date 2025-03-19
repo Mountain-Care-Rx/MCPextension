@@ -2,7 +2,7 @@
 // Message input component for HIPAA-compliant chat
 
 import { sendChatMessage } from '../../services/messageService.js';
-import { isAuthenticated, hasPermission } from '../../services/authService.js';
+import { isAuthenticated, hasPermission } from '../../services/auth';
 import { logChatEvent } from '../../utils/logger.js';
 import { validateMessage, containsPotentialPHI } from '../../utils/validation.js';
 
@@ -116,7 +116,7 @@ class MessageInput {
       // Create send button
       this.sendButtonElement = document.createElement('button');
       this.sendButtonElement.className = 'send-button';
-      this.sendButtonElement.innerHTML = '&#10148;'; // Right arrow icon
+      this.sendButtonElement.innerHTML = '➤'; // Right arrow icon
       this.sendButtonElement.title = 'Send Message';
       this.sendButtonElement.disabled = true;
       this.applyStyles(this.sendButtonElement, {
@@ -201,7 +201,7 @@ class MessageInput {
       this.inputContainerElement.appendChild(readonlyNotice);
     }
     
-    // Add HIPAA notice if needed
+    // Add HIPAA notice
     const hipaaNotice = document.createElement('div');
     hipaaNotice.className = 'hipaa-notice';
     hipaaNotice.innerHTML = '🔒 HIPAA Compliant Chat - Messages are encrypted and expire after 24 hours';

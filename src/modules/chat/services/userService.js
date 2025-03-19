@@ -3,7 +3,7 @@
 
 import { logChatEvent } from '../utils/logger.js';
 import { getUsers, saveUser } from '../utils/storage.js';
-import { getCurrentUser, getAuthToken, isAuthenticated, hasPermission } from './authService.js';
+import { getCurrentUser, getAuthToken, isAuthenticated, hasPermission } from './auth';
 
 // Current online users
 let onlineUsers = [];

@@ -1,7 +1,7 @@
 // chat/components/admin/roles/CreateRoleModal.js
 // Modal for creating new roles
 
-import { createRole } from '../../../services/authService.js';
+import { createRole } from '../../../services/auth';
 import { logChatEvent } from '../../../utils/logger.js';
 import ModalBase from '../../common/ModalBase.js';
 import PermissionSelector from './PermissionSelector.js';

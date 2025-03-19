@@ -1,7 +1,7 @@
 // chat/components/admin/users/DeleteUserModal.js
 // Modal for confirming user deletion
 
-import { deleteUser } from '../../../services/authService.js';
+import { deleteUser } from '../../../services/auth';
 import { logChatEvent } from '../../../utils/logger.js';
 import ModalBase from '../../common/ModalBase.js';
 

@@ -1,7 +1,7 @@
 // chat/components/admin/roles/DeleteRoleModal.js
 // Modal for confirming role deletion
 
-import { deleteRole } from '../../../services/authService.js';
+import { deleteRole } from '../../../services/auth';
 import { logChatEvent } from '../../../utils/logger.js';
 import ModalBase from '../../common/ModalBase.js';
 

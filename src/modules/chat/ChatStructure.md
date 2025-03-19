@@ -1,232 +1,149 @@
-Here's the updated structure.md:
+# Chat Application File Structure
 
-```markdown
-# Project Structure
+This document outlines the modular architecture of the HIPAA-compliant chat application.
 
-## Completed Structure
+## Main Files
 
-```
 /chat
 ├── components/
-│   ├── admin/                               # Admin panel components
-│   │   ├── AdminPanel.js                    # ✅ Admin dashboard and navigation
-│   │   ├── users/                           # User management components
-│   │   │   ├── UserTable.js                 # ✅ User table with pagination
-│   │   │   ├── UserToolbar.js               # ✅ User search and filtering
-│   │   │   ├── CreateUserModal.js           # ✅ Modal for creating users
-│   │   │   ├── EditUserModal.js             # ✅ Modal for editing users
-│   │   │   ├── DeleteUserModal.js           # ✅ Modal for deleting users
-│   │   │   ├── ResetPasswordModal.js        # ✅ Modal for resetting passwords
-│   │   │   └── ImportUsersModal.js          # ✅ Modal for importing users
-│   │   ├── channels/                        # Channel management components
-│   │   │   ├── ChannelTable.js              # ✅ Channel table component
-│   │   │   ├── ChannelToolbar.js            # ✅ Channel filtering and search
-│   │   │   ├── CreateChannelModal.js        # ✅ Modal for creating channels
-│   │   │   ├── EditChannelModal.js          # ✅ Modal for editing channels
-│   │   │   └── DeleteChannelModal.js        # ✅ Modal for deleting channels
-│   │   ├── roles/                           # Role management components
-│   │   │   ├── RoleTable.js                 # ✅ Role listing component
-│   │   │   ├── RoleToolbar.js               # ✅ Role search and filtering
-│   │   │   ├── CreateRoleModal.js           # ✅ Modal for creating roles
-│   │   │   ├── EditRoleModal.js             # ✅ Modal for editing roles
-│   │   │   ├── DeleteRoleModal.js           # ✅ Modal for deleting roles
-│   │   │   └── PermissionSelector.js        # ✅ Permission selection component
-│   │   ├── UserManager.js                   # ✅ Main user management component
-│   │   ├── ChannelManager.js                # ✅ Channel management container
-│   │   └── RoleManager.js                   # ✅ Role and permission management
-│   ├── auth/
-│   │   ├── authContext.js                   # ✅ Authentication state management
-│   │   └── LoginForm.js                     # ✅ User login interface
-│   ├── channels/
-│   │   ├── ChannelList.js                   # ✅ Channel list with grouping
-│   │   └── ChannelView.js                   # ✅ Channel message display
-│   ├── common/                              # Common components
-│   │   └── ModalBase.js                     # ✅ Base modal component
-│   ├── messages/
-│   │   ├── MessageList.js                   # ✅ Message display component
-│   │   └── MessageInput.js                  # ✅ Message composition
-│   └── users/
-│       ├── UserList.js                      # ✅ User list with status
-│       └── UserStatus.js                    # ✅ User status selector
+│   ├── admin/                          # Admin components (channels, roles, users, etc.)
+│   │   ├── AdminPanel.js               # Main admin panel component that provides administrative functionality for the chat system
+│   │   ├── ChannelManager.js           # Channel management component that provides functionality for administrators to manage channels
+│   │   ├── RoleManager.js              # Role management component that provides functionality for administrators to manage roles
+│   │   ├── UserManager.js              # User management component that provides functionality for administrators to manage users
+│   │   ├── channels/                   # Channel-related components
+│   │   │   ├── ChannelList.js          # Channel list component that displays a list of available channels
+│   │   │   ├── ChannelTable.js         # Channel table component that displays channels in a table format with pagination and actions
+│   │   │   ├── ChannelToolbar.js       # Channel toolbar component that provides search and filtering functionality for channel management
+│   │   │   ├── ChannelView.js          # Channel view component that displays the messages for a selected channel
+│   │   │   ├── CreateChannelModal.js   # Modal component that allows administrators to create new channels
+│   │   │   ├── DeleteChannelModal.js   # Modal component that confirms channel deletion
+│   │   │   └── EditChannelModal.js     # Modal component that allows administrators to edit existing channels
+│   │   ├── roles/                      # Role-related components
+│   │   │   ├── CreateRoleModal.js      # Modal component that allows administrators to create new roles
+│   │   │   ├── DeleteRoleModal.js      # Modal component that confirms role deletion
+│   │   │   ├── EditRoleModal.js        # Modal component that allows administrators to edit existing roles
+│   │   │   ├── PermissionSelector.js   # Permission selection component that allows administrators to select multiple permissions for roles
+│   │   │   ├── RoleTable.js            # Role table component that displays roles in a table format with pagination and actions
+│   │   │   └── RoleToolbar.js          # Role toolbar component that provides search functionality for role management
+│   │   └── users/                      # User-related components
+│   │   │   ├── CreateUserModal.js      # Modal component that allows administrators to create new users
+│   │   │   ├── DeleteUserModal.js      # Modal component that confirms user deletion
+│   │   │   ├── EditUserModal.js        # Modal component that allows administrators to edit existing users
+│   │   │   ├── ImportUsersModal.js     # Modal component that allows administrators to import multiple users from CSV or JSON data
+│   │   │   ├── ResetPasswordModal.js   # Modal component that allows administrators to reset user passwords
+│   │   │   ├── UserTable.js            # User table component that displays users in a table format with pagination and actions
+│   │   │   └── UserToolbar.js          # User toolbar component that provides search and filtering functionality for user management
+│   ├── app/                            # Main application components
+│   │   ├── AppContainer.js             # Main application container (imports view renderers)
+│   │   ├── Header.js                   # Application header component (legacy - consider refactoring or removal)
+│   │   ├── NotificationSystem.js       # Message notification handling
+│   │   ├── appcontainer/               # Modular components folder
+│   │   │   ├── AdminViewRenderer.js    # Handles rendering of the admin view component
+│   │   │   ├── ChatViewRenderer.js     # Handles rendering of the chat view component
+│   │   │   ├── HeaderRenderer.js       # Handles rendering of the custom header component
+│   │   │   ├── index.js                # Barrel file for easy imports
+│   │   │   ├── SettingsViewRenderer.js # Handles rendering of the settings view component
+│   │   │   └── StylesHelper.js         # Common styling utilities
+│   ├── auth/                           # Authentication components
+│   │   ├── AuthContext.js              # Authentication state management
+│   │   └── LoginForm.js                # User login with demo mode
+│   ├── common/                         # Reusable components
+│   │   └── ModalBase.js                # Base modal component
+│   ├── messages/                       # Message-related components
+│   │   ├── MessageInput.js             # Message input component
+│   │   └── MessageList.js              # Message list component
+│   ├── users/                          # User-related components
+│   │   ├── UserList.js                 # User list component
+│   │   └── UserStatus.js               # User status component
 ├── services/
-│   ├── authService.js                       # ✅ Authentication and permissions
-│   ├── channelService.js                    # ✅ Channel management
-│   ├── messageService.js                    # ✅ WebSocket messaging
-│   └── userService.js                       # ✅ User management
+│   ├── auth/                           # Authentication and permissions
+│   │   ├── index.js                    # TODO: Investigate and document the purpose of this file
+│   │   ├── authentication.js
+│   │   ├── roles.js
+│   │   ├── permissions.js
+│   │   ├── userOperations.js
+│   │   ├── userImport.js
+│   │   └── sessionManagement.js
+│   ├── channel/                        # Channel management services
+│   │   └── channelService.js
+│   ├── message/                        # Message services
+│   │   └── messageService.js
+│   └── user/                           # User management services
+│   │   └── userService.js
 ├── utils/
-│   ├── encryption.js                        # ✅ Message encryption
-│   ├── logger.js                            # ✅ HIPAA audit logging
-│   ├── storage.js                           # ✅ Local data persistence
-│   └── validation.js                        # ✅ Input validation and PHI detection
-├── config.js                                # ✅ System configuration
-└── index.js                                 # ✅ Main entry point
-```
+│   ├── encryption.js                   # Message encryption
+│   ├── logger.js                       # HIPAA audit logging
+│   ├── storage.js                      # Local data persistence
+│   └── validation.js                   # Input validation and PHI detection
+└── index.js                            # Main entry point
 
-## Remaining Components To Implement
+## Modular Architecture
 
-```
-/chat
-└── components/
-    └── app/
-        ├── AppContainer.js                  # ⏳ Main application container
-        ├── Header.js                        # ⏳ Application header with navigation
-        └── NotificationSystem.js            # ⏳ Message notification handling
-```
+The application has been restructured to use a modular approach where each major view is handled by a separate renderer component:
 
-## Description of Completed Components
+### Main Container
 
-### Admin Components
+`AppContainer.js` acts as the main orchestrator that:
+- Imports renderers from the `/app` folder
+- Manages application state
+- Determines which view to show based on current state
+- Passes appropriate data and callbacks to each renderer
 
-1. **AdminPanel.js**
-   - Main admin dashboard
-   - Tab-based navigation between admin functions
-   - System statistics and metrics display
-   - Quick actions for common administrative tasks
-   - HIPAA compliance settings management
+### Renderer Components
 
-2. **UserManager.js**
-   - User management container component
-   - Coordinates user table, search, and modals
-   - Permission checking for admin access
+Each renderer is responsible for a specific part of the UI:
 
-3. **ChannelManager.js**
-   - Channel management container component
-   - Coordinates channel table, search, and modals
-   - Permission checking for admin/moderator access
+- `HeaderRenderer.js` - Creates the application header with navigation, user info, and connection status
+- `ChatViewRenderer.js` - Renders the main chat interface with channels, messages, and user list
+- `AdminViewRenderer.js` - Renders the admin panel for user/channel management
+- `SettingsViewRenderer.js` - Renders the settings interface
 
-4. **RoleManager.js**
-   - Role management container component
-   - Coordinates role table, search, and modals
-   - Permission checking for admin access
+### Support Components
 
-5. **User Components**
-   - **UserTable.js** - User listing with pagination
-   - **UserToolbar.js** - User search and filtering
-   - **CreateUserModal.js** - User creation form
-   - **EditUserModal.js** - User editing interface
-   - **DeleteUserModal.js** - User deletion confirmation
-   - **ResetPasswordModal.js** - Password reset interface
-   - **ImportUsersModal.js** - Bulk user import
+- `MockDataProvider.js` - Provides sample data for demo mode
+- `StylesHelper.js` - Common styling utilities and constants
+- `index.js` - Barrel file that simplifies imports
 
-6. **Channel Components**
-   - **ChannelTable.js** - Channel listing with pagination
-   - **ChannelToolbar.js** - Channel search and filtering
-   - **CreateChannelModal.js** - Channel creation form
-   - **EditChannelModal.js** - Channel editing interface
-   - **DeleteChannelModal.js** - Channel deletion confirmation
+## Important Implementation Details
 
-7. **Role Components**
-   - **RoleTable.js** - Role listing with pagination
-   - **RoleToolbar.js** - Role search functionality
-   - **CreateRoleModal.js** - Role creation form
-   - **EditRoleModal.js** - Role editing interface
-   - **DeleteRoleModal.js** - Role deletion confirmation
-   - **PermissionSelector.js** - Permission selection UI
+### Global Functions and Integration Points
 
-### Services
+- **toggleChatUI Function (CRITICAL)**: 
+  - The `toggleChatVisibility` method in `AppContainer.js` must be explicitly assigned to `window.toggleChatUI` during initialization
+  - This global function is used by the main application header bar to toggle chat visibility
+  - Example: `window.toggleChatUI = this.toggleChatVisibility;`
+  - This assignment MUST be preserved in any refactoring or updates to `AppContainer.js`
+  - Failure to expose this function globally will break the chat button in the header bar
 
-1. **authService.js**
-   - User authentication and session management
-   - Token-based authentication with JWT
-   - Role-based permission system
-   - Session timeout management for HIPAA compliance
+### Demo Mode
 
-2. **channelService.js**
-   - Channel creation and management
-   - Public and private channel support
-   - Channel joining/leaving logic
-   - Channel permission validation
+The application supports a demo mode that can be accessed by clicking the "Demo" button on the login screen. This mode:
 
-3. **messageService.js**
-   - WebSocket communication handling
-   - Message encryption and delivery
-   - Connection status management
-   - Automatic reconnection logic
+1. Creates a guest user account
+2. Populates the app with sample channels, messages, and users
+3. Allows exploring the UI without requiring a server connection
 
-4. **userService.js**
-   - User status management
-   - Online user tracking
-   - User search and filtering
-   - Admin user management functions
+## Styling Approach
 
-### UI Components
+The application uses a consistent styling approach:
 
-1. **authContext.js**
-   - Authentication state management
-   - Context provider for auth data
-   - Session persistence
+- Styles are applied directly to DOM elements using the `applyStyles` helper
+- Common colors and styling utilities are provided by `StylesHelper.js`
+- Each component is responsible for its own styling
 
-2. **LoginForm.js**
-   - User login interface
-   - Form validation
-   - Error handling
+## Benefits of the Modular Structure
 
-3. **ChannelList.js**
-   - Display available channels
-   - Channel grouping by type
-   - Channel creation for authorized users
+- **Separation of Concerns**: Each renderer is responsible for only one aspect of the UI
+- **Maintainability**: Smaller files are easier to understand and modify
+- **Scalability**: New features can be added by creating additional renderers
+- **Reusability**: Common utilities can be shared across components
+- **Testing**: Components can be tested in isolation
 
-4. **ChannelView.js**
-   - Display channel messages
-   - Channel information header
-   - Input for sending messages
+## Future Improvements
 
-5. **MessageList.js**
-   - Display messages with grouping
-   - PHI detection and warnings
-   - Message formatting
-
-6. **MessageInput.js**
-   - Message composition
-   - Real-time PHI detection
-   - Message validation
-
-7. **UserList.js**
-   - Display online and offline users
-   - User filtering and searching
-   - Direct message initiation
-
-8. **UserStatus.js**
-   - User status selection
-   - Status indicator display
-   - Status update to server
-
-### Utilities
-
-1. **encryption.js**
-   - End-to-end message encryption
-   - WebCrypto API integration
-   - Fallback encryption methods
-
-2. **logger.js**
-   - HIPAA-compliant audit logging
-   - Log search and filtering
-   - Exportable audit trails
-
-3. **storage.js**
-   - Local message persistence
-   - Message expiration handling
-   - Secure data storage
-
-4. **validation.js**
-   - Input sanitization
-   - PHI detection in messages
-   - Form validation helpers
-
-## Components To Be Completed
-
-1. **AppContainer.js**
-   - Main application container
-   - Component integration
-   - Routing between views
-
-2. **Header.js**
-   - Navigation header
-   - User information display
-   - Notification badges
-
-3. **NotificationSystem.js**
-   - New message notifications
-   - System alerts
-   - Sound notifications (optional)
-```
+- Further modularization of the renderers into smaller components
+- Add TypeScript for better type checking
+- Implement a proper state management solution
+- Add unit and integration tests
+- Improve accessibility support

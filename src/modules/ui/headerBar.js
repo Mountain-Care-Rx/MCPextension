@@ -169,12 +169,28 @@ export function createFixedHeader() {
     // Create chat button with explicit click handler
     const chatButton = document.createElement("button");
     chatButton.className = "chat-button btn";
-    chatButton.innerHTML = '<span class="icon">💬</span><span class="badge" style="display:none">0</span>';
-    chatButton.title = "HIPAA-Compliant Chat";
+    chatButton.title = "Mountain Care Chat";
     chatButton.style.marginRight = "8px";
-      
-    // Apply badge styles
-    const badge = chatButton.querySelector('.badge');
+    
+    // Create the content wrapper to hold the icon and text
+    const chatContentWrapper = document.createElement("div");
+    chatContentWrapper.style.display = "flex";
+    chatContentWrapper.style.alignItems = "center";
+    chatContentWrapper.style.justifyContent = "center";
+    
+    // Add chat icon
+    const chatIcon = document.createElement("span");
+    chatIcon.className = "icon";
+    chatIcon.innerHTML = '💬';
+    chatIcon.style.marginRight = "4px";
+    
+    // Add chat text
+    const chatText = document.createElement("span");
+    chatText.textContent = "Chat";
+    
+    // Add badge for notifications
+    const badge = document.createElement("span");
+    badge.className = "badge";
     Object.assign(badge.style, {
       position: 'absolute',
       top: '0',
@@ -187,6 +203,12 @@ export function createFixedHeader() {
       borderRadius: '50%',
       display: 'none'
     });
+    
+    // Assemble the chat button
+    chatContentWrapper.appendChild(chatIcon);
+    chatContentWrapper.appendChild(chatText);
+    chatButton.appendChild(chatContentWrapper);
+    chatButton.appendChild(badge);
 
     // Add explicit click handler
     chatButton.addEventListener("click", function() {

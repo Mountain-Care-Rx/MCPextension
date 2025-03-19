@@ -2,7 +2,7 @@
 // User list component for HIPAA-compliant chat
 
 import { getOnlineUsers, getAllUsers, addUserStatusListener } from '../../services/userService.js';
-import { getCurrentUser, isAuthenticated } from '../../services/authService.js';
+import { getCurrentUser, isAuthenticated } from '../../services/auth';
 import { logChatEvent } from '../../utils/logger.js';
 
 class UserList {

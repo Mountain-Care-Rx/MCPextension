@@ -1,7 +1,7 @@
 // chat/components/app/Header.js
 // Application header component for HIPAA-compliant chat
 
-import { logout, getCurrentUser } from '../../services/authService.js';
+import { logout, getCurrentUser } from '../../services/auth';
 import { logChatEvent } from '../../utils/logger.js';
 import UserStatus from '../users/UserStatus.js';
 

@@ -5,7 +5,7 @@ import { getChannelById, getActiveChannel, hasPermission } from '../../../servic
 import { getChannelMessages } from '../../../utils/storage.js';
 import { addMessageListener, sendChatMessage } from '../../../services/messageService.js';
 import { getUserById, getOnlineUsers, addUserStatusListener } from '../../../services/userService.js';
-import { getCurrentUser, isAuthenticated } from '../../../services/authService.js';
+import { getCurrentUser, isAuthenticated } from '../../../services/auth';
 import { logChatEvent } from '../../../utils/logger.js';
 import { containsPotentialPHI } from '../../../utils/validation.js';
 

@@ -4,7 +4,7 @@
 import { 
     getCurrentUser, 
     hasPermission 
-  } from '../../services/authService.js';
+  } from '../../services/auth';
   import { getAvailableChannels } from '../../services/channelService.js';
   import { logChatEvent } from '../../utils/logger.js';
   import ChannelTable from './channels/ChannelTable.js';

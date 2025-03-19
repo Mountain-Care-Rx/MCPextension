@@ -39,6 +39,26 @@ export function renderChatView(container, options = {}) {
   // Create collapsible users panel
   const userPanel = createUserPanel(mockUsers, onUserSelect);
   
+  // Apply more compact sizing to each panel
+  applyStyles(sidebar, {
+    flex: '0 0 180px',  // More compact fixed width
+    minWidth: '160px',  // Smaller minimum width
+    maxWidth: '180px'   // Smaller maximum width
+  });
+  
+  applyStyles(chatArea, {
+    flex: '1 1 auto',   // Grow and shrink as needed
+    minWidth: '250px'   // Smaller minimum width
+  });
+  
+  if (showUserList) {
+    applyStyles(userPanel, {
+      flex: '0 0 200px',  // More compact fixed width
+      minWidth: '180px',  // Smaller minimum width
+      maxWidth: '200px'   // Smaller maximum width
+    });
+  }
+  
   // Add all panels to layout
   layout.appendChild(sidebar);
   layout.appendChild(chatArea);
@@ -59,22 +79,20 @@ export function renderChatView(container, options = {}) {
  * @returns {HTMLElement} Sidebar element
  */
 function createSidebar(channels, selectedChannel, onChannelSelect) {
-  const sidebarWidth = '240px';
   const sidebar = document.createElement('div');
   applyStyles(sidebar, {
-    width: sidebarWidth,
-    minWidth: sidebarWidth,
     height: '100%',
     borderRight: '1px solid #e0e0e0',
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: '#f8f9fa'
+    backgroundColor: '#f8f9fa',
+    overflow: 'hidden' // Prevent overflow
   });
   
-  // Sidebar header
+  // Sidebar header - more compact
   const sidebarHeader = document.createElement('div');
   applyStyles(sidebarHeader, {
-    padding: '16px',
+    padding: '10px 12px', // Reduced padding
     borderBottom: '1px solid #e0e0e0',
     display: 'flex',
     justifyContent: 'space-between',
@@ -85,7 +103,7 @@ function createSidebar(channels, selectedChannel, onChannelSelect) {
   headingText.textContent = 'Channels';
   applyStyles(headingText, {
     margin: '0',
-    fontSize: '18px',
+    fontSize: '16px', // Smaller font
     fontWeight: 'bold'
   });
   
@@ -96,8 +114,8 @@ function createSidebar(channels, selectedChannel, onChannelSelect) {
     backgroundColor: '#e0e0e0',
     color: '#333',
     borderRadius: '12px',
-    padding: '2px 8px',
-    fontSize: '12px',
+    padding: '1px 6px', // Smaller padding
+    fontSize: '11px', // Smaller font
     fontWeight: 'bold'
   });
   
@@ -109,7 +127,7 @@ function createSidebar(channels, selectedChannel, onChannelSelect) {
   applyStyles(channelsContainer, {
     flex: '1',
     overflowY: 'auto',
-    padding: '8px 0'
+    padding: '4px 0' // Reduced padding
   });
   
   // Group channels by type
@@ -126,28 +144,28 @@ function createSidebar(channels, selectedChannel, onChannelSelect) {
     addChannelGroup(channelsContainer, 'PRIVATE CHANNELS', privateChannels, selectedChannel, onChannelSelect);
   }
   
-  // Add new channel button
+  // Add new channel button - more compact
   const newChannelButton = document.createElement('button');
   applyStyles(newChannelButton, {
-    margin: '16px',
-    padding: '10px 0',
+    margin: '8px', // Reduced margin
+    padding: '6px 0', // Reduced padding
     backgroundColor: '#2196F3',
     color: 'white',
     border: 'none',
     borderRadius: '4px',
-    fontSize: '14px',
+    fontSize: '13px', // Smaller font
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '8px',
+    gap: '6px', // Reduced gap
     fontWeight: 'bold'
   });
   
   const plusIcon = document.createElement('span');
   plusIcon.textContent = '+';
   applyStyles(plusIcon, {
-    fontSize: '18px'
+    fontSize: '16px' // Smaller font
   });
   
   const buttonText = document.createElement('span');
@@ -185,8 +203,8 @@ function addChannelGroup(container, title, channels, selectedChannel, onChannelS
   // Create group header
   const groupHeader = document.createElement('div');
   applyStyles(groupHeader, {
-    padding: '12px 16px 8px',
-    fontSize: '12px',
+    padding: '8px 12px 4px', // More compact padding
+    fontSize: '10px', // Smaller font
     color: '#666',
     fontWeight: 'bold',
     textTransform: 'uppercase',
@@ -197,7 +215,7 @@ function addChannelGroup(container, title, channels, selectedChannel, onChannelS
   // Create channel list
   const channelList = document.createElement('div');
   applyStyles(channelList, {
-    marginBottom: '16px'
+    marginBottom: '10px' // Reduced margin
   });
   
   // Add channels
@@ -221,22 +239,22 @@ function addChannelGroup(container, title, channels, selectedChannel, onChannelS
 function createChannelItem(channel, isActive, onChannelSelect) {
   const item = document.createElement('div');
   applyStyles(item, {
-    padding: '10px 16px 10px 12px',
+    padding: '6px 12px 6px 10px', // More compact padding
     display: 'flex',
     alignItems: 'center',
     cursor: 'pointer',
-    fontSize: '14px',
+    fontSize: '13px', // Smaller font
     color: isActive ? '#2196F3' : '#333',
     backgroundColor: isActive ? 'rgba(33, 150, 243, 0.08)' : 'transparent',
-    borderLeft: isActive ? '4px solid #2196F3' : '4px solid transparent'
+    borderLeft: isActive ? '3px solid #2196F3' : '3px solid transparent' // Thinner border
   });
   
   // Globe icon for channel type
   const icon = document.createElement('span');
   icon.textContent = channel.type === 'public' ? '🌐' : '🔒';
   applyStyles(icon, {
-    marginRight: '10px',
-    fontSize: '16px',
+    marginRight: '8px', // Reduced margin
+    fontSize: '14px', // Smaller font
     opacity: '0.7'
   });
   
@@ -245,7 +263,10 @@ function createChannelItem(channel, isActive, onChannelSelect) {
   name.textContent = channel.name;
   applyStyles(name, {
     flex: '1',
-    fontWeight: isActive ? 'bold' : 'normal'
+    fontWeight: isActive ? 'bold' : 'normal',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   });
   
   // Unread indicator
@@ -253,17 +274,17 @@ function createChannelItem(channel, isActive, onChannelSelect) {
     const badge = document.createElement('span');
     badge.textContent = channel.unread > 99 ? '99+' : channel.unread;
     applyStyles(badge, {
-      minWidth: '20px',
-      height: '20px',
+      minWidth: '18px', // Smaller badge
+      height: '18px', // Smaller badge
       backgroundColor: isActive ? '#2196F3' : '#f44336',
       color: 'white',
-      borderRadius: '10px',
-      fontSize: '12px',
+      borderRadius: '9px',
+      fontSize: '11px', // Smaller font
       fontWeight: 'bold',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '0 6px'
+      padding: '0 4px' // Reduced padding
     });
     
     item.appendChild(badge);
@@ -308,7 +329,8 @@ function createChatArea(selectedChannel, channels, toggleUserList, mockUsers) {
     flex: '1',
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
+    width: '100%' // FIXED: Ensure the chat area takes full width
   });
   
   // Get channel info
@@ -326,6 +348,9 @@ function createChatArea(selectedChannel, channels, toggleUserList, mockUsers) {
   
   // Chat input area container
   const inputContainer = document.createElement('div');
+  applyStyles(inputContainer, {
+    width: '100%' // FIXED: Ensure input takes full width
+  });
   
   // Create MessageInput component
   const messageInput = new MessageInput(inputContainer, {
@@ -351,12 +376,13 @@ function createChatArea(selectedChannel, channels, toggleUserList, mockUsers) {
 function createChatHeader(channel, toggleUserList) {
   const header = document.createElement('div');
   applyStyles(header, {
-    padding: '16px',
+    padding: '10px 12px', // Reduced padding
     borderBottom: '1px solid #e0e0e0',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
+    width: '100%'
   });
   
   // Channel info
@@ -364,21 +390,21 @@ function createChatHeader(channel, toggleUserList) {
   applyStyles(channelInfo, {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px'
+    gap: '8px' // Reduced gap
   });
   
   // Channel icon
   const channelIcon = document.createElement('span');
   channelIcon.textContent = channel.type === 'public' ? '🌐' : '🔒';
   applyStyles(channelIcon, {
-    fontSize: '20px'
+    fontSize: '16px' // Smaller font
   });
   
   // Channel name
   const channelName = document.createElement('div');
   channelName.textContent = channel.name;
   applyStyles(channelName, {
-    fontSize: '18px',
+    fontSize: '16px', // Smaller font
     fontWeight: 'bold'
   });
   
@@ -386,9 +412,9 @@ function createChatHeader(channel, toggleUserList) {
   const channelType = document.createElement('span');
   channelType.textContent = channel.type === 'public' ? 'Public' : 'Private';
   applyStyles(channelType, {
-    fontSize: '12px',
-    padding: '3px 10px',
-    borderRadius: '12px',
+    fontSize: '10px', // Smaller font
+    padding: '2px 8px', // Reduced padding
+    borderRadius: '10px',
     backgroundColor: channel.type === 'public' ? '#e3f2fd' : '#fff3e0',
     color: channel.type === 'public' ? '#1565c0' : '#e65100'
   });
@@ -401,7 +427,7 @@ function createChatHeader(channel, toggleUserList) {
   const actions = document.createElement('div');
   applyStyles(actions, {
     display: 'flex',
-    gap: '12px'
+    gap: '8px' // Reduced gap
   });
   
   // Search button
@@ -433,13 +459,13 @@ function createIconButton(icon, title) {
   button.textContent = icon;
   button.title = title;
   applyStyles(button, {
-    width: '36px',
-    height: '36px',
+    width: '28px', // Smaller size
+    height: '28px', // Smaller size
     borderRadius: '4px',
     backgroundColor: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '16px',
+    fontSize: '14px', // Smaller font
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center'
@@ -470,7 +496,9 @@ function createMessagesContainer(channel) {
     padding: '20px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px'
+    gap: '12px',
+    width: '100%', // FIXED: Ensure container takes full width
+    minHeight: '200px' // FIXED: Ensure minimum height
   });
 
   // Placeholder message
@@ -522,11 +550,8 @@ function createMessagesContainer(channel) {
  * @returns {HTMLElement} User panel element
  */
 function createUserPanel(users, onUserSelect) {
-  const userPanelWidth = '260px';
   const panel = document.createElement('div');
   applyStyles(panel, {
-    width: userPanelWidth,
-    minWidth: userPanelWidth,
     height: '100%',
     borderLeft: '1px solid #e0e0e0',
     display: 'flex',
@@ -534,10 +559,10 @@ function createUserPanel(users, onUserSelect) {
     backgroundColor: '#f8f9fa'
   });
 
-  // Panel header
+  // Panel header - more compact
   const panelHeader = document.createElement('div');
   applyStyles(panelHeader, {
-    padding: '16px',
+    padding: '10px 12px', // Reduced padding
     borderBottom: '1px solid #e0e0e0',
     display: 'flex',
     justifyContent: 'space-between',
@@ -548,7 +573,7 @@ function createUserPanel(users, onUserSelect) {
   heading.textContent = 'Team Members';
   applyStyles(heading, {
     margin: '0',
-    fontSize: '18px',
+    fontSize: '16px', // Smaller font
     fontWeight: 'bold'
   });
   
@@ -559,18 +584,18 @@ function createUserPanel(users, onUserSelect) {
     backgroundColor: '#e0e0e0',
     color: '#333',
     borderRadius: '12px',
-    padding: '2px 8px',
-    fontSize: '12px',
+    padding: '1px 6px', // Smaller padding
+    fontSize: '11px', // Smaller font
     fontWeight: 'bold'
   });
   
   panelHeader.appendChild(heading);
   panelHeader.appendChild(userCount);
 
-  // Search box
+  // Search box - more compact
   const searchBox = document.createElement('div');
   applyStyles(searchBox, {
-    padding: '12px 16px',
+    padding: '8px 12px', // Reduced padding
     borderBottom: '1px solid #e0e0e0'
   });
 
@@ -579,17 +604,17 @@ function createUserPanel(users, onUserSelect) {
     display: 'flex',
     alignItems: 'center',
     backgroundColor: 'white',
-    borderRadius: '20px',
+    borderRadius: '16px', // Smaller radius
     border: '1px solid #ddd',
-    padding: '0 12px'
+    padding: '0 10px' // Reduced padding
   });
   
   const searchIcon = document.createElement('span');
   searchIcon.textContent = '🔍';
   applyStyles(searchIcon, {
-    fontSize: '14px',
+    fontSize: '12px', // Smaller font
     color: '#666',
-    marginRight: '8px'
+    marginRight: '6px' // Reduced margin
   });
 
   const searchInput = document.createElement('input');
@@ -597,10 +622,10 @@ function createUserPanel(users, onUserSelect) {
   searchInput.placeholder = 'Search users...';
   applyStyles(searchInput, {
     width: '100%',
-    padding: '8px 0',
+    padding: '6px 0', // Reduced padding
     border: 'none',
     borderRadius: '16px',
-    fontSize: '14px',
+    fontSize: '13px', // Smaller font
     outline: 'none'
   });
 
@@ -613,7 +638,7 @@ function createUserPanel(users, onUserSelect) {
   applyStyles(usersContainer, {
     flex: '1',
     overflowY: 'auto',
-    padding: '8px 0'
+    padding: '4px 0' // Reduced padding
   });
 
   // Group users by status
@@ -655,11 +680,11 @@ function createUserPanel(users, onUserSelect) {
  * @param {Function} onUserSelect - User selection callback
  */
 function addUserGroup(container, title, users, onUserSelect) {
-  // Create group header
+  // Create group header - more compact
   const groupHeader = document.createElement('div');
   applyStyles(groupHeader, {
-    padding: '12px 16px 8px',
-    fontSize: '12px',
+    padding: '8px 12px 4px', // Reduced padding
+    fontSize: '10px', // Smaller font
     color: '#666',
     fontWeight: 'bold',
     textTransform: 'uppercase',
@@ -670,7 +695,7 @@ function addUserGroup(container, title, users, onUserSelect) {
   // Create user list
   const userList = document.createElement('div');
   applyStyles(userList, {
-    marginBottom: '16px'
+    marginBottom: '10px' // Reduced margin
   });
   
   // Add users
@@ -696,7 +721,7 @@ function createUserItem(user, isOnline, onUserSelect) {
   applyStyles(item, {
     display: 'flex',
     alignItems: 'center',
-    padding: '10px 16px',
+    padding: '6px 12px', // Reduced padding
     cursor: 'pointer',
     opacity: isOnline ? '1' : '0.7'
   });
@@ -704,10 +729,10 @@ function createUserItem(user, isOnline, onUserSelect) {
   // Status indicator
   const statusIndicator = document.createElement('div');
   applyStyles(statusIndicator, {
-    width: '8px',
-    height: '8px',
+    width: '6px', // Smaller size
+    height: '6px', // Smaller size
     borderRadius: '50%',
-    marginRight: '12px'
+    marginRight: '8px' // Reduced margin
   });
   
   // Set status color
@@ -721,7 +746,7 @@ function createUserItem(user, isOnline, onUserSelect) {
     statusIndicator.style.backgroundColor = '#9E9E9E'; // Gray
   }
   
-  // Avatar
+  // Avatar - smaller
   const avatar = document.createElement('div');
   
   // Get first letter of display name or username
@@ -734,8 +759,8 @@ function createUserItem(user, isOnline, onUserSelect) {
   const textColor = `hsl(${hue}, 70%, 30%)`;
   
   applyStyles(avatar, {
-    width: '36px',
-    height: '36px',
+    width: '28px', // Smaller size
+    height: '28px', // Smaller size
     borderRadius: '50%',
     backgroundColor: bgColor,
     color: textColor,
@@ -743,8 +768,8 @@ function createUserItem(user, isOnline, onUserSelect) {
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: 'bold',
-    fontSize: '16px',
-    marginRight: '12px'
+    fontSize: '14px', // Smaller font
+    marginRight: '8px' // Reduced margin
   });
   
   // User info
@@ -758,20 +783,20 @@ function createUserItem(user, isOnline, onUserSelect) {
   displayName.textContent = user.displayName || user.username;
   applyStyles(displayName, {
     fontWeight: 'medium',
-    fontSize: '14px'
+    fontSize: '13px' // Smaller font
   });
   
-  // Role badge for admin/moderator
+  // Role badge for admin/moderator - smaller
   if (user.role === 'admin' || user.role === 'moderator') {
     const roleBadge = document.createElement('span');
     roleBadge.textContent = user.role;
     applyStyles(roleBadge, {
-      fontSize: '10px',
+      fontSize: '9px', // Smaller font
       backgroundColor: user.role === 'admin' ? '#f44336' : '#2196F3',
       color: 'white',
-      padding: '2px 6px',
-      borderRadius: '10px',
-      marginLeft: '6px',
+      padding: '1px 4px', // Reduced padding
+      borderRadius: '8px', // Smaller radius
+      marginLeft: '4px', // Reduced margin
       textTransform: 'uppercase',
       fontWeight: 'bold'
     });
@@ -784,9 +809,9 @@ function createUserItem(user, isOnline, onUserSelect) {
     const statusText = document.createElement('div');
     statusText.textContent = user.statusMessage;
     applyStyles(statusText, {
-      fontSize: '12px',
+      fontSize: '11px', // Smaller font
       color: '#666',
-      marginTop: '2px'
+      marginTop: '1px' // Reduced margin
     });
     
     userInfo.appendChild(statusText);
@@ -794,7 +819,7 @@ function createUserItem(user, isOnline, onUserSelect) {
   
   userInfo.appendChild(displayName);
   
-  // Message icon button for direct messaging
+  // Message icon button for direct messaging - smaller
   const messageButton = document.createElement('button');
   messageButton.innerHTML = '💬';
   messageButton.title = 'Message';
@@ -802,8 +827,8 @@ function createUserItem(user, isOnline, onUserSelect) {
     backgroundColor: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '16px',
-    padding: '4px',
+    fontSize: '14px', // Smaller font
+    padding: '2px', // Reduced padding
     borderRadius: '4px'
   });
   
@@ -845,15 +870,6 @@ function createUserItem(user, isOnline, onUserSelect) {
 }
 
 /**
- * Apply CSS styles to an element
- * @param {HTMLElement} element - Element to style
- * @param {Object} styles - Styles to apply
- */
-function applyStyles(element, styles) {
-  Object.assign(element.style, styles);
-}
-
-/**
  * Generate a color hue from a string
  * @param {string} str - Input string
  * @returns {number} Hue value (0-360)
@@ -864,6 +880,15 @@ function generateColorFromString(str) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   return hash % 360;
+}
+
+/**
+ * Apply CSS styles to an element
+ * @param {HTMLElement} element - Element to style
+ * @param {Object} styles - Styles to apply
+ */
+function applyStyles(element, styles) {
+  Object.assign(element.style, styles);
 }
 
 export default { renderChatView };

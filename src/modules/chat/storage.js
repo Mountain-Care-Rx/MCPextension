@@ -1,4 +1,6 @@
-// modules/chat/storage.js
+/**
+ * modules/chat/storage.js
+ */
 
 // Store for chat messages and state
 let chatMessages = [];
@@ -17,7 +19,6 @@ let directMessages = [];
 export function addNewMessage(message) {
   if (!message || !message.text) return;
   
-  // Add message to conversations map
   if (message.conversationId) {
     if (!conversations.has(message.conversationId)) {
       conversations.set(message.conversationId, {
@@ -30,60 +31,40 @@ export function addNewMessage(message) {
       });
     } else {
       const conversation = conversations.get(message.conversationId);
-      
-      // Update conversation details
       conversation.lastMessage = message.text;
       conversation.lastTimestamp = message.timestamp;
-      
-      // Only update name if we have a valid sender
       if (message.sender && message.sender.trim() !== "") {
         conversation.name = message.sender;
       }
-      
-      // Add to messages array
       conversation.messages.push(message);
-      
-      // Update unread count
       if (!message.isRead) {
         conversation.unreadCount = (conversation.unreadCount || 0) + 1;
       }
-      
-      // Keep only last 50 messages per conversation
       if (conversation.messages.length > 50) {
         conversation.messages = conversation.messages.slice(-50);
       }
     }
   }
   
-  // Check if this is a genuinely new message
-  // Compare with the most recent timestamp we have
   let isNewMessage = true;
   if (lastMessageTimestamp) {
-    // Parse timestamps to compare
     try {
       const currentTime = new Date(message.timestamp).getTime();
       const lastTime = new Date(lastMessageTimestamp).getTime();
-      
       isNewMessage = currentTime > lastTime;
-    } catch (e) {
-      // If parsing fails, assume it's a new message
-    }
+    } catch (e) {}
   }
   
-  // Update last timestamp if newer
   if (isNewMessage) {
     lastMessageTimestamp = message.timestamp;
   }
   
-  // Add to global messages array
   chatMessages.unshift(message);
   
-  // Keep only last 100 messages
   if (chatMessages.length > 100) {
     chatMessages = chatMessages.slice(0, 100);
   }
   
-  // Notify listeners
   if (isNewMessage) {
     notifyMessageListeners([message]);
   }
@@ -97,7 +78,6 @@ export function updateExistingMessageDetails(latestMessages) {
   for (const latestMsg of latestMessages) {
     const existingIndex = chatMessages.findIndex(msg => msg.id === latestMsg.id);
     if (existingIndex >= 0) {
-      // Update any fields that might have changed
       chatMessages[existingIndex].isRead = latestMsg.isRead;
       chatMessages[existingIndex].element = latestMsg.element;
     }
@@ -114,7 +94,6 @@ export function onNewMessages(callback) {
   
   userListeners.push(callback);
   
-  // Return unsubscribe function
   return () => {
     userListeners = userListeners.filter(cb => cb !== callback);
   };
@@ -159,7 +138,6 @@ export function getRecentMessages(count = 5) {
  */
 export function getAllConversations() {
   return Array.from(conversations.values()).sort((a, b) => {
-    // Sort by timestamp (newest first)
     try {
       return new Date(b.lastTimestamp).getTime() - new Date(a.lastTimestamp).getTime();
     } catch (e) {
@@ -176,7 +154,6 @@ export function getAllConversations() {
 export function getConversationMessages(conversationId) {
   const conversation = conversations.get(conversationId);
   return conversation ? [...conversation.messages].sort((a, b) => {
-    // Sort by timestamp (oldest first for display purposes)
     try {
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     } catch (e) {
@@ -253,48 +230,8 @@ export function getConversationById(id, type) {
  * @param {Array} messages - Array of message objects to add
  */
 export function addMessagesToConversation(id, type, messages) {
-  let conversation = getConversationById(id, type);
-  
-  if (!conversation) {
-    return false;
+  const conversation = getConversationById(id, type);
+  if (conversation) {
+    conversation.messages = conversation.messages.concat(messages);
   }
-  
-  // Add the messages array if it doesn't exist
-  if (!conversation.messages) {
-    conversation.messages = [];
-  }
-  
-  // Add messages and update last message information
-  if (messages.length > 0) {
-    conversation.messages.push(...messages);
-    
-    // Sort messages by timestamp
-    conversation.messages.sort((a, b) => {
-      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-    });
-    
-    // Update the last message info with the most recent message
-    const lastMessage = messages.sort((a, b) => {
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-    })[0];
-    
-    conversation.lastMessage = lastMessage.text;
-    conversation.lastTimestamp = lastMessage.timestamp;
-    
-    return true;
-  }
-  
-  return false;
-}
-
-/**
- * Clean up storage when unloading
- */
-export function clearStorage() {
-  chatMessages = [];
-  conversations.clear();
-  userListeners = [];
-  lastMessageTimestamp = null;
-  channels = [];
-  directMessages = [];
 }

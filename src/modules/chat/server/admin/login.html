@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HIPAA Chat - Admin Login</title>
+  <link rel="stylesheet" href="/admin/assets/login.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <div class="login-container">
+    <h1>Admin Login</h1>
+    <form method="post" action="/admin/login">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      <button type="submit" class="submit-btn">Login</button>
+      <div id="error-message" class="error" style="display: none;"></div>
+      <div class="note">
+        Default credentials: admin / admin123<br>
+        Change these after first login!
+      </div>
+    </form>
+  </div>
+  
+  <script>
+    // Handle client-side error message if passed in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    if (error) {
+      const errorElement = document.getElementById('error-message');
+      errorElement.textContent = decodeURIComponent(error);
+      errorElement.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

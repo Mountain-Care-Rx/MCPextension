@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HIPAA Chat - Admin Dashboard</title>
+  <link rel="stylesheet" href="/admin/assets/dashboard.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1>HIPAA Chat Admin</h1>
+      </div>
+      <ul class="sidebar-menu">
+        <li class="active" data-page="dashboard">
+          <span class="icon">📊</span> Dashboard
+        </li>
+        <li data-page="users">
+          <span class="icon">👥</span> User Management
+        </li>
+        <li data-page="channels">
+          <span class="icon">💬</span> Channels
+        </li>
+        <li data-page="messages">
+          <span class="icon">✉️</span> Message Monitoring
+        </li>
+        <li data-page="logs">
+          <span class="icon">📝</span> System Logs
+        </li>
+        <li data-page="settings">
+          <span class="icon">⚙️</span> Settings
+        </li>
+        <li id="logoutBtn">
+          <span class="icon">🚪</span> Logout
+        </li>
+      </ul>
+    </div>
+    <div class="main-content">
+      <div class="header">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="user-info">
+          <span>Welcome, Admin</span>
+        </div>
+      </div>
+      
+      <div id="dashboardContent">
+        <p>Dashboard content coming soon...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sidebar menu interaction
+    const menuItems = document.querySelectorAll('.sidebar-menu li');
+    const dashboardContent = document.getElementById('dashboardContent');
+    const pageTitle = document.querySelector('.page-title');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    menuItems.forEach(item => {
+      item.addEventListener('click', function() {
+        // Remove active class from all items
+        menuItems.forEach(el => el.classList.remove('active'));
+        
+        // Add active class to clicked item
+        this.classList.add('active');
+        
+        // Update page title
+        const page = this.getAttribute('data-page');
+        pageTitle.textContent = getPageTitle(page);
+        
+        // Update content (placeholder)
+        dashboardContent.innerHTML = `<p>Content for ${page} page coming soon...</p>`;
+      });
+    });
+
+    // Logout functionality
+    logoutBtn.addEventListener('click', function() {
+      window.location.href = '/admin/login.html';
+    });
+
+    // Helper function to get page title
+    function getPageTitle(page) {
+      const titles = {
+        'dashboard': 'Dashboard',
+        'users': 'User Management',
+        'channels': 'Channels',
+        'messages': 'Message Monitoring',
+        'logs': 'System Logs',
+        'settings': 'Settings'
+      };
+      return titles[page] || 'Dashboard';
+    }
+  </script>
+</body>
+</html>

@@ -35,6 +35,34 @@ class ChannelTable {
     this.render = this.render.bind(this);
     this.createActionButton = this.createActionButton.bind(this);
     this.formatDateTime = this.formatDateTime.bind(this);
+    this.handleEditClick = this.handleEditClick.bind(this);
+    this.handleDeleteClick = this.handleDeleteClick.bind(this);
+  }
+  
+  /**
+   * Handle edit button click
+   * @param {Object} channel - Channel to edit
+   * @param {Event} e - Click event
+   */
+  handleEditClick(channel, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.options.onEditChannel) {
+      this.options.onEditChannel(channel);
+    }
+  }
+  
+  /**
+   * Handle delete button click
+   * @param {Object} channel - Channel to delete
+   * @param {Event} e - Click event
+   */
+  handleDeleteClick(channel, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.options.onDeleteChannel) {
+      this.options.onDeleteChannel(channel);
+    }
   }
   
   /**
@@ -43,11 +71,12 @@ class ChannelTable {
    */
   render() {
     // Calculate pagination
-    const totalChannels = this.options.channels.length;
+    const totalChannels = this.options.channels ? this.options.channels.length : 0;
     const totalPages = Math.ceil(totalChannels / this.options.pageSize);
     const startIndex = (this.options.currentPage - 1) * this.options.pageSize;
     const endIndex = Math.min(startIndex + this.options.pageSize, totalChannels);
-    const paginatedChannels = this.options.channels.slice(startIndex, endIndex);
+    const paginatedChannels = Array.isArray(this.options.channels) ? 
+      this.options.channels.slice(startIndex, endIndex) : [];
     
     // Create table container
     this.tableContainer = document.createElement('div');
@@ -127,7 +156,7 @@ class ChannelTable {
         
         // Name cell
         const nameCell = document.createElement('td');
-        nameCell.textContent = channel.name;
+        nameCell.textContent = channel.name || 'Unnamed Channel';
         this.applyStyles(nameCell, {
           padding: '12px 15px',
           borderBottom: '1px solid #dee2e6',
@@ -204,13 +233,13 @@ class ChannelTable {
         });
         
         // Edit button
-        const editButton = this.createActionButton('Edit', '✏️', () => {
-          this.options.onEditChannel(channel);
+        const editButton = this.createActionButton('Edit', '✏️', (e) => {
+          this.handleEditClick(channel, e);
         });
         
         // Delete button
-        const deleteButton = this.createActionButton('Delete', '🗑️', () => {
-          this.options.onDeleteChannel(channel);
+        const deleteButton = this.createActionButton('Delete', '🗑️', (e) => {
+          this.handleDeleteClick(channel, e);
         });
         
         // Don't allow deleting default channels
@@ -392,6 +421,7 @@ class ChannelTable {
     const button = document.createElement('button');
     button.title = title;
     button.innerHTML = icon;
+    button.setAttribute('data-action', title.toLowerCase().replace(/\s+/g, '-'));
     
     this.applyStyles(button, {
       width: '28px',
@@ -440,8 +470,6 @@ class ChannelTable {
    * Destroy the component
    */
   destroy() {
-    // Remove event listeners
-    
     // Remove from DOM
     if (this.tableContainer && this.tableContainer.parentNode) {
       this.tableContainer.parentNode.removeChild(this.tableContainer);

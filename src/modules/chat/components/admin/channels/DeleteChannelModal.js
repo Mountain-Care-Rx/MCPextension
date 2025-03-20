@@ -28,6 +28,9 @@ class DeleteChannelModal extends ModalBase {
       onSuccess: () => {},
       ...options
     };
+    
+    // Bind methods
+    this.handleDeleteChannel = this.handleDeleteChannel.bind(this);
   }
   
   /**
@@ -60,6 +63,7 @@ class DeleteChannelModal extends ModalBase {
       // Add close button
       const closeButton = document.createElement('button');
       closeButton.textContent = 'Close';
+      closeButton.id = 'system-channel-close';
       this.applyStyles(closeButton, {
         marginTop: '15px',
         padding: '8px 16px',
@@ -110,6 +114,7 @@ class DeleteChannelModal extends ModalBase {
     });
     
     const warningMessage = document.createElement('p');
+    warningMessage.id = 'delete-warning-message';
     warningMessage.textContent = 'This action cannot be undone. All channel messages will be permanently removed.';
     this.applyStyles(warningMessage, {
       color: '#721c24',
@@ -131,6 +136,7 @@ class DeleteChannelModal extends ModalBase {
     });
     
     const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
     cancelButton.textContent = 'Cancel';
     this.applyStyles(cancelButton, {
       padding: '8px 16px',
@@ -145,7 +151,9 @@ class DeleteChannelModal extends ModalBase {
     });
     
     const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
     deleteButton.textContent = 'Delete Channel';
+    deleteButton.id = 'confirm-delete-channel';
     this.applyStyles(deleteButton, {
       padding: '8px 16px',
       backgroundColor: '#dc3545',
@@ -155,51 +163,72 @@ class DeleteChannelModal extends ModalBase {
       cursor: 'pointer'
     });
     
-    deleteButton.addEventListener('click', async () => {
-      // Disable button
-      deleteButton.disabled = true;
-      deleteButton.textContent = 'Deleting...';
-      
-      try {
-        const result = await deleteChannel(channel.id);
-        
-        if (result.success) {
-          // Close modal
-          this.close();
-          
-          // Call success callback
-          if (this.options.onSuccess && typeof this.options.onSuccess === 'function') {
-            this.options.onSuccess();
-          }
-          
-          // Log channel deletion
-          logChatEvent('admin', 'Deleted channel', { 
-            name: channel.name,
-            id: channel.id
-          });
-        } else {
-          // Show error
-          warningMessage.textContent = result.error || 'Failed to delete channel';
-          
-          // Re-enable button
-          deleteButton.disabled = false;
-          deleteButton.textContent = 'Delete Channel';
-        }
-      } catch (error) {
-        console.error('[CRM Extension] Error deleting channel:', error);
-        warningMessage.textContent = 'An error occurred while deleting the channel';
-        
-        // Re-enable button
-        deleteButton.disabled = false;
-        deleteButton.textContent = 'Delete Channel';
-      }
-    });
+    deleteButton.addEventListener('click', () => this.handleDeleteChannel(deleteButton, warningMessage));
     
     actionButtons.appendChild(cancelButton);
     actionButtons.appendChild(deleteButton);
     content.appendChild(actionButtons);
     
     return content;
+  }
+  
+  /**
+   * Handle channel deletion
+   * @param {HTMLElement} deleteButton - Delete button element
+   * @param {HTMLElement} warningElement - Warning message element
+   */
+  async handleDeleteChannel(deleteButton, warningElement) {
+    const channel = this.options.channel;
+    
+    if (!channel || !channel.id) {
+      warningElement.textContent = 'Error: Invalid channel data';
+      return;
+    }
+    
+    // System channels cannot be deleted
+    if (channel.id === 'general' || channel.id === 'announcements') {
+      warningElement.textContent = 'System channels cannot be deleted';
+      return;
+    }
+    
+    // Disable button
+    deleteButton.disabled = true;
+    deleteButton.textContent = 'Deleting...';
+    
+    try {
+      const result = await deleteChannel(channel.id);
+      
+      if (result && result.success) {
+        // Close modal
+        this.close();
+        
+        // Call success callback
+        if (this.options.onSuccess && typeof this.options.onSuccess === 'function') {
+          this.options.onSuccess(channel.id);
+        }
+        
+        // Log channel deletion
+        logChatEvent('admin', 'Deleted channel', { 
+          name: channel.name,
+          id: channel.id
+        });
+      } else {
+        // Show error
+        const errorMsg = result && result.error ? result.error : 'Failed to delete channel';
+        warningElement.textContent = errorMsg;
+        
+        // Re-enable button
+        deleteButton.disabled = false;
+        deleteButton.textContent = 'Delete Channel';
+      }
+    } catch (error) {
+      console.error('[CRM Extension] Error deleting channel:', error);
+      warningElement.textContent = 'An error occurred while deleting the channel';
+      
+      // Re-enable button
+      deleteButton.disabled = false;
+      deleteButton.textContent = 'Delete Channel';
+    }
   }
 }
 

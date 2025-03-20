@@ -37,6 +37,48 @@ class UserTable {
     this.render = this.render.bind(this);
     this.createActionButton = this.createActionButton.bind(this);
     this.formatDateTime = this.formatDateTime.bind(this);
+    this.handleEditClick = this.handleEditClick.bind(this);
+    this.handleDeleteClick = this.handleDeleteClick.bind(this);
+    this.handleResetPasswordClick = this.handleResetPasswordClick.bind(this);
+  }
+  
+  /**
+   * Handle edit button click
+   * @param {Object} user - User to edit
+   * @param {Event} e - Click event
+   */
+  handleEditClick(user, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.options.onEditUser) {
+      this.options.onEditUser(user);
+    }
+  }
+  
+  /**
+   * Handle delete button click
+   * @param {Object} user - User to delete
+   * @param {Event} e - Click event
+   */
+  handleDeleteClick(user, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.options.onDeleteUser) {
+      this.options.onDeleteUser(user);
+    }
+  }
+  
+  /**
+   * Handle reset password button click
+   * @param {Object} user - User to reset password for
+   * @param {Event} e - Click event
+   */
+  handleResetPasswordClick(user, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.options.onResetPassword) {
+      this.options.onResetPassword(user);
+    }
   }
   
   /**
@@ -45,11 +87,12 @@ class UserTable {
    */
   render() {
     // Calculate pagination
-    const totalUsers = this.options.users.length;
+    const totalUsers = this.options.users ? this.options.users.length : 0;
     const totalPages = Math.ceil(totalUsers / this.options.pageSize);
     const startIndex = (this.options.currentPage - 1) * this.options.pageSize;
     const endIndex = Math.min(startIndex + this.options.pageSize, totalUsers);
-    const paginatedUsers = this.options.users.slice(startIndex, endIndex);
+    const paginatedUsers = Array.isArray(this.options.users) ? 
+      this.options.users.slice(startIndex, endIndex) : [];
     
     // Create table container
     this.tableContainer = document.createElement('div');
@@ -129,7 +172,7 @@ class UserTable {
         
         // Username cell
         const usernameCell = document.createElement('td');
-        usernameCell.textContent = user.username;
+        usernameCell.textContent = user.username || 'N/A';
         this.applyStyles(usernameCell, {
           padding: '12px 15px',
           borderBottom: '1px solid #dee2e6'
@@ -216,18 +259,18 @@ class UserTable {
         });
         
         // Edit button
-        const editButton = this.createActionButton('Edit', '✏️', () => {
-          this.options.onEditUser(user);
+        const editButton = this.createActionButton('Edit', '✏️', (e) => {
+          this.handleEditClick(user, e);
         });
         
         // Reset password button
-        const resetButton = this.createActionButton('Reset Password', '🔑', () => {
-          this.options.onResetPassword(user);
+        const resetButton = this.createActionButton('Reset Password', '🔑', (e) => {
+          this.handleResetPasswordClick(user, e);
         });
         
         // Delete button
-        const deleteButton = this.createActionButton('Delete', '🗑️', () => {
-          this.options.onDeleteUser(user);
+        const deleteButton = this.createActionButton('Delete', '🗑️', (e) => {
+          this.handleDeleteClick(user, e);
         });
         
         // Only add delete button if not self
@@ -411,6 +454,7 @@ class UserTable {
     const button = document.createElement('button');
     button.title = title;
     button.innerHTML = icon;
+    button.setAttribute('data-action', title.toLowerCase().replace(/\s+/g, '-'));
     
     this.applyStyles(button, {
       width: '28px',

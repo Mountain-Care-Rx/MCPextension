@@ -27,6 +27,10 @@ class CreateChannelModal extends ModalBase {
       onSuccess: () => {},
       ...options
     };
+    
+    // Bind methods
+    this.handleCreateChannel = this.handleCreateChannel.bind(this);
+    this.showFormError = this.showFormError.bind(this);
   }
   
   /**
@@ -204,6 +208,7 @@ class CreateChannelModal extends ModalBase {
     const createButton = document.createElement('button');
     createButton.type = 'submit';
     createButton.textContent = 'Create Channel';
+    createButton.id = 'submit-create-channel';
     this.applyStyles(createButton, {
       padding: '8px 16px',
       backgroundColor: '#28a745',
@@ -316,7 +321,7 @@ class CreateChannelModal extends ModalBase {
       // Call API to create channel
       const result = await createChannel(channelData);
       
-      if (result.success) {
+      if (result && result.success) {
         // Close modal
         this.close();
         
@@ -331,7 +336,8 @@ class CreateChannelModal extends ModalBase {
           type: channelData.type
         });
       } else {
-        this.showFormError(errorElement, result.error || 'Failed to create channel');
+        const errorMsg = result && result.error ? result.error : 'Failed to create channel';
+        this.showFormError(errorElement, errorMsg);
         
         // Re-enable submit button
         submitButton.disabled = false;
@@ -360,7 +366,9 @@ class CreateChannelModal extends ModalBase {
     
     // Automatically hide after 5 seconds
     setTimeout(() => {
-      errorElement.style.display = 'none';
+      if (errorElement) {
+        errorElement.style.display = 'none';
+      }
     }, 5000);
   }
 }

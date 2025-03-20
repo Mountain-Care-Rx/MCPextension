@@ -47,7 +47,7 @@ class AdminPanelTabs {
         this.renderSettings(container);
         break;
       default:
-        this.renderDashboard(container);
+        this.renderUserManagement(container, callbacks.onUserManagerCreated); // Default to users
     }
   }
   
@@ -56,53 +56,112 @@ class AdminPanelTabs {
    * @param {HTMLElement} container - Container to render dashboard into
    */
   static renderDashboard(container) {
-    // Get current stats
-    const auditStats = getAuditLogStats();
-    const storageStats = getStorageUsage();
-    const encryptionInfo = getEncryptionInfo();
-    
-    // Dashboard header
-    const header = this.createSectionHeader('System Dashboard', 'Overview of system status and metrics');
-    container.appendChild(header);
-    
-    // Create stats grid
-    const statsGrid = document.createElement('div');
-    this.applyStyles(statsGrid, {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-      gap: '20px',
-      marginBottom: '30px'
-    });
-    
-    // Create and add stat cards
-    const statCards = [
-      this.createStatCard('👥 Users', [
-        { label: 'Total Users', value: storageStats.userCount },
-        { label: 'Users Online', value: 'N/A' },
-        { label: 'Admin Users', value: 'N/A' },
-        { label: 'Last Login', value: 'N/A' }
-      ]),
-      this.createStatCard('💬 Messages', [
-        { label: 'Total Messages', value: storageStats.messageCount },
-        { label: 'Storage Usage', value: `${storageStats.messagesKB} KB` },
-        { label: 'Expiration', value: '24 hours' },
-        { label: 'Encryption', value: encryptionInfo.method }
-      ]),
-      this.createStatCard('📋 Audit Log', [
-        { label: 'Total Entries', value: auditStats.totalEntries },
-        { label: 'Oldest Entry', value: this.formatDate(auditStats.oldestEntry) },
-        { label: 'Newest Entry', value: this.formatDate(auditStats.newestEntry) },
-        { label: 'Retention Period', value: `${auditStats.retentionDays} days` }
-      ])
-    ];
-    
-    statCards.forEach(card => statsGrid.appendChild(card));
-    
-    container.appendChild(statsGrid);
-    
-    // Quick actions section
-    const actionsSection = this.createQuickActionsSection();
-    container.appendChild(actionsSection);
+    try {
+      // Get current stats safely with error handling
+      const auditStats = this.getSafeAuditStats();
+      const storageStats = this.getSafeStorageStats();
+      const encryptionInfo = this.getSafeEncryptionInfo();
+      
+      // Dashboard header
+      const header = this.createSectionHeader('System Dashboard', 'Overview of system status and metrics');
+      container.appendChild(header);
+      
+      // Create stats grid
+      const statsGrid = document.createElement('div');
+      this.applyStyles(statsGrid, {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gap: '20px',
+        marginBottom: '30px'
+      });
+      
+      // Create and add stat cards
+      const statCards = [
+        this.createStatCard('👥 Users', [
+          { label: 'Total Users', value: storageStats.userCount || 'N/A' },
+          { label: 'Users Online', value: storageStats.onlineUsers || 'N/A' },
+          { label: 'Admin Users', value: storageStats.adminCount || 'N/A' },
+          { label: 'Last Login', value: this.formatDate(storageStats.lastLogin) || 'N/A' }
+        ]),
+        this.createStatCard('💬 Messages', [
+          { label: 'Total Messages', value: storageStats.messageCount || 'N/A' },
+          { label: 'Storage Usage', value: storageStats.messagesKB ? `${storageStats.messagesKB} KB` : 'N/A' },
+          { label: 'Expiration', value: '24 hours' },
+          { label: 'Encryption', value: encryptionInfo.method || 'N/A' }
+        ]),
+        this.createStatCard('📋 Audit Log', [
+          { label: 'Total Entries', value: auditStats.totalEntries || 'N/A' },
+          { label: 'Oldest Entry', value: this.formatDate(auditStats.oldestEntry) || 'N/A' },
+          { label: 'Newest Entry', value: this.formatDate(auditStats.newestEntry) || 'N/A' },
+          { label: 'Retention Period', value: auditStats.retentionDays ? `${auditStats.retentionDays} days` : 'N/A' }
+        ])
+      ];
+      
+      statCards.forEach(card => statsGrid.appendChild(card));
+      
+      container.appendChild(statsGrid);
+      
+      // Quick actions section
+      const actionsSection = this.createQuickActionsSection();
+      container.appendChild(actionsSection);
+    } catch (error) {
+      console.error('[AdminPanelTabs] Error rendering dashboard:', error);
+      this.renderErrorState(container, 'Failed to load dashboard');
+    }
+  }
+  
+  /**
+   * Get safe audit stats with error handling
+   * @returns {Object} Audit stats with defaults
+   */
+  static getSafeAuditStats() {
+    try {
+      return getAuditLogStats() || {};
+    } catch (error) {
+      console.error('[AdminPanelTabs] Error getting audit stats:', error);
+      return {
+        totalEntries: 0,
+        oldestEntry: null,
+        newestEntry: null,
+        retentionDays: 30
+      };
+    }
+  }
+  
+  /**
+   * Get safe storage stats with error handling
+   * @returns {Object} Storage stats with defaults
+   */
+  static getSafeStorageStats() {
+    try {
+      return getStorageUsage() || {};
+    } catch (error) {
+      console.error('[AdminPanelTabs] Error getting storage stats:', error);
+      return {
+        userCount: 0,
+        messageCount: 0,
+        messagesKB: 0,
+        onlineUsers: 0,
+        adminCount: 0,
+        lastLogin: null
+      };
+    }
+  }
+  
+  /**
+   * Get safe encryption info with error handling
+   * @returns {Object} Encryption info with defaults
+   */
+  static getSafeEncryptionInfo() {
+    try {
+      return getEncryptionInfo() || {};
+    } catch (error) {
+      console.error('[AdminPanelTabs] Error getting encryption info:', error);
+      return {
+        method: 'AES-256',
+        enabled: true
+      };
+    }
   }
   
   /**
@@ -111,11 +170,16 @@ class AdminPanelTabs {
    * @param {Function} onManagerCreated - Callback to notify about created manager
    */
   static renderUserManagement(container, onManagerCreated) {
-    const userManager = new UserManager(container);
-    
-    // Call callback if provided
-    if (onManagerCreated && typeof onManagerCreated === 'function') {
-      onManagerCreated(userManager);
+    try {
+      const userManager = new UserManager(container);
+      
+      // Call callback if provided
+      if (onManagerCreated && typeof onManagerCreated === 'function') {
+        onManagerCreated(userManager);
+      }
+    } catch (error) {
+      console.error('[AdminPanelTabs] Error rendering user management:', error);
+      this.renderErrorState(container, 'Failed to load user management');
     }
   }
   
@@ -125,11 +189,16 @@ class AdminPanelTabs {
    * @param {Function} onManagerCreated - Callback to notify about created manager
    */
   static renderChannelManagement(container, onManagerCreated) {
-    const channelManager = new ChannelManager(container);
-    
-    // Call callback if provided
-    if (onManagerCreated && typeof onManagerCreated === 'function') {
-      onManagerCreated(channelManager);
+    try {
+      const channelManager = new ChannelManager(container);
+      
+      // Call callback if provided
+      if (onManagerCreated && typeof onManagerCreated === 'function') {
+        onManagerCreated(channelManager);
+      }
+    } catch (error) {
+      console.error('[AdminPanelTabs] Error rendering channel management:', error);
+      this.renderErrorState(container, 'Failed to load channel management');
     }
   }
   
@@ -139,11 +208,16 @@ class AdminPanelTabs {
    * @param {Function} onManagerCreated - Callback to notify about created manager
    */
   static renderRoleManagement(container, onManagerCreated) {
-    const roleManager = new RoleManager(container);
-    
-    // Call callback if provided
-    if (onManagerCreated && typeof onManagerCreated === 'function') {
-      onManagerCreated(roleManager);
+    try {
+      const roleManager = new RoleManager(container);
+      
+      // Call callback if provided
+      if (onManagerCreated && typeof onManagerCreated === 'function') {
+        onManagerCreated(roleManager);
+      }
+    } catch (error) {
+      console.error('[AdminPanelTabs] Error rendering role management:', error);
+      this.renderErrorState(container, 'Failed to load role management');
     }
   }
   
@@ -152,21 +226,26 @@ class AdminPanelTabs {
    * @param {HTMLElement} container - Container to render audit log into
    */
   static renderAuditLog(container) {
-    // Audit log header
-    const header = this.createSectionHeader('Audit Log', 'Detailed system activity log');
-    container.appendChild(header);
-    
-    // Audit log search/filter section
-    const filterSection = this.createAuditLogFilterSection();
-    container.appendChild(filterSection);
-    
-    // Audit log results area
-    const resultsContainer = document.createElement('div');
-    resultsContainer.id = 'audit-log-results';
-    container.appendChild(resultsContainer);
-    
-    // Initial search with no filters
-    this.performAuditLogSearch(resultsContainer);
+    try {
+      // Audit log header
+      const header = this.createSectionHeader('Audit Log', 'Detailed system activity log');
+      container.appendChild(header);
+      
+      // Audit log search/filter section
+      const filterSection = this.createAuditLogFilterSection();
+      container.appendChild(filterSection);
+      
+      // Audit log results area
+      const resultsContainer = document.createElement('div');
+      resultsContainer.id = 'audit-log-results';
+      container.appendChild(resultsContainer);
+      
+      // Initial search with no filters
+      this.performAuditLogSearch(resultsContainer);
+    } catch (error) {
+      console.error('[AdminPanelTabs] Error rendering audit log:', error);
+      this.renderErrorState(container, 'Failed to load audit log');
+    }
   }
   
   /**
@@ -174,21 +253,67 @@ class AdminPanelTabs {
    * @param {HTMLElement} container - Container to render settings into
    */
   static renderSettings(container) {
-    // Settings header
-    const header = this.createSectionHeader('System Settings', 'Configure HIPAA-compliant chat system');
-    container.appendChild(header);
+    try {
+      // Settings header
+      const header = this.createSectionHeader('System Settings', 'Configure HIPAA-compliant chat system');
+      container.appendChild(header);
+      
+      // Server settings section
+      const serverSection = this.createSettingsSection('Server Configuration', '🖥️');
+      container.appendChild(serverSection);
+      
+      // Security settings section
+      const securitySection = this.createSettingsSection('Security Settings', '🔒');
+      container.appendChild(securitySection);
+      
+      // Add save button
+      const saveButton = this.createSaveButton();
+      container.appendChild(saveButton);
+    } catch (error) {
+      console.error('[AdminPanelTabs] Error rendering settings:', error);
+      this.renderErrorState(container, 'Failed to load settings');
+    }
+  }
+  
+  /**
+   * Render error state
+   * @param {HTMLElement} container - Container to render error into
+   * @param {string} message - Error message
+   */
+  static renderErrorState(container, message) {
+    const errorContainer = document.createElement('div');
+    this.applyStyles(errorContainer, {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '50px 20px',
+      textAlign: 'center',
+      color: '#721c24',
+      backgroundColor: '#f8d7da',
+      borderRadius: '4px'
+    });
     
-    // Server settings section
-    const serverSection = this.createSettingsSection('Server Configuration', '🖥️');
-    container.appendChild(serverSection);
+    const errorIcon = document.createElement('div');
+    errorIcon.textContent = '⚠️';
+    this.applyStyles(errorIcon, {
+      fontSize: '48px',
+      marginBottom: '20px'
+    });
     
-    // Security settings section
-    const securitySection = this.createSettingsSection('Security Settings', '🔒');
-    container.appendChild(securitySection);
+    const errorMessage = document.createElement('h3');
+    errorMessage.textContent = message || 'An error occurred';
     
-    // Add save button
-    const saveButton = this.createSaveButton();
-    container.appendChild(saveButton);
+    const errorHint = document.createElement('p');
+    errorHint.textContent = 'Please try refreshing the page or contact system administrator.';
+    
+    errorContainer.appendChild(errorIcon);
+    errorContainer.appendChild(errorMessage);
+    errorContainer.appendChild(errorHint);
+    
+    // Clear container and add error
+    container.innerHTML = '';
+    container.appendChild(errorContainer);
   }
   
   /**
@@ -562,6 +687,54 @@ class AdminPanelTabs {
   }
   
   /**
+   * Create a save button for settings
+   * @returns {HTMLElement} Save button
+   */
+  static createSaveButton() {
+    const button = document.createElement('button');
+    button.textContent = 'Save Settings';
+    this.applyStyles(button, {
+      padding: '10px 20px',
+      backgroundColor: '#28a745',
+      color: 'white',
+      border: 'none',
+      borderRadius: '4px',
+      cursor: 'pointer',
+      fontSize: '16px',
+      display: 'inline-block',
+      marginTop: '10px'
+    });
+    
+    button.addEventListener('click', () => {
+      const settings = this.collectSettingsFromInputs();
+      
+      if (this.validateSettings(settings)) {
+        this.saveSettings(settings);
+        alert('Settings saved successfully');
+      }
+    });
+    
+    return button;
+  }
+  
+  /**
+   * Format a date for display
+   * @param {string|Date} date - Date to format
+   * @returns {string} Formatted date or 'N/A'
+   */
+  static formatDate(date) {
+    if (!date) return 'N/A';
+    
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      return dateObj.toLocaleString();
+    } catch (error) {
+      console.error('[AdminPanelTabs] Error formatting date:', error);
+      return 'N/A';
+    }
+  }
+  
+  /**
    * Collect settings from input elements
    * @returns {Object} Collected settings
    */
@@ -637,6 +810,15 @@ class AdminPanelTabs {
     } catch {
       return false;
     }
+  }
+  
+  /**
+   * Apply CSS styles to an element
+   * @param {HTMLElement} element - Element to style
+   * @param {Object} styles - Styles to apply
+   */
+  static applyStyles(element, styles) {
+    Object.assign(element.style, styles);
   }
 }
 

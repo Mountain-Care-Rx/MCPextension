@@ -28,6 +28,13 @@ class ImportUsersModal extends ModalBase {
     };
     
     this.users = [];
+    
+    // Bind methods
+    this.validateImportData = this.validateImportData.bind(this);
+    this.showValidationSummary = this.showValidationSummary.bind(this);
+    this.showResultSummary = this.showResultSummary.bind(this);
+    this.showFormError = this.showFormError.bind(this);
+    this.handleImportUsers = this.handleImportUsers.bind(this);
   }
   
   /**
@@ -80,6 +87,7 @@ class ImportUsersModal extends ModalBase {
     
     // Import form
     const form = document.createElement('form');
+    form.id = 'import-users-form';
     
     // Text area for input
     const textAreaGroup = document.createElement('div');
@@ -200,6 +208,7 @@ class ImportUsersModal extends ModalBase {
     const validateButton = document.createElement('button');
     validateButton.type = 'button';
     validateButton.textContent = 'Validate';
+    validateButton.id = 'validate-import';
     this.applyStyles(validateButton, {
       padding: '8px 16px',
       backgroundColor: '#6c757d',
@@ -217,6 +226,7 @@ class ImportUsersModal extends ModalBase {
     const importButton = document.createElement('button');
     importButton.type = 'submit';
     importButton.textContent = 'Import Users';
+    importButton.id = 'confirm-import';
     this.applyStyles(importButton, {
       padding: '8px 16px',
       backgroundColor: '#28a745',
@@ -259,59 +269,18 @@ class ImportUsersModal extends ModalBase {
       
       if (!valid) return;
       
-      // Disable import button
-      importButton.disabled = true;
-      importButton.textContent = 'Importing...';
-      
-      try {
-        // Call API to import users
-        const result = await importUsers(this.users);
-        
-        if (result.success) {
-          // Show success message
-          this.showResultSummary(resultArea, result);
-          
-          // Update button
-          importButton.textContent = 'Close';
-          importButton.style.backgroundColor = '#007bff';
-          importButton.disabled = false;
-          
-          // Change import button to close
-          importButton.removeEventListener('click', form.onsubmit);
-          importButton.addEventListener('click', () => {
-            this.close();
-            
-            // Call success callback
-            if (this.options.onSuccess && typeof this.options.onSuccess === 'function') {
-              this.options.onSuccess();
-            }
-          });
-          
-          // Log import
-          logChatEvent('admin', 'Imported users', { 
-            count: result.successCount,
-            failed: result.failedCount
-          });
-        } else {
-          this.showFormError(errorMessage, result.error || 'Failed to import users');
-          
-          // Re-enable import button
-          importButton.disabled = false;
-          importButton.textContent = 'Import Users';
-        }
-      } catch (error) {
-        console.error('[CRM Extension] Error importing users:', error);
-        this.showFormError(errorMessage, 'An error occurred while importing users');
-        
-        // Re-enable import button
-        importButton.disabled = false;
-        importButton.textContent = 'Import Users';
-      }
+      // Then perform the import
+      await this.handleImportUsers(importButton, errorMessage, resultArea);
     });
     
     content.appendChild(instructions);
     content.appendChild(formatInfo);
     content.appendChild(form);
+    
+    // Set focus to textarea on next tick
+    setTimeout(() => {
+      textArea.focus();
+    }, 0);
     
     return content;
   }
@@ -453,6 +422,73 @@ class ImportUsersModal extends ModalBase {
   }
   
   /**
+   * Handle user import form submission
+   * @param {HTMLElement} importButton - Import button element
+   * @param {HTMLElement} errorElement - Error message element
+   * @param {HTMLElement} resultElement - Result display element
+   */
+  async handleImportUsers(importButton, errorElement, resultElement) {
+    if (!this.users || this.users.length === 0) {
+      this.showFormError(errorElement, 'No valid users to import');
+      return;
+    }
+    
+    // Disable import button
+    importButton.disabled = true;
+    importButton.textContent = 'Importing...';
+    
+    try {
+      // Call API to import users
+      const result = await importUsers(this.users);
+      
+      if (result && result.success) {
+        // Show success message
+        this.showResultSummary(resultElement, result);
+        
+        // Update button
+        importButton.textContent = 'Close';
+        importButton.style.backgroundColor = '#007bff';
+        importButton.disabled = false;
+        
+        // Change import button to close
+        const form = importButton.closest('form');
+        if (form) {
+          const originalHandler = form.onsubmit;
+          form.onsubmit = null;
+          importButton.addEventListener('click', () => {
+            this.close();
+            
+            // Call success callback
+            if (this.options.onSuccess && typeof this.options.onSuccess === 'function') {
+              this.options.onSuccess(result);
+            }
+          });
+        }
+        
+        // Log import
+        logChatEvent('admin', 'Imported users', { 
+          count: result.successCount,
+          failed: result.failedCount
+        });
+      } else {
+        const errorMsg = result && result.error ? result.error : 'Failed to import users';
+        this.showFormError(errorElement, errorMsg);
+        
+        // Re-enable import button
+        importButton.disabled = false;
+        importButton.textContent = 'Import Users';
+      }
+    } catch (error) {
+      console.error('[CRM Extension] Error importing users:', error);
+      this.showFormError(errorElement, 'An error occurred while importing users');
+      
+      // Re-enable import button
+      importButton.disabled = false;
+      importButton.textContent = 'Import Users';
+    }
+  }
+  
+  /**
    * Show result summary after import
    * @param {HTMLElement} resultElement - Result display element
    * @param {Object} result - Import result
@@ -512,7 +548,9 @@ class ImportUsersModal extends ModalBase {
     
     // Automatically hide after 5 seconds
     setTimeout(() => {
-      errorElement.style.display = 'none';
+      if (errorElement) {
+        errorElement.style.display = 'none';
+      }
     }, 5000);
   }
 }

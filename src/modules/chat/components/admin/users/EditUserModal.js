@@ -29,6 +29,10 @@ class EditUserModal extends ModalBase {
       onSuccess: () => {},
       ...options
     };
+    
+    // Bind methods
+    this.handleEditUser = this.handleEditUser.bind(this);
+    this.showFormError = this.showFormError.bind(this);
   }
   
   /**
@@ -108,6 +112,13 @@ class EditUserModal extends ModalBase {
       roleGroup.appendChild(roleLabel);
       roleGroup.appendChild(roleSelect);
       form.appendChild(roleGroup);
+    } else {
+      // Hidden field for the role
+      const hiddenRole = document.createElement('input');
+      hiddenRole.type = 'hidden';
+      hiddenRole.name = 'role';
+      hiddenRole.value = user.role || 'user';
+      form.appendChild(hiddenRole);
     }
     
     // Error message area
@@ -147,6 +158,7 @@ class EditUserModal extends ModalBase {
     const saveButton = document.createElement('button');
     saveButton.type = 'submit';
     saveButton.textContent = 'Save Changes';
+    saveButton.id = 'submit-edit-user';
     this.applyStyles(saveButton, {
       padding: '8px 16px',
       backgroundColor: '#007bff',
@@ -163,84 +175,16 @@ class EditUserModal extends ModalBase {
     // Form submission handler
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      // Get form data
-      const formData = new FormData(form);
-      const userData = {
-        displayName: formData.get('displayName'),
-        email: formData.get('email'),
-        role: formData.get('role') || user.role
-      };
-      
-      // Validate email if provided
-      if (userData.email) {
-        const emailValidation = validateEmail(userData.email);
-        if (!emailValidation.success) {
-          this.showFormError(errorMessage, emailValidation.error);
-          return;
-        }
-      }
-      
-      // Disable form submission
-      saveButton.disabled = true;
-      saveButton.textContent = 'Saving...';
-      
-      try {
-        // Different handling based on whether editing self or other user
-        let result;
-        
-        if (currentUser && user.id === currentUser.id) {
-          // Editing self - use updateUserProfile
-          result = await updateUser(user.id, userData);
-        } else {
-          // Editing another user - use admin update
-          result = await updateUser(user.id, userData);
-          
-          // If role change was requested, also update role
-          if (userData.role && userData.role !== user.role) {
-            const roleResult = await updateUserRole(user.id, userData.role);
-            if (!roleResult.success) {
-              this.showFormError(errorMessage, roleResult.error || 'Failed to update user role');
-              
-              // Re-enable submit button
-              saveButton.disabled = false;
-              saveButton.textContent = 'Save Changes';
-              return;
-            }
-          }
-        }
-        
-        if (result.success) {
-          // Close modal
-          this.close();
-          
-          // Call success callback
-          if (this.options.onSuccess && typeof this.options.onSuccess === 'function') {
-            this.options.onSuccess(result.user);
-          }
-          
-          // Log user update
-          logChatEvent('admin', 'Updated user', { 
-            username: user.username
-          });
-        } else {
-          this.showFormError(errorMessage, result.error || 'Failed to update user');
-          
-          // Re-enable submit button
-          saveButton.disabled = false;
-          saveButton.textContent = 'Save Changes';
-        }
-      } catch (error) {
-        console.error('[CRM Extension] Error updating user:', error);
-        this.showFormError(errorMessage, 'An error occurred while updating the user');
-        
-        // Re-enable submit button
-        saveButton.disabled = false;
-        saveButton.textContent = 'Save Changes';
-      }
+      await this.handleEditUser(form, errorMessage, saveButton);
     });
     
     content.appendChild(form);
+    
+    // Set focus to display name field on next tick
+    setTimeout(() => {
+      form.elements.displayName.focus();
+    }, 0);
+    
     return content;
   }
   
@@ -272,7 +216,7 @@ class EditUserModal extends ModalBase {
     input.type = type;
     input.id = id;
     input.name = id;
-    input.value = value;
+    input.value = value || '';
     input.placeholder = placeholder;
     this.applyStyles(input, {
       width: '100%',
@@ -286,6 +230,102 @@ class EditUserModal extends ModalBase {
     group.appendChild(input);
     
     return group;
+  }
+  
+  /**
+   * Handle user edit form submission
+   * @param {HTMLFormElement} form - Form element
+   * @param {HTMLElement} errorElement - Error message element
+   * @param {HTMLElement} submitButton - Submit button element
+   */
+  async handleEditUser(form, errorElement, submitButton) {
+    const user = this.options.user;
+    
+    // Get form data
+    const formData = new FormData(form);
+    const userData = {
+      displayName: formData.get('displayName'),
+      email: formData.get('email'),
+      role: formData.get('role') || user.role
+    };
+    
+    // Validate email if provided
+    if (userData.email) {
+      const emailValidation = validateEmail(userData.email);
+      if (!emailValidation.success) {
+        this.showFormError(errorElement, emailValidation.error);
+        return;
+      }
+    }
+    
+    // Disable form submission
+    submitButton.disabled = true;
+    submitButton.textContent = 'Saving...';
+    
+    try {
+      // Different handling based on whether editing self or other user
+      let result;
+      let roleChangeResult = { success: true };
+      const currentUser = getCurrentUser();
+      
+      // Update user's basic info
+      result = await updateUser(user.id, {
+        displayName: userData.displayName,
+        email: userData.email
+      });
+      
+      // If role change was requested and not editing self, also update role
+      if (userData.role && userData.role !== user.role && 
+          (!currentUser || user.id !== currentUser.id)) {
+        roleChangeResult = await updateUserRole(user.id, userData.role);
+      }
+      
+      if (result.success && roleChangeResult.success) {
+        // Close modal
+        this.close();
+        
+        // Create updated user object for callback
+        const updatedUser = {
+          ...user,
+          displayName: userData.displayName,
+          email: userData.email,
+          role: userData.role
+        };
+        
+        // Call success callback
+        if (this.options.onSuccess && typeof this.options.onSuccess === 'function') {
+          this.options.onSuccess(updatedUser);
+        }
+        
+        // Log user update
+        logChatEvent('admin', 'Updated user', { 
+          username: user.username,
+          userId: user.id
+        });
+      } else {
+        // Combine error messages if both operations failed
+        let errorMsg = '';
+        if (!result.success) {
+          errorMsg += result.error || 'Failed to update user information';
+        }
+        if (!roleChangeResult.success) {
+          errorMsg += (errorMsg ? ' ' : '') + (roleChangeResult.error || 'Failed to update user role');
+        }
+        
+        this.showFormError(errorElement, errorMsg);
+        
+        // Re-enable submit button
+        submitButton.disabled = false;
+        submitButton.textContent = 'Save Changes';
+      }
+    } catch (error) {
+      console.error('[CRM Extension] Error updating user:', error);
+      this.showFormError(errorElement, 'An error occurred while updating the user');
+      
+      // Re-enable submit button
+      submitButton.disabled = false;
+      submitButton.textContent = 'Save Changes';
+    }
   }
   
   /**

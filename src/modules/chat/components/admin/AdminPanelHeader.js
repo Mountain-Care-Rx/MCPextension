@@ -61,14 +61,12 @@ class AdminPanelHeader {
       borderBottom: '1px solid #dee2e6'
     });
     
-    // Define tabs
+    // Define tabs - simplified to match UI screenshot
     const tabs = [
-      { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-      { id: 'users', label: 'User Management', icon: '👥' },
-      { id: 'channels', label: 'Channel Management', icon: '💬' },
+      { id: 'users', label: 'Users', icon: '👥' },
+      { id: 'channels', label: 'Channels', icon: '💬' },
       { id: 'roles', label: 'Roles & Permissions', icon: '🔑' },
-      { id: 'audit', label: 'Audit Log', icon: '📝' },
-      { id: 'settings', label: 'System Settings', icon: '⚙️' }
+      { id: 'audit', label: 'Audit Log', icon: '📝' }
     ];
     
     // Create tab buttons
@@ -119,11 +117,22 @@ class AdminPanelHeader {
     tabButton.appendChild(tabLabel);
     
     // Add click event
-    tabButton.addEventListener('click', () => {
-      this.switchTabCallback(tab.id);
+    tabButton.addEventListener('click', (e) => {
+      e.preventDefault(); // Prevent default button behavior
       
-      // Visually update tab buttons
-      this.updateTabButtonStyles(tab.id);
+      // Call the tab switching callback
+      if (this.switchTabCallback && typeof this.switchTabCallback === 'function') {
+        this.switchTabCallback(tab.id);
+        
+        // Update active tab for this instance
+        this.activeTab = tab.id;
+        
+        // Update visual styles
+        this.updateTabButtonStyles(tab.id);
+        
+        // Log tab click
+        logChatEvent('admin', `Clicked ${tab.label} tab`);
+      }
     });
     
     return tabButton;
@@ -134,6 +143,8 @@ class AdminPanelHeader {
    * @param {string} activeTabId - ID of the active tab
    */
   updateTabButtonStyles(activeTabId) {
+    if (!this.tabNavElement) return;
+    
     const tabButtons = this.tabNavElement.querySelectorAll('.tab-button');
     
     tabButtons.forEach(button => {
@@ -145,6 +156,13 @@ class AdminPanelHeader {
         fontWeight: isActive ? 'bold' : 'normal',
         color: isActive ? '#2196F3' : '#495057'
       });
+      
+      // Add or remove active class
+      if (isActive) {
+        button.classList.add('active');
+      } else {
+        button.classList.remove('active');
+      }
     });
   }
   
@@ -155,6 +173,28 @@ class AdminPanelHeader {
    */
   applyStyles(element, styles) {
     Object.assign(element.style, styles);
+  }
+  
+  /**
+   * Destroy the component and remove listeners
+   */
+  destroy() {
+    // Remove event listeners if needed
+    if (this.tabNavElement) {
+      const tabButtons = this.tabNavElement.querySelectorAll('.tab-button');
+      tabButtons.forEach(button => {
+        button.removeEventListener('click', this.handleTabClick);
+      });
+    }
+    
+    // Remove elements from DOM
+    if (this.headerElement && this.headerElement.parentNode) {
+      this.headerElement.parentNode.removeChild(this.headerElement);
+    }
+    
+    if (this.tabNavElement && this.tabNavElement.parentNode) {
+      this.tabNavElement.parentNode.removeChild(this.tabNavElement);
+    }
   }
 }
 

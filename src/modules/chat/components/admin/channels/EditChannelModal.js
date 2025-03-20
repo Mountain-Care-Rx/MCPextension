@@ -29,6 +29,10 @@ class EditChannelModal extends ModalBase {
       onSuccess: () => {},
       ...options
     };
+    
+    // Bind methods
+    this.handleEditChannel = this.handleEditChannel.bind(this);
+    this.showFormError = this.showFormError.bind(this);
   }
   
   /**
@@ -49,7 +53,7 @@ class EditChannelModal extends ModalBase {
     form.id = 'edit-channel-form';
     
     // Channel name field (readonly if default channel)
-    const nameGroup = this.createFormGroup('name', 'Channel Name', 'text', channel.name, 'Enter channel name');
+    const nameGroup = this.createFormGroup('name', 'Channel Name', 'text', channel.name || '', 'Enter channel name');
     const nameInput = nameGroup.querySelector('input');
     
     // Make name readonly for default channels
@@ -232,6 +236,7 @@ class EditChannelModal extends ModalBase {
     const saveButton = document.createElement('button');
     saveButton.type = 'submit';
     saveButton.textContent = 'Save Changes';
+    saveButton.id = 'submit-edit-channel';
     this.applyStyles(saveButton, {
       padding: '8px 16px',
       backgroundColor: '#007bff',
@@ -252,6 +257,12 @@ class EditChannelModal extends ModalBase {
     });
     
     content.appendChild(form);
+    
+    // Set focus to description field on next tick (since name might be readonly)
+    setTimeout(() => {
+      form.elements.description.focus();
+    }, 0);
+    
     return content;
   }
   
@@ -283,7 +294,7 @@ class EditChannelModal extends ModalBase {
     input.type = type;
     input.id = id;
     input.name = id;
-    input.value = value;
+    input.value = value || '';
     input.placeholder = placeholder;
     this.applyStyles(input, {
       width: '100%',
@@ -340,7 +351,7 @@ class EditChannelModal extends ModalBase {
       // Call API to update channel
       const result = await updateChannel(channel.id, channelData);
       
-      if (result.success) {
+      if (result && result.success) {
         // Close modal
         this.close();
         
@@ -355,7 +366,8 @@ class EditChannelModal extends ModalBase {
           id: channel.id
         });
       } else {
-        this.showFormError(errorElement, result.error || 'Failed to update channel');
+        const errorMsg = result && result.error ? result.error : 'Failed to update channel';
+        this.showFormError(errorElement, errorMsg);
         
         // Re-enable submit button
         submitButton.disabled = false;
@@ -384,7 +396,9 @@ class EditChannelModal extends ModalBase {
     
     // Automatically hide after 5 seconds
     setTimeout(() => {
-      errorElement.style.display = 'none';
+      if (errorElement) {
+        errorElement.style.display = 'none';
+      }
     }, 5000);
   }
 }

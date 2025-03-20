@@ -29,6 +29,10 @@ class ResetPasswordModal extends ModalBase {
       onSuccess: () => {},
       ...options
     };
+    
+    // Bind methods
+    this.handleResetPassword = this.handleResetPassword.bind(this);
+    this.showFormError = this.showFormError.bind(this);
   }
   
   /**
@@ -92,6 +96,7 @@ class ResetPasswordModal extends ModalBase {
     
     // Form
     const form = document.createElement('form');
+    form.id = 'reset-password-form';
     
     // New password
     const newPasswordGroup = this.createFormGroup('newPassword', 'New Password', 'password', '', 'Enter new password');
@@ -148,6 +153,7 @@ class ResetPasswordModal extends ModalBase {
     const resetButton = document.createElement('button');
     resetButton.type = 'submit';
     resetButton.textContent = 'Reset Password';
+    resetButton.id = 'confirm-reset-password';
     this.applyStyles(resetButton, {
       padding: '8px 16px',
       backgroundColor: '#007bff',
@@ -165,63 +171,16 @@ class ResetPasswordModal extends ModalBase {
     // Form submission handler
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      // Get form data
-      const newPassword = form.elements.newPassword.value;
-      const confirmPassword = form.elements.confirmPassword.value;
-      
-      // Validate passwords
-      const passwordValidation = validatePassword(newPassword);
-      if (!passwordValidation.success) {
-        this.showFormError(errorMessage, passwordValidation.error);
-        return;
-      }
-      
-      if (newPassword !== confirmPassword) {
-        this.showFormError(errorMessage, 'Passwords do not match');
-        return;
-      }
-      
-      // Disable form submission
-      resetButton.disabled = true;
-      resetButton.textContent = 'Resetting...';
-      
-      try {
-        // Call API to reset password
-        const result = await resetUserPassword(user.id, newPassword);
-        
-        if (result.success) {
-          // Close modal
-          this.close();
-          
-          // Call success callback
-          if (this.options.onSuccess && typeof this.options.onSuccess === 'function') {
-            this.options.onSuccess();
-          }
-          
-          // Log password reset
-          logChatEvent('admin', 'Reset user password', { 
-            username: user.username
-          });
-        } else {
-          this.showFormError(errorMessage, result.error || 'Failed to reset password');
-          
-          // Re-enable submit button
-          resetButton.disabled = false;
-          resetButton.textContent = 'Reset Password';
-        }
-      } catch (error) {
-        console.error('[CRM Extension] Error resetting password:', error);
-        this.showFormError(errorMessage, 'An error occurred while resetting the password');
-        
-        // Re-enable submit button
-        resetButton.disabled = false;
-        resetButton.textContent = 'Reset Password';
-      }
+      await this.handleResetPassword(form, errorMessage, resetButton);
     });
     
     content.appendChild(userInfo);
     content.appendChild(form);
+    
+    // Set focus to new password field on next tick
+    setTimeout(() => {
+      form.elements.newPassword.focus();
+    }, 0);
     
     return content;
   }
@@ -271,6 +230,71 @@ class ResetPasswordModal extends ModalBase {
   }
   
   /**
+   * Handle password reset form submission
+   * @param {HTMLFormElement} form - Form element
+   * @param {HTMLElement} errorElement - Error message element
+   * @param {HTMLElement} submitButton - Submit button element
+   */
+  async handleResetPassword(form, errorElement, submitButton) {
+    const user = this.options.user;
+    
+    // Get form data
+    const newPassword = form.elements.newPassword.value;
+    const confirmPassword = form.elements.confirmPassword.value;
+    
+    // Validate passwords
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.success) {
+      this.showFormError(errorElement, passwordValidation.error);
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      this.showFormError(errorElement, 'Passwords do not match');
+      return;
+    }
+    
+    // Disable form submission
+    submitButton.disabled = true;
+    submitButton.textContent = 'Resetting...';
+    
+    try {
+      // Call API to reset password
+      const result = await resetUserPassword(user.id, newPassword);
+      
+      if (result && result.success) {
+        // Close modal
+        this.close();
+        
+        // Call success callback
+        if (this.options.onSuccess && typeof this.options.onSuccess === 'function') {
+          this.options.onSuccess(user.id);
+        }
+        
+        // Log password reset
+        logChatEvent('admin', 'Reset user password', { 
+          username: user.username,
+          userId: user.id
+        });
+      } else {
+        const errorMsg = (result && result.error) ? result.error : 'Failed to reset password';
+        this.showFormError(errorElement, errorMsg);
+        
+        // Re-enable submit button
+        submitButton.disabled = false;
+        submitButton.textContent = 'Reset Password';
+      }
+    } catch (error) {
+      console.error('[CRM Extension] Error resetting password:', error);
+      this.showFormError(errorElement, 'An error occurred while resetting the password');
+      
+      // Re-enable submit button
+      submitButton.disabled = false;
+      submitButton.textContent = 'Reset Password';
+    }
+  }
+  
+  /**
    * Show error message in form
    * @param {HTMLElement} errorElement - Error message element
    * @param {string} message - Error message
@@ -283,7 +307,9 @@ class ResetPasswordModal extends ModalBase {
     
     // Automatically hide after 5 seconds
     setTimeout(() => {
-      errorElement.style.display = 'none';
+      if (errorElement) {
+        errorElement.style.display = 'none';
+      }
     }, 5000);
   }
 }

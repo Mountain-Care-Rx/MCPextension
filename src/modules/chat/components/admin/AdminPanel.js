@@ -24,7 +24,7 @@ class AdminPanel {
   constructor(container) {
     this.container = container;
     this.panelElement = null;
-    this.activeTab = 'dashboard';
+    this.activeTab = 'users'; // Changed default from dashboard to users to match UI
     
     // Subcomponents
     this.header = null;
@@ -101,11 +101,11 @@ class AdminPanel {
       overflowY: 'auto'
     });
     
-    // Render active tab content
-    this.renderActiveTab();
-    
     // Append tab content to panel
     this.panelElement.appendChild(this.tabContent);
+    
+    // Render active tab content
+    this.renderActiveTab();
   }
   
   /**
@@ -121,6 +121,9 @@ class AdminPanel {
       onChannelManagerCreated: (manager) => this.channelManager = manager,
       onRoleManagerCreated: (manager) => this.roleManager = manager
     });
+    
+    // Log active tab render
+    logChatEvent('admin', `Rendered ${this.activeTab} tab content`);
   }
   
   /**
@@ -156,8 +159,8 @@ class AdminPanel {
     // Log tab switch
     logChatEvent('admin', `Switched to ${tabId} tab`);
     
-    // Re-render the panel
-    this.render();
+    // Re-render the tab content without recreating the entire panel
+    this.renderActiveTab();
   }
   
   /**

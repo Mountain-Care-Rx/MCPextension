@@ -27,6 +27,10 @@ class CreateUserModal extends ModalBase {
       onSuccess: () => {},
       ...options
     };
+    
+    // Bind methods
+    this.handleCreateUser = this.handleCreateUser.bind(this);
+    this.showFormError = this.showFormError.bind(this);
   }
   
   /**
@@ -151,6 +155,7 @@ class CreateUserModal extends ModalBase {
     const createButton = document.createElement('button');
     createButton.type = 'submit';
     createButton.textContent = 'Create User';
+    createButton.id = 'submit-create-user';
     this.applyStyles(createButton, {
       padding: '8px 16px',
       backgroundColor: '#28a745',
@@ -276,7 +281,7 @@ class CreateUserModal extends ModalBase {
       // Call API to create user
       const result = await createUser(userData);
       
-      if (result.success) {
+      if (result && result.success) {
         // Close modal
         this.close();
         
@@ -291,7 +296,8 @@ class CreateUserModal extends ModalBase {
           role: userData.role
         });
       } else {
-        this.showFormError(errorElement, result.error || 'Failed to create user');
+        const errorMessage = result && result.error ? result.error : 'Failed to create user';
+        this.showFormError(errorElement, errorMessage);
         
         // Re-enable submit button
         submitButton.disabled = false;

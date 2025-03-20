@@ -21,6 +21,10 @@ class AdminPanelHeader {
     
     this.headerElement = null;
     this.tabNavElement = null;
+    this.tabButtonClickHandlers = new Map(); // Store references to event handlers
+    
+    // Bind methods
+    this.handleTabClick = this.handleTabClick.bind(this);
     
     // Render the header
     this.render();
@@ -81,6 +85,34 @@ class AdminPanelHeader {
   }
   
   /**
+   * Handle tab button click
+   * @param {string} tabId - ID of the clicked tab
+   * @param {Event} e - Click event
+   */
+  handleTabClick(tabId, e) {
+    e.preventDefault(); // Prevent default button behavior
+    e.stopPropagation(); // Prevent event bubbling
+    
+    console.log(`Tab ${tabId} clicked`); // Add debugging log
+    
+    // Call the tab switching callback
+    if (this.switchTabCallback && typeof this.switchTabCallback === 'function') {
+      this.switchTabCallback(tabId);
+      
+      // Update active tab for this instance
+      this.activeTab = tabId;
+      
+      // Update visual styles
+      this.updateTabButtonStyles(tabId);
+      
+      // Log tab click
+      logChatEvent('admin', `Clicked ${tabId} tab`);
+    } else {
+      console.warn('No valid switchTabCallback provided');
+    }
+  }
+  
+  /**
    * Create a tab button
    * @param {Object} tab - Tab configuration
    * @returns {HTMLElement} Tab button element
@@ -89,6 +121,7 @@ class AdminPanelHeader {
     const tabButton = document.createElement('button');
     tabButton.className = `tab-button ${this.activeTab === tab.id ? 'active' : ''}`;
     tabButton.setAttribute('data-tab', tab.id);
+    tabButton.id = `tab-${tab.id}`; // Add an ID for easier debugging
     
     this.applyStyles(tabButton, {
       padding: '12px 16px',
@@ -100,7 +133,8 @@ class AdminPanelHeader {
       fontWeight: this.activeTab === tab.id ? 'bold' : 'normal',
       display: 'flex',
       alignItems: 'center',
-      color: this.activeTab === tab.id ? '#2196F3' : '#495057'
+      color: this.activeTab === tab.id ? '#2196F3' : '#495057',
+      pointerEvents: 'auto' // Ensure clicks are registered
     });
     
     const tabIcon = document.createElement('span');
@@ -116,24 +150,14 @@ class AdminPanelHeader {
     tabButton.appendChild(tabIcon);
     tabButton.appendChild(tabLabel);
     
+    // Create a bound click handler for this specific tab
+    const clickHandler = this.handleTabClick.bind(this, tab.id);
+    
+    // Store the click handler for cleanup
+    this.tabButtonClickHandlers.set(tabButton, clickHandler);
+    
     // Add click event
-    tabButton.addEventListener('click', (e) => {
-      e.preventDefault(); // Prevent default button behavior
-      
-      // Call the tab switching callback
-      if (this.switchTabCallback && typeof this.switchTabCallback === 'function') {
-        this.switchTabCallback(tab.id);
-        
-        // Update active tab for this instance
-        this.activeTab = tab.id;
-        
-        // Update visual styles
-        this.updateTabButtonStyles(tab.id);
-        
-        // Log tab click
-        logChatEvent('admin', `Clicked ${tab.label} tab`);
-      }
-    });
+    tabButton.addEventListener('click', clickHandler);
     
     return tabButton;
   }
@@ -179,12 +203,18 @@ class AdminPanelHeader {
    * Destroy the component and remove listeners
    */
   destroy() {
-    // Remove event listeners if needed
+    // Remove event listeners properly
     if (this.tabNavElement) {
       const tabButtons = this.tabNavElement.querySelectorAll('.tab-button');
       tabButtons.forEach(button => {
-        button.removeEventListener('click', this.handleTabClick);
+        const handler = this.tabButtonClickHandlers.get(button);
+        if (handler) {
+          button.removeEventListener('click', handler);
+        }
       });
+      
+      // Clear the handlers map
+      this.tabButtonClickHandlers.clear();
     }
     
     // Remove elements from DOM

@@ -114,8 +114,6 @@ class AppContainer {
       // Add to container
       this.container.appendChild(this.appElement);
       
-      // Setup mock data for demo
-      this.mockData = this.setupMockData();
       
       // CRITICAL FIX: Assign the toggle function to the global window object
       // This ensures it's accessible from the header bar's chat button

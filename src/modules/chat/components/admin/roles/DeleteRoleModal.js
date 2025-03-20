@@ -28,6 +28,9 @@ class DeleteRoleModal extends ModalBase {
       onSuccess: () => {},
       ...options
     };
+    
+    // Bind methods
+    this.handleDeleteRole = this.handleDeleteRole.bind(this);
   }
   
   /**
@@ -60,6 +63,7 @@ class DeleteRoleModal extends ModalBase {
       // Add close button
       const closeButton = document.createElement('button');
       closeButton.textContent = 'Close';
+      closeButton.id = 'system-role-close';
       this.applyStyles(closeButton, {
         marginTop: '15px',
         padding: '8px 16px',
@@ -122,6 +126,7 @@ class DeleteRoleModal extends ModalBase {
     });
     
     const warningMessage = document.createElement('p');
+    warningMessage.id = 'delete-warning-message';
     warningMessage.textContent = 'This action cannot be undone.';
     this.applyStyles(warningMessage, {
       color: '#721c24',
@@ -144,6 +149,7 @@ class DeleteRoleModal extends ModalBase {
     });
     
     const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
     cancelButton.textContent = 'Cancel';
     this.applyStyles(cancelButton, {
       padding: '8px 16px',
@@ -158,7 +164,9 @@ class DeleteRoleModal extends ModalBase {
     });
     
     const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
     deleteButton.textContent = 'Delete Role';
+    deleteButton.id = 'confirm-delete-role';
     this.applyStyles(deleteButton, {
       padding: '8px 16px',
       backgroundColor: '#dc3545',
@@ -168,51 +176,72 @@ class DeleteRoleModal extends ModalBase {
       cursor: 'pointer'
     });
     
-    deleteButton.addEventListener('click', async () => {
-      // Disable button
-      deleteButton.disabled = true;
-      deleteButton.textContent = 'Deleting...';
-      
-      try {
-        const result = await deleteRole(role.id);
-        
-        if (result.success) {
-          // Close modal
-          this.close();
-          
-          // Call success callback
-          if (this.options.onSuccess && typeof this.options.onSuccess === 'function') {
-            this.options.onSuccess();
-          }
-          
-          // Log role deletion
-          logChatEvent('admin', 'Deleted role', { 
-            roleName: role.name,
-            roleId: role.id
-          });
-        } else {
-          // Show error
-          warningMessage.textContent = result.error || 'Failed to delete role';
-          
-          // Re-enable button
-          deleteButton.disabled = false;
-          deleteButton.textContent = 'Delete Role';
-        }
-      } catch (error) {
-        console.error('[CRM Extension] Error deleting role:', error);
-        warningMessage.textContent = 'An error occurred while deleting the role';
-        
-        // Re-enable button
-        deleteButton.disabled = false;
-        deleteButton.textContent = 'Delete Role';
-      }
-    });
+    deleteButton.addEventListener('click', () => this.handleDeleteRole(deleteButton, warningMessage));
     
     actionButtons.appendChild(cancelButton);
     actionButtons.appendChild(deleteButton);
     content.appendChild(actionButtons);
     
     return content;
+  }
+  
+  /**
+   * Handle role deletion
+   * @param {HTMLElement} deleteButton - Delete button element
+   * @param {HTMLElement} warningElement - Warning message element
+   */
+  async handleDeleteRole(deleteButton, warningElement) {
+    const role = this.options.role;
+    
+    if (!role || !role.id) {
+      warningElement.textContent = 'Error: Invalid role data';
+      return;
+    }
+    
+    // System roles cannot be deleted
+    if (role.isDefault) {
+      warningElement.textContent = 'System roles cannot be deleted';
+      return;
+    }
+    
+    // Disable button
+    deleteButton.disabled = true;
+    deleteButton.textContent = 'Deleting...';
+    
+    try {
+      const result = await deleteRole(role.id);
+      
+      if (result && result.success) {
+        // Close modal
+        this.close();
+        
+        // Call success callback
+        if (this.options.onSuccess && typeof this.options.onSuccess === 'function') {
+          this.options.onSuccess(role.id);
+        }
+        
+        // Log role deletion
+        logChatEvent('admin', 'Deleted role', { 
+          roleName: role.name,
+          roleId: role.id
+        });
+      } else {
+        // Show error
+        const errorMsg = (result && result.error) ? result.error : 'Failed to delete role';
+        warningElement.textContent = errorMsg;
+        
+        // Re-enable button
+        deleteButton.disabled = false;
+        deleteButton.textContent = 'Delete Role';
+      }
+    } catch (error) {
+      console.error('[CRM Extension] Error deleting role:', error);
+      warningElement.textContent = 'An error occurred while deleting the role';
+      
+      // Re-enable button
+      deleteButton.disabled = false;
+      deleteButton.textContent = 'Delete Role';
+    }
   }
 }
 

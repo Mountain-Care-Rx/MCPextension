@@ -6,82 +6,6 @@ export { renderChatView } from './ChatViewRenderer.js';
 export { renderAdminView } from './AdminViewRenderer.js';
 export { renderSettingsView } from './SettingsViewRenderer.js';
 
-/**
- * Set up mock data for the application
- * @returns {Object} Mock data object with channels and users
- */
-export function setupMockData() {
-  return {
-    channels: [
-      {
-        id: 'general',
-        name: 'General',
-        description: 'General chat for team discussions',
-        type: 'public',
-        unread: 0
-      },
-      {
-        id: 'announcements',
-        name: 'Announcements',
-        description: 'Important team announcements',
-        type: 'public',
-        unread: 2
-      },
-      {
-        id: 'hipaa-compliance',
-        name: 'HIPAA Compliance',
-        description: 'Discussions about HIPAA compliance',
-        type: 'public',
-        unread: 0
-      },
-      {
-        id: 'pharmacy-staff',
-        name: 'Pharmacy Staff',
-        description: 'Private channel for pharmacy staff',
-        type: 'private',
-        unread: 5
-      }
-    ],
-    users: [
-      {
-        id: 'user1',
-        username: 'john.smith',
-        displayName: 'John Smith',
-        role: 'admin',
-        status: 'online'
-      },
-      {
-        id: 'user2',
-        username: 'sarah.johnson',
-        displayName: 'Sarah Johnson',
-        role: 'user',
-        status: 'online'
-      },
-      {
-        id: 'user3',
-        username: 'michael.brown',
-        displayName: 'Michael Brown',
-        role: 'moderator',
-        status: 'away'
-      },
-      {
-        id: 'user4',
-        username: 'lisa.davis',
-        displayName: 'Lisa Davis',
-        role: 'user',
-        status: 'dnd'
-      },
-      {
-        id: 'user5',
-        username: 'robert.wilson',
-        displayName: 'Robert Wilson',
-        role: 'user',
-        status: 'offline'
-      }
-    ]
-  };
-}
-
 // Common styling utility
 export const COLORS = {
   primary: '#2196F3',        // Blue primary color
@@ -172,7 +96,6 @@ export default {
   renderChatView,
   renderAdminView,
   renderSettingsView,
-  setupMockData,
   COLORS,
   applyStyles,
   formatDateTime,

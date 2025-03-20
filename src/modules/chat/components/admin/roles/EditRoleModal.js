@@ -31,6 +31,10 @@ class EditRoleModal extends ModalBase {
     };
     
     this.permissionSelector = null;
+    
+    // Bind methods
+    this.handleEditRole = this.handleEditRole.bind(this);
+    this.showFormError = this.showFormError.bind(this);
   }
   
   /**
@@ -78,15 +82,75 @@ class EditRoleModal extends ModalBase {
       marginBottom: '20px'
     });
     
+    const permissionsHeader = document.createElement('div');
+    this.applyStyles(permissionsHeader, {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '10px'
+    });
+    
     const permissionsLabel = document.createElement('label');
     permissionsLabel.textContent = 'Permissions';
     this.applyStyles(permissionsLabel, {
       display: 'block',
-      marginBottom: '10px',
       fontWeight: 'bold'
     });
     
-    permissionsSection.appendChild(permissionsLabel);
+    permissionsHeader.appendChild(permissionsLabel);
+    
+    // Quick selection buttons
+    const quickButtons = document.createElement('div');
+    this.applyStyles(quickButtons, {
+      display: 'flex',
+      gap: '10px'
+    });
+    
+    const selectAllButton = document.createElement('button');
+    selectAllButton.type = 'button';
+    selectAllButton.textContent = 'Select All';
+    selectAllButton.id = 'select-all-permissions';
+    this.applyStyles(selectAllButton, {
+      padding: '4px 8px',
+      fontSize: '12px',
+      backgroundColor: '#f8f9fa',
+      border: '1px solid #ced4da',
+      borderRadius: '4px',
+      cursor: 'pointer'
+    });
+    
+    selectAllButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.permissionSelector) {
+        this.permissionSelector.selectAll();
+      }
+    });
+    
+    const clearButton = document.createElement('button');
+    clearButton.type = 'button';
+    clearButton.textContent = 'Clear All';
+    clearButton.id = 'clear-all-permissions';
+    this.applyStyles(clearButton, {
+      padding: '4px 8px',
+      fontSize: '12px',
+      backgroundColor: '#f8f9fa',
+      border: '1px solid #ced4da',
+      borderRadius: '4px',
+      cursor: 'pointer'
+    });
+    
+    clearButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.permissionSelector) {
+        this.permissionSelector.deselectAll();
+      }
+    });
+    
+    quickButtons.appendChild(selectAllButton);
+    quickButtons.appendChild(clearButton);
+    
+    permissionsHeader.appendChild(quickButtons);
+    permissionsSection.appendChild(permissionsHeader);
     
     // Add permission selector
     this.permissionSelector = new PermissionSelector({
@@ -133,6 +197,7 @@ class EditRoleModal extends ModalBase {
     const saveButton = document.createElement('button');
     saveButton.type = 'submit';
     saveButton.textContent = 'Save Changes';
+    saveButton.id = 'submit-edit-role';
     this.applyStyles(saveButton, {
       padding: '8px 16px',
       backgroundColor: '#007bff',
@@ -153,6 +218,18 @@ class EditRoleModal extends ModalBase {
     });
     
     content.appendChild(form);
+    
+    // Set focus to name field on next tick
+    setTimeout(() => {
+      // Focus on description if name is readonly (for default roles)
+      const nameInput = form.elements.name;
+      if (nameInput.readOnly) {
+        form.elements.description.focus();
+      } else {
+        nameInput.focus();
+      }
+    }, 0);
+    
     return content;
   }
   
@@ -242,7 +319,7 @@ class EditRoleModal extends ModalBase {
       // Call API to update role
       const result = await updateRole(role.id, roleData);
       
-      if (result.success) {
+      if (result && result.success) {
         // Close modal
         this.close();
         
@@ -257,7 +334,8 @@ class EditRoleModal extends ModalBase {
           roleId: role.id
         });
       } else {
-        this.showFormError(errorElement, result.error || 'Failed to update role');
+        const errorMsg = (result && result.error) ? result.error : 'Failed to update role';
+        this.showFormError(errorElement, errorMsg);
         
         // Re-enable submit button
         submitButton.disabled = false;
@@ -286,7 +364,9 @@ class EditRoleModal extends ModalBase {
     
     // Automatically hide after 5 seconds
     setTimeout(() => {
-      errorElement.style.display = 'none';
+      if (errorElement && errorElement.parentNode) {
+        errorElement.style.display = 'none';
+      }
     }, 5000);
   }
   
@@ -297,6 +377,7 @@ class EditRoleModal extends ModalBase {
     // Clean up permission selector
     if (this.permissionSelector) {
       this.permissionSelector.destroy();
+      this.permissionSelector = null;
     }
     
     // Call parent close method

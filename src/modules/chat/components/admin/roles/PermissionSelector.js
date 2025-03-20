@@ -23,6 +23,7 @@ class PermissionSelector {
     this.selectedPermissions = [...this.options.selectedPermissions];
     this.selectorElement = null;
     this.permissionListElement = null;
+    this.isInitialized = false;
     
     // Bind methods
     this.render = this.render.bind(this);
@@ -30,17 +31,24 @@ class PermissionSelector {
     this.togglePermission = this.togglePermission.bind(this);
     this.getSelectedPermissions = this.getSelectedPermissions.bind(this);
     this.setSelectedPermissions = this.setSelectedPermissions.bind(this);
+    this.initialize = this.initialize.bind(this);
   }
   
   /**
    * Initialize permission data
+   * @returns {Promise<void>} Promise that resolves when initialization is complete
    */
   async initialize() {
+    if (this.isInitialized) {
+      return;
+    }
+    
     try {
       // Get available permissions from the auth service
       const result = await getAvailablePermissions();
       if (result.success) {
         this.availablePermissions = result.permissions;
+        console.log('[CRM Extension] Loaded permissions:', this.availablePermissions.length);
       } else {
         console.error('[CRM Extension] Error loading permissions:', result.error);
         this.availablePermissions = [];
@@ -51,7 +59,7 @@ class PermissionSelector {
     }
     
     // If no permissions loaded, use default permission list
-    if (this.availablePermissions.length === 0) {
+    if (!this.availablePermissions || this.availablePermissions.length === 0) {
       this.availablePermissions = this.getDefaultPermissions();
     }
     
@@ -59,6 +67,9 @@ class PermissionSelector {
     this.selectedPermissions = this.selectedPermissions.filter(
       permission => this.availablePermissions.some(p => p.id === permission)
     );
+    
+    // Set initialization flag
+    this.isInitialized = true;
     
     // Render permission list if already mounted
     if (this.permissionListElement) {
@@ -121,7 +132,7 @@ class PermissionSelector {
     this.selectorElement.appendChild(this.permissionListElement);
     
     // Initialize permissions (if not already done)
-    if (this.availablePermissions.length === 0) {
+    if (!this.isInitialized) {
       // Add loading indicator
       const loadingElement = document.createElement('div');
       loadingElement.textContent = 'Loading permissions...';
@@ -135,6 +146,18 @@ class PermissionSelector {
       // Initialize and then render
       this.initialize().then(() => {
         this.renderPermissionList();
+      }).catch(error => {
+        console.error('[PermissionSelector] Error initializing permissions:', error);
+        // Show error state
+        this.permissionListElement.innerHTML = '';
+        const errorElement = document.createElement('div');
+        errorElement.textContent = 'Error loading permissions. Please try again.';
+        this.applyStyles(errorElement, {
+          padding: '10px',
+          textAlign: 'center',
+          color: '#dc3545'
+        });
+        this.permissionListElement.appendChild(errorElement);
       });
     } else {
       // Render permission list immediately
@@ -198,6 +221,10 @@ class PermissionSelector {
    */
   groupPermissionsByCategory() {
     const groups = {};
+    
+    if (!this.availablePermissions || !Array.isArray(this.availablePermissions)) {
+      return groups;
+    }
     
     this.availablePermissions.forEach(permission => {
       const category = permission.category || 'Other';
@@ -306,16 +333,61 @@ class PermissionSelector {
    * @param {Array} permissions - Permission IDs to select
    */
   setSelectedPermissions(permissions) {
+    if (!permissions || !Array.isArray(permissions)) {
+      console.error('[PermissionSelector] Invalid permissions array provided:', permissions);
+      return;
+    }
+    
     this.selectedPermissions = [...permissions];
     
     // Update UI if already rendered
     if (this.permissionListElement) {
-      // Update checkboxes
+      // Uncheck all checkboxes first
+      const checkboxes = this.permissionListElement.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      
+      // Then check the selected ones
       this.selectedPermissions.forEach(permissionId => {
         const checkbox = this.permissionListElement.querySelector(`#perm-${permissionId}`);
         if (checkbox) {
           checkbox.checked = true;
         }
+      });
+    }
+  }
+  
+  /**
+   * Select all permissions
+   */
+  selectAll() {
+    if (!this.availablePermissions || !Array.isArray(this.availablePermissions)) {
+      return;
+    }
+    
+    this.selectedPermissions = this.availablePermissions.map(p => p.id);
+    
+    // Update UI if already rendered
+    if (this.permissionListElement) {
+      const checkboxes = this.permissionListElement.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+      });
+    }
+  }
+  
+  /**
+   * Deselect all permissions
+   */
+  deselectAll() {
+    this.selectedPermissions = [];
+    
+    // Update UI if already rendered
+    if (this.permissionListElement) {
+      const checkboxes = this.permissionListElement.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
       });
     }
   }
@@ -337,6 +409,10 @@ class PermissionSelector {
     if (this.selectorElement && this.selectorElement.parentNode) {
       this.selectorElement.parentNode.removeChild(this.selectorElement);
     }
+    
+    // Clear references
+    this.selectorElement = null;
+    this.permissionListElement = null;
   }
 }
 

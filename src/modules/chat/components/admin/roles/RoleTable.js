@@ -35,6 +35,34 @@ class RoleTable {
     this.render = this.render.bind(this);
     this.createActionButton = this.createActionButton.bind(this);
     this.formatDateTime = this.formatDateTime.bind(this);
+    this.handleEditClick = this.handleEditClick.bind(this);
+    this.handleDeleteClick = this.handleDeleteClick.bind(this);
+  }
+  
+  /**
+   * Handle edit button click
+   * @param {Object} role - Role to edit
+   * @param {Event} e - Click event
+   */
+  handleEditClick(role, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.options.onEditRole) {
+      this.options.onEditRole(role);
+    }
+  }
+  
+  /**
+   * Handle delete button click
+   * @param {Object} role - Role to delete
+   * @param {Event} e - Click event
+   */
+  handleDeleteClick(role, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.options.onDeleteRole) {
+      this.options.onDeleteRole(role);
+    }
   }
   
   /**
@@ -43,11 +71,12 @@ class RoleTable {
    */
   render() {
     // Calculate pagination
-    const totalRoles = this.options.roles.length;
+    const totalRoles = Array.isArray(this.options.roles) ? this.options.roles.length : 0;
     const totalPages = Math.ceil(totalRoles / this.options.pageSize);
     const startIndex = (this.options.currentPage - 1) * this.options.pageSize;
     const endIndex = Math.min(startIndex + this.options.pageSize, totalRoles);
-    const paginatedRoles = this.options.roles.slice(startIndex, endIndex);
+    const paginatedRoles = Array.isArray(this.options.roles) ? 
+      this.options.roles.slice(startIndex, endIndex) : [];
     
     // Create table container
     this.tableContainer = document.createElement('div');
@@ -127,7 +156,7 @@ class RoleTable {
         
         // Name cell
         const nameCell = document.createElement('td');
-        nameCell.textContent = role.name;
+        nameCell.textContent = role.name || 'Unnamed Role';
         this.applyStyles(nameCell, {
           padding: '12px 15px',
           borderBottom: '1px solid #dee2e6',
@@ -226,14 +255,16 @@ class RoleTable {
         });
         
         // Edit button
-        const editButton = this.createActionButton('Edit', '✏️', () => {
-          this.options.onEditRole(role);
+        const editButton = this.createActionButton('Edit', '✏️', (e) => {
+          this.handleEditClick(role, e);
         });
+        editButton.setAttribute('data-action', 'edit-role');
         
         // Delete button
-        const deleteButton = this.createActionButton('Delete', '🗑️', () => {
-          this.options.onDeleteRole(role);
+        const deleteButton = this.createActionButton('Delete', '🗑️', (e) => {
+          this.handleDeleteClick(role, e);
         });
+        deleteButton.setAttribute('data-action', 'delete-role');
         
         // Don't allow deleting default roles
         if (!role.isDefault) {
@@ -414,6 +445,7 @@ class RoleTable {
     const button = document.createElement('button');
     button.title = title;
     button.innerHTML = icon;
+    button.setAttribute('data-action', title.toLowerCase().replace(/\s+/g, '-'));
     
     this.applyStyles(button, {
       width: '28px',
@@ -462,8 +494,6 @@ class RoleTable {
    * Destroy the component
    */
   destroy() {
-    // Remove event listeners
-    
     // Remove from DOM
     if (this.tableContainer && this.tableContainer.parentNode) {
       this.tableContainer.parentNode.removeChild(this.tableContainer);

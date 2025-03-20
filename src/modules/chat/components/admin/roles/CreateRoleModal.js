@@ -29,6 +29,10 @@ class CreateRoleModal extends ModalBase {
     };
     
     this.permissionSelector = null;
+    
+    // Bind methods
+    this.handleCreateRole = this.handleCreateRole.bind(this);
+    this.showFormError = this.showFormError.bind(this);
   }
   
   /**
@@ -56,15 +60,75 @@ class CreateRoleModal extends ModalBase {
       marginBottom: '20px'
     });
     
+    const permissionsHeader = document.createElement('div');
+    this.applyStyles(permissionsHeader, {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '10px'
+    });
+    
     const permissionsLabel = document.createElement('label');
     permissionsLabel.textContent = 'Permissions';
     this.applyStyles(permissionsLabel, {
       display: 'block',
-      marginBottom: '10px',
       fontWeight: 'bold'
     });
     
-    permissionsSection.appendChild(permissionsLabel);
+    permissionsHeader.appendChild(permissionsLabel);
+    
+    // Quick selection buttons
+    const quickButtons = document.createElement('div');
+    this.applyStyles(quickButtons, {
+      display: 'flex',
+      gap: '10px'
+    });
+    
+    const selectAllButton = document.createElement('button');
+    selectAllButton.type = 'button';
+    selectAllButton.textContent = 'Select All';
+    selectAllButton.id = 'select-all-permissions';
+    this.applyStyles(selectAllButton, {
+      padding: '4px 8px',
+      fontSize: '12px',
+      backgroundColor: '#f8f9fa',
+      border: '1px solid #ced4da',
+      borderRadius: '4px',
+      cursor: 'pointer'
+    });
+    
+    selectAllButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.permissionSelector) {
+        this.permissionSelector.selectAll();
+      }
+    });
+    
+    const clearButton = document.createElement('button');
+    clearButton.type = 'button';
+    clearButton.textContent = 'Clear All';
+    clearButton.id = 'clear-all-permissions';
+    this.applyStyles(clearButton, {
+      padding: '4px 8px',
+      fontSize: '12px',
+      backgroundColor: '#f8f9fa',
+      border: '1px solid #ced4da',
+      borderRadius: '4px',
+      cursor: 'pointer'
+    });
+    
+    clearButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.permissionSelector) {
+        this.permissionSelector.deselectAll();
+      }
+    });
+    
+    quickButtons.appendChild(selectAllButton);
+    quickButtons.appendChild(clearButton);
+    
+    permissionsHeader.appendChild(quickButtons);
+    permissionsSection.appendChild(permissionsHeader);
     
     // Add permission selector
     this.permissionSelector = new PermissionSelector();
@@ -109,6 +173,7 @@ class CreateRoleModal extends ModalBase {
     const createButton = document.createElement('button');
     createButton.type = 'submit';
     createButton.textContent = 'Create Role';
+    createButton.id = 'submit-create-role';
     this.applyStyles(createButton, {
       padding: '8px 16px',
       backgroundColor: '#28a745',
@@ -221,7 +286,7 @@ class CreateRoleModal extends ModalBase {
       // Call API to create role
       const result = await createRole(roleData);
       
-      if (result.success) {
+      if (result && result.success) {
         // Close modal
         this.close();
         
@@ -236,7 +301,8 @@ class CreateRoleModal extends ModalBase {
           permissionCount: roleData.permissions.length
         });
       } else {
-        this.showFormError(errorElement, result.error || 'Failed to create role');
+        const errorMsg = (result && result.error) ? result.error : 'Failed to create role';
+        this.showFormError(errorElement, errorMsg);
         
         // Re-enable submit button
         submitButton.disabled = false;
@@ -265,7 +331,9 @@ class CreateRoleModal extends ModalBase {
     
     // Automatically hide after 5 seconds
     setTimeout(() => {
-      errorElement.style.display = 'none';
+      if (errorElement && errorElement.parentNode) {
+        errorElement.style.display = 'none';
+      }
     }, 5000);
   }
   
@@ -276,6 +344,7 @@ class CreateRoleModal extends ModalBase {
     // Clean up permission selector
     if (this.permissionSelector) {
       this.permissionSelector.destroy();
+      this.permissionSelector = null;
     }
     
     // Call parent close method

@@ -1,31 +1,62 @@
 // chat/components/users/UserStatus.js
-// User status component for HIPAA-compliant chat
+// User Status Component for HIPAA-compliant chat
 
 import { getCurrentUser, isAuthenticated } from '../../services/auth';
-import { setUserStatus } from '../../services/userService.js';
+import { 
+  setUserStatus, 
+  addUserStatusListener, 
+  UserStatus as UserStatusConstants 
+} from '../../services/userService.js';
 import { logChatEvent } from '../../utils/logger.js';
 
 class UserStatus {
+  /**
+   * Create a new UserStatus component
+   * @param {HTMLElement} container - Container to render into
+   * @param {Object} options - Component options
+   */
   constructor(container, options = {}) {
     this.container = container;
     this.options = {
       showStatusText: true,
+      enableStatusChange: true,
       ...options
     };
     
+    // Component state
     this.statusElement = null;
     this.statusMenuOpen = false;
     
-    // Status options
+    // Status options with detailed information
     this.statusOptions = [
-      { value: 'online', label: 'Online', icon: '🟢' },
-      { value: 'away', label: 'Away', icon: '🟡' },
-      { value: 'busy', label: 'Busy', icon: '🔴' },
-      { value: 'offline', label: 'Appear Offline', icon: '⚫' }
+      { 
+        value: UserStatusConstants.ONLINE, 
+        label: 'Available', 
+        icon: '🟢',
+        description: 'Ready to chat and collaborate'
+      },
+      { 
+        value: UserStatusConstants.AWAY, 
+        label: 'Away', 
+        icon: '🟡',
+        description: 'Temporarily unavailable'
+      },
+      { 
+        value: UserStatusConstants.BUSY, 
+        label: 'Do Not Disturb', 
+        icon: '🔴',
+        description: 'Focusing on work, minimizing interruptions'
+      },
+      { 
+        value: UserStatusConstants.INVISIBLE, 
+        label: 'Invisible', 
+        icon: '⚫',
+        description: 'Appear offline to other users'
+      }
     ];
     
-    // Current status
-    this.currentStatus = 'online';
+    // Unsubscribe function for user status listener
+    this.unsubscribeStatusListener = null;
     
     // Bind methods
     this.render = this.render.bind(this);
@@ -41,7 +72,13 @@ class UserStatus {
    * Initialize the status component
    */
   initialize() {
-    // Create container element
+    // Validate container
+    if (!this.container) {
+      console.warn('[UserStatus] No container provided');
+      return;
+    }
+    
+    // Create status element
     this.statusElement = document.createElement('div');
     this.statusElement.className = 'user-status-container';
     this.applyStyles(this.statusElement, {
@@ -50,20 +87,15 @@ class UserStatus {
     });
     
     // Add to container
-    if (this.container) {
-      this.container.appendChild(this.statusElement);
-    }
+    this.container.appendChild(this.statusElement);
     
-    // Get current user
-    const currentUser = getCurrentUser();
-    if (currentUser && currentUser.status) {
-      this.currentStatus = currentUser.status;
-    }
+    // Set up user status listener
+    this.setupUserStatusListener();
     
-    // Render initial state
+    // Initial render
     this.render();
     
-    // Add click outside handler to document
+    // Add click outside handler
     document.addEventListener('click', this.handleClickOutside);
     
     // Log initialization
@@ -71,148 +103,224 @@ class UserStatus {
   }
   
   /**
-   * Render the status component
+   * Set up listener for user status updates
    */
-  render() {
-    if (!this.statusElement) return;
-    
-    // Clear existing content
-    this.statusElement.innerHTML = '';
-    
-    // Get current user
-    const currentUser = getCurrentUser();
-    
-    // If not authenticated, show nothing
-    if (!isAuthenticated() || !currentUser) {
-      this.statusElement.style.display = 'none';
-      return;
-    } else {
-      this.statusElement.style.display = 'inline-block';
-    }
-    
-    // Create status indicator button
-    const statusButton = document.createElement('button');
-    statusButton.className = 'status-button';
-    this.applyStyles(statusButton, {
-      display: 'flex',
-      alignItems: 'center',
-      backgroundColor: 'transparent',
-      border: 'none',
-      padding: '4px 8px',
-      cursor: 'pointer',
-      borderRadius: '4px'
-    });
-    
-    // Status icon
-    const selectedStatus = this.statusOptions.find(status => status.value === this.currentStatus) || this.statusOptions[0];
-    
-    const statusIcon = document.createElement('span');
-    statusIcon.className = 'status-icon';
-    statusIcon.textContent = selectedStatus.icon;
-    this.applyStyles(statusIcon, {
-      marginRight: this.options.showStatusText ? '8px' : '0'
-    });
-    
-    statusButton.appendChild(statusIcon);
-    
-    // Status text (optional)
-    if (this.options.showStatusText) {
-      const statusText = document.createElement('span');
-      statusText.className = 'status-text';
-      statusText.textContent = selectedStatus.label;
-      this.applyStyles(statusText, {
-        fontSize: '14px'
-      });
+  setupUserStatusListener() {
+    try {
+      // Ensure we're not creating multiple listeners
+      if (this.unsubscribeStatusListener) {
+        this.unsubscribeStatusListener();
+      }
       
-      // Caret icon
-      const caretIcon = document.createElement('span');
-      caretIcon.className = 'caret-icon';
-      caretIcon.innerHTML = '&#9662;'; // Down triangle
-      this.applyStyles(caretIcon, {
-        marginLeft: '4px',
-        fontSize: '10px'
-      });
-      
-      statusButton.appendChild(statusText);
-      statusButton.appendChild(caretIcon);
-    }
-    
-    // Add click event listener to toggle menu
-    statusButton.addEventListener('click', this.toggleStatusMenu);
-    
-    this.statusElement.appendChild(statusButton);
-    
-    // Create status menu (dropdown)
-    if (this.statusMenuOpen) {
-      const statusMenu = document.createElement('div');
-      statusMenu.className = 'status-menu';
-      this.applyStyles(statusMenu, {
-        position: 'absolute',
-        top: '100%',
-        right: '0',
-        backgroundColor: 'white',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        zIndex: '1000',
-        marginTop: '4px',
-        minWidth: '150px'
-      });
-      
-      // Create menu items
-      this.statusOptions.forEach(status => {
-        const menuItem = document.createElement('div');
-        menuItem.className = `status-menu-item ${status.value === this.currentStatus ? 'active' : ''}`;
-        this.applyStyles(menuItem, {
-          display: 'flex',
-          alignItems: 'center',
-          padding: '8px 12px',
-          cursor: 'pointer',
-          backgroundColor: status.value === this.currentStatus ? '#f0f0f0' : 'transparent',
-          borderLeft: status.value === this.currentStatus ? '3px solid #2196F3' : '3px solid transparent'
-        });
-        
-        // Hover effect
-        menuItem.addEventListener('mouseover', () => {
-          if (status.value !== this.currentStatus) {
-            menuItem.style.backgroundColor = '#f5f5f5';
+      // Subscribe to user status updates
+      this.unsubscribeStatusListener = addUserStatusListener(users => {
+        // Find current user's status
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+          const userStatus = users.find(u => u.id === currentUser.id);
+          if (userStatus && userStatus.status) {
+            this.render();
           }
-        });
-        
-        menuItem.addEventListener('mouseout', () => {
-          if (status.value !== this.currentStatus) {
-            menuItem.style.backgroundColor = 'transparent';
-          }
-        });
-        
-        // Status icon
-        const itemIcon = document.createElement('span');
-        itemIcon.className = 'status-icon';
-        itemIcon.textContent = status.icon;
-        this.applyStyles(itemIcon, {
-          marginRight: '8px'
-        });
-        
-        // Status label
-        const itemLabel = document.createElement('span');
-        itemLabel.className = 'status-label';
-        itemLabel.textContent = status.label;
-        
-        menuItem.appendChild(itemIcon);
-        menuItem.appendChild(itemLabel);
-        
-        // Add click event listener
-        menuItem.addEventListener('click', () => this.handleStatusSelect(status.value));
-        
-        statusMenu.appendChild(menuItem);
+        }
       });
-      
-      this.statusElement.appendChild(statusMenu);
+    } catch (error) {
+      console.error('[UserStatus] Error setting up status listener:', error);
     }
   }
   
   /**
-   * Toggle the status menu dropdown
+   * Render the status component
+   */
+  render() {
+    // Clear existing content
+    if (this.statusElement) {
+      this.statusElement.innerHTML = '';
+    }
+    
+    // Check authentication
+    if (!isAuthenticated()) {
+      return;
+    }
+    
+    // Get current user
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+    
+    // Determine current status
+    const currentStatus = currentUser.status || UserStatusConstants.ONLINE;
+    const selectedStatus = this.statusOptions.find(
+      status => status.value === currentStatus
+    ) || this.statusOptions[0];
+    
+    // Create status button
+    const statusButton = this.createStatusButton(selectedStatus);
+    
+    // Add status menu if enabled and menu is open
+    if (this.statusMenuOpen && this.options.enableStatusChange) {
+      const statusMenu = this.createStatusMenu(currentStatus);
+      this.statusElement.appendChild(statusMenu);
+    }
+    
+    this.statusElement.appendChild(statusButton);
+  }
+  
+  /**
+   * Create status button
+   * @param {Object} status - Selected status object
+   * @returns {HTMLElement} Status button element
+   */
+  createStatusButton(status) {
+    const button = document.createElement('button');
+    button.className = 'status-button';
+    this.applyStyles(button, {
+      display: 'flex',
+      alignItems: 'center',
+      background: 'transparent',
+      border: 'none',
+      cursor: 'pointer',
+      padding: '4px 8px',
+      borderRadius: '4px'
+    });
+    
+    // Status icon
+    const icon = document.createElement('span');
+    icon.textContent = status.icon;
+    this.applyStyles(icon, {
+      marginRight: this.options.showStatusText ? '6px' : '0',
+      fontSize: '16px'
+    });
+    
+    button.appendChild(icon);
+    
+    // Status text (optional)
+    if (this.options.showStatusText) {
+      const text = document.createElement('span');
+      text.textContent = status.label;
+      this.applyStyles(text, {
+        fontSize: '14px'
+      });
+      button.appendChild(text);
+    }
+    
+    // Toggle menu on click
+    button.addEventListener('click', this.toggleStatusMenu);
+    
+    // Hover effects
+    button.addEventListener('mouseover', () => {
+      button.style.backgroundColor = 'rgba(0,0,0,0.05)';
+    });
+    
+    button.addEventListener('mouseout', () => {
+      button.style.backgroundColor = 'transparent';
+    });
+    
+    return button;
+  }
+  
+  /**
+   * Create status menu
+   * @param {string} currentStatus - Current user status
+   * @returns {HTMLElement} Status menu element
+   */
+  createStatusMenu(currentStatus) {
+    const menu = document.createElement('div');
+    menu.className = 'status-menu';
+    this.applyStyles(menu, {
+      position: 'absolute',
+      top: '100%',
+      right: '0',
+      width: '250px',
+      backgroundColor: 'white',
+      border: '1px solid #e0e0e0',
+      borderRadius: '4px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      zIndex: '1000',
+      padding: '8px',
+      marginTop: '4px'
+    });
+    
+    // Create status options
+    this.statusOptions.forEach(status => {
+      const statusItem = this.createStatusMenuItem(status, currentStatus);
+      menu.appendChild(statusItem);
+    });
+    
+    return menu;
+  }
+  
+  /**
+   * Create individual status menu item
+   * @param {Object} status - Status option
+   * @param {string} currentStatus - Current user status
+   * @returns {HTMLElement} Status menu item
+   */
+  createStatusMenuItem(status, currentStatus) {
+    const item = document.createElement('div');
+    item.className = `status-menu-item ${status.value === currentStatus ? 'active' : ''}`;
+    this.applyStyles(item, {
+      display: 'flex',
+      alignItems: 'center',
+      padding: '8px 12px',
+      cursor: 'pointer',
+      borderRadius: '4px',
+      backgroundColor: status.value === currentStatus ? 'rgba(33,150,243,0.1)' : 'transparent'
+    });
+    
+    // Status icon
+    const icon = document.createElement('span');
+    icon.textContent = status.icon;
+    this.applyStyles(icon, {
+      marginRight: '12px',
+      fontSize: '16px'
+    });
+    
+    // Status details container
+    const details = document.createElement('div');
+    this.applyStyles(details, {
+      display: 'flex',
+      flexDirection: 'column'
+    });
+    
+    // Status label
+    const label = document.createElement('span');
+    label.textContent = status.label;
+    this.applyStyles(label, {
+      fontWeight: 'bold',
+      fontSize: '14px'
+    });
+    
+    // Status description
+    const description = document.createElement('span');
+    description.textContent = status.description;
+    this.applyStyles(description, {
+      fontSize: '12px',
+      color: '#666'
+    });
+    
+    details.appendChild(label);
+    details.appendChild(description);
+    
+    item.appendChild(icon);
+    item.appendChild(details);
+    
+    // Add click handler
+    item.addEventListener('click', () => this.handleStatusSelect(status.value));
+    
+    // Hover effects
+    item.addEventListener('mouseover', () => {
+      item.style.backgroundColor = 'rgba(0,0,0,0.05)';
+    });
+    
+    item.addEventListener('mouseout', () => {
+      item.style.backgroundColor = 
+        status.value === currentStatus ? 'rgba(33,150,243,0.1)' : 'transparent';
+    });
+    
+    return item;
+  }
+  
+  /**
+   * Toggle status menu
    * @param {Event} e - Click event
    */
   toggleStatusMenu(e) {
@@ -226,20 +334,21 @@ class UserStatus {
    * @param {string} status - Selected status
    */
   handleStatusSelect(status) {
-    // Update current status
-    this.currentStatus = status;
-    
-    // Close the menu
-    this.statusMenuOpen = false;
-    
-    // Update UI
-    this.render();
-    
-    // Send status update to server
-    setUserStatus(status);
-    
-    // Log status change
-    logChatEvent('ui', 'User status changed', { status });
+    try {
+      // Close menu
+      this.statusMenuOpen = false;
+      
+      // Update status via service
+      setUserStatus(status);
+      
+      // Update local render
+      this.render();
+      
+      // Log status change
+      logChatEvent('ui', 'User status changed', { status });
+    } catch (error) {
+      console.error('[UserStatus] Error changing status:', error);
+    }
   }
   
   /**
@@ -247,19 +356,10 @@ class UserStatus {
    * @param {Event} e - Click event
    */
   handleClickOutside(e) {
-    if (this.statusElement && !this.statusElement.contains(e.target) && this.statusMenuOpen) {
+    if (this.statusElement && 
+        !this.statusElement.contains(e.target) && 
+        this.statusMenuOpen) {
       this.statusMenuOpen = false;
-      this.render();
-    }
-  }
-  
-  /**
-   * Update status from external source
-   * @param {string} status - New status
-   */
-  updateStatus(status) {
-    if (this.statusOptions.some(option => option.value === status)) {
-      this.currentStatus = status;
       this.render();
     }
   }
@@ -279,6 +379,11 @@ class UserStatus {
   destroy() {
     // Remove event listeners
     document.removeEventListener('click', this.handleClickOutside);
+    
+    // Unsubscribe from status updates
+    if (this.unsubscribeStatusListener) {
+      this.unsubscribeStatusListener();
+    }
     
     // Remove from DOM
     if (this.statusElement && this.statusElement.parentNode) {

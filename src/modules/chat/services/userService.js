@@ -1,32 +1,50 @@
 // chat/services/userService.js
-// User management service for HIPAA-compliant chat
+// Enhanced user service with robust status management and user operations
 
 import { logChatEvent } from '../utils/logger.js';
-import { getUsers, saveUser } from '../utils/storage.js';
-import { getCurrentUser, getAuthToken, isAuthenticated, hasPermission } from './auth';
+import { getUsers, saveUser, getSetting, saveSetting } from '../utils/storage.js';
+import { 
+  getCurrentUser, 
+  getAuthToken, 
+  isAuthenticated 
+} from './auth';
 
-// Current online users
+// Import user management operations
+import { 
+  createUser as createUserOperation,
+  updateUser as updateUserOperation,
+  deleteUser as deleteUserOperation 
+} from './auth/userOperations.js';
+
+// User status configuration
+export const UserStatus = {
+  ONLINE: 'online',
+  AWAY: 'away',
+  BUSY: 'busy',
+  INVISIBLE: 'invisible'
+};
+
+// Online users tracking
 let onlineUsers = [];
 
 // User status listeners
 let userStatusListeners = [];
 
 /**
- * Initialize the user service
- * @returns {boolean} Success status
+ * Initialize user service
+ * @returns {boolean} Initialization success
  */
 export function initUserService() {
   try {
-    // Initialize with any cached users
+    // Load cached users
     loadCachedUsers();
     
     // Log initialization
     logChatEvent('system', 'User service initialized');
     
-    console.log('[CRM Extension] User service initialized');
     return true;
   } catch (error) {
-    console.error('[CRM Extension] Error initializing user service:', error);
+    console.error('[CRM Extension] User service init error:', error);
     return false;
   }
 }
@@ -39,9 +57,181 @@ function loadCachedUsers() {
   if (users.length > 0) {
     // Mark all users as offline initially
     users.forEach(user => {
-      user.online = false;
+      user.status = user.status || UserStatus.ONLINE;
       user.lastSeen = user.lastSeen || new Date().toISOString();
     });
+  }
+}
+
+/**
+ * Create a new user
+ * @param {Object} userData - User creation data
+ * @returns {Promise<Object>} User creation result
+ */
+export async function createUser(userData) {
+  try {
+    // Delegate to user operations
+    const result = await createUserOperation(userData);
+    
+    // Log creation event
+    logChatEvent('user', 'User created', { 
+      username: result.user?.username,
+      success: result.success 
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('[CRM Extension] Error creating user:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Update an existing user
+ * @param {string} userId - User ID to update
+ * @param {Object} userData - User update data
+ * @returns {Promise<Object>} User update result
+ */
+export async function updateUser(userId, userData) {
+  try {
+    // Delegate to user operations
+    const result = await updateUserOperation(userId, userData);
+    
+    // Log update event
+    logChatEvent('user', 'User updated', { 
+      userId,
+      success: result.success 
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('[CRM Extension] Error updating user:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Delete a user
+ * @param {string} userId - User ID to delete
+ * @returns {Promise<Object>} User deletion result
+ */
+export async function deleteUser(userId) {
+  try {
+    // Delegate to user operations
+    const result = await deleteUserOperation(userId);
+    
+    // Log deletion event
+    logChatEvent('user', 'User deleted', { 
+      userId,
+      success: result.success 
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('[CRM Extension] Error deleting user:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Set user status
+ * @param {string} status - New user status
+ * @returns {Promise<boolean>} Status update success
+ */
+export async function setUserStatus(status) {
+  try {
+    // Validate status
+    if (!Object.values(UserStatus).includes(status)) {
+      throw new Error(`Invalid status: ${status}`);
+    }
+    
+    // Check authentication
+    if (!isAuthenticated()) {
+      throw new Error('Not authenticated');
+    }
+    
+    const currentUser = getCurrentUser();
+    
+    // Get server URL
+    const serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
+    const httpServerUrl = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://');
+    
+    // Prepare status update payload
+    const statusUpdatePayload = {
+      userId: currentUser.id,
+      status: status,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Send status update to server
+    const response = await fetch(`${httpServerUrl}/api/users/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAuthToken()}`
+      },
+      body: JSON.stringify(statusUpdatePayload)
+    });
+    
+    // Handle server response
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update status');
+    }
+    
+    // Update local user data
+    const updatedUser = { 
+      ...currentUser, 
+      status,
+      lastStatusUpdate: new Date().toISOString()
+    };
+    
+    // Save to local storage
+    saveUser(updatedUser);
+    
+    // Notify listeners
+    notifyUserStatusListeners();
+    
+    // Log status change
+    logChatEvent('user', 'User status updated', { 
+      userId: currentUser.id, 
+      status 
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('[CRM Extension] Error setting user status:', error);
+    
+    // Fallback for local authentication or offline mode
+    if (getSetting('allow_local_auth', false)) {
+      const localUsers = getSetting('local_users', []);
+      const userIndex = localUsers.findIndex(u => u.id === currentUser.id);
+      
+      if (userIndex !== -1) {
+        // Update local user status
+        localUsers[userIndex].status = status;
+        localUsers[userIndex].lastStatusUpdate = new Date().toISOString();
+        
+        // Save local users
+        saveSetting('local_users', localUsers);
+        
+        // Notify listeners
+        notifyUserStatusListeners();
+        
+        return true;
+      }
+    }
+    
+    return false;
   }
 }
 
@@ -53,7 +243,7 @@ export function updateOnlineUsers(users) {
   try {
     if (!Array.isArray(users)) return;
     
-    // Track previous online users for change detection
+    // Track previous online users
     const prevOnlineUserIds = onlineUsers.map(u => u.id);
     
     // Update online users list
@@ -72,7 +262,9 @@ export function updateOnlineUsers(users) {
     const currentOnlineUserIds = onlineUsers.map(u => u.id);
     
     // Find users who went offline
-    const offlineUsers = prevOnlineUserIds.filter(id => !currentOnlineUserIds.includes(id));
+    const offlineUsers = prevOnlineUserIds.filter(
+      id => !currentOnlineUserIds.includes(id)
+    );
     
     // Update offline users
     if (offlineUsers.length > 0) {
@@ -157,7 +349,7 @@ export function addUserStatusListener(listener) {
   
   userStatusListeners.push(listener);
   
-  // Immediately call with current online users
+  // Immediately call listener with current online users
   listener(getOnlineUsers());
   
   return () => {
@@ -181,184 +373,6 @@ function notifyUserStatusListeners() {
 }
 
 /**
- * Create a new user (admin function)
- * @param {Object} userData - User data
- * @returns {Promise<Object>} Creation result
- */
-export async function createUser(userData) {
-  try {
-    if (!isAuthenticated()) {
-      return { success: false, error: 'Authentication required' };
-    }
-    
-    if (!hasPermission('user.create')) {
-      return { success: false, error: 'Permission denied' };
-    }
-    
-    // Validate user data
-    if (!userData.username) {
-      return { success: false, error: 'Username is required' };
-    }
-    
-    // Check if username is already taken
-    const existingUser = getUserByUsername(userData.username);
-    if (existingUser) {
-      return { success: false, error: 'Username already taken' };
-    }
-    
-    // Get server URL from storage
-    const serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
-    const httpServerUrl = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://');
-    
-    // Send request to server
-    const response = await fetch(`${httpServerUrl}/api/users`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getAuthToken()}`
-      },
-      body: JSON.stringify(userData)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to create user');
-    }
-    
-    const newUser = await response.json();
-    
-    // Save to local cache
-    saveUser(newUser);
-    
-    // Log user creation
-    logChatEvent('user', 'User created', { username: newUser.username });
-    
-    return {
-      success: true,
-      user: newUser
-    };
-  } catch (error) {
-    console.error('[CRM Extension] Error creating user:', error);
-    
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-/**
- * Update a user (admin function or self)
- * @param {string} userId - User ID
- * @param {Object} updates - User data updates
- * @returns {Promise<Object>} Update result
- */
-export async function updateUser(userId, updates) {
-  try {
-    if (!isAuthenticated()) {
-      return { success: false, error: 'Authentication required' };
-    }
-    
-    const currentUser = getCurrentUser();
-    
-    // Check permissions - can update self or need admin permissions
-    if (userId !== currentUser.id && !hasPermission('user.update')) {
-      return { success: false, error: 'Permission denied' };
-    }
-    
-    // Get server URL from storage
-    const serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
-    const httpServerUrl = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://');
-    
-    // Send request to server
-    const response = await fetch(`${httpServerUrl}/api/users/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getAuthToken()}`
-      },
-      body: JSON.stringify(updates)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to update user');
-    }
-    
-    const updatedUser = await response.json();
-    
-    // Save to local cache
-    saveUser(updatedUser);
-    
-    // Log user update
-    logChatEvent('user', 'User updated', { userId });
-    
-    return {
-      success: true,
-      user: updatedUser
-    };
-  } catch (error) {
-    console.error('[CRM Extension] Error updating user:', error);
-    
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-/**
- * Delete a user (admin function)
- * @param {string} userId - User ID
- * @returns {Promise<Object>} Deletion result
- */
-export async function deleteUser(userId) {
-  try {
-    if (!isAuthenticated()) {
-      return { success: false, error: 'Authentication required' };
-    }
-    
-    if (!hasPermission('user.delete')) {
-      return { success: false, error: 'Permission denied' };
-    }
-    
-    // Get server URL from storage
-    const serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
-    const httpServerUrl = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://');
-    
-    // Send request to server
-    const response = await fetch(`${httpServerUrl}/api/users/${userId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`
-      }
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to delete user');
-    }
-    
-    // Remove from local cache
-    const cachedUsers = getUsers();
-    const updatedUsers = cachedUsers.filter(u => u.id !== userId);
-    localStorage.setItem('crmplus_chat_users', JSON.stringify(updatedUsers));
-    
-    // Log user deletion
-    logChatEvent('user', 'User deleted', { userId });
-    
-    return { success: true };
-  } catch (error) {
-    console.error('[CRM Extension] Error deleting user:', error);
-    
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-/**
  * Get all users (cached and online)
  * @returns {Array} Array of all users
  */
@@ -370,7 +384,8 @@ export function getAllUsers() {
     // Mark cached users as online/offline
     const mergedUsers = cachedUsers.map(user => ({
       ...user,
-      online: onlineUserIds.includes(user.id)
+      online: onlineUserIds.includes(user.id),
+      status: user.status || UserStatus.ONLINE
     }));
     
     // Add any online users not in cache
@@ -391,68 +406,41 @@ export function getAllUsers() {
 }
 
 /**
- * Set user status (away, busy, etc.)
- * @param {string} status - Status to set
- * @returns {Promise<boolean>} Success status
- */
-export async function setUserStatus(status) {
-  try {
-    if (!isAuthenticated()) {
-      return false;
-    }
-    
-    const currentUser = getCurrentUser();
-    
-    // Send status update to server
-    // This will typically be handled through the WebSocket connection
-    const statusMessage = {
-      type: 'status_update',
-      userId: currentUser.id,
-      status,
-      timestamp: new Date().toISOString()
-    };
-    
-    // This assumes messageService has a sendToServer function
-    // You may need to modify this based on your actual implementation
-    if (typeof window.sendToServer === 'function') {
-      window.sendToServer(statusMessage);
-    }
-    
-    // Update local cache
-    const user = getUserById(currentUser.id);
-    if (user) {
-      user.status = status;
-      saveUser(user);
-    }
-    
-    // Log status update
-    logChatEvent('user', 'Status updated', { status });
-    
-    return true;
-  } catch (error) {
-    console.error('[CRM Extension] Error setting user status:', error);
-    return false;
-  }
-}
-
-/**
  * Search for users by name or username
  * @param {string} query - Search query
  * @returns {Array} Matching users
  */
 export function searchUsers(query) {
   try {
-    if (!query || typeof query !== 'string') return [];
+    if (!query || typeof query !== 'string') return getAllUsers();
     
     const normalizedQuery = query.toLowerCase();
     const allUsers = getAllUsers();
     
     return allUsers.filter(user => 
       user.username.toLowerCase().includes(normalizedQuery) ||
-      (user.displayName && user.displayName.toLowerCase().includes(normalizedQuery))
+      (user.displayName && 
+       user.displayName.toLowerCase().includes(normalizedQuery))
     );
   } catch (error) {
     console.error('[CRM Extension] Error searching users:', error);
     return [];
   }
 }
+
+// Export as default for additional flexibility
+export default {
+  UserStatus,
+  setUserStatus,
+  addUserStatusListener,
+  getOnlineUsers,
+  getUserById,
+  getUserByUsername,
+  getAllUsers,
+  searchUsers,
+  updateOnlineUsers,
+  initUserService,
+  createUser,
+  updateUser,
+  deleteUser
+};

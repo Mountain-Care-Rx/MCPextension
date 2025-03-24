@@ -82,3 +82,44 @@ Distribution files:
 ## Asset Directories
 - `/src/assets/` - Icons and images
 - `/src/styles/` - Global CSS styles
+
+
+
+## Client Directory Structure (With new Serverside)
+```
+/chat/
+├── index.js                           # Main entry point (updated for API usage)
+│
+├── components/                        # UI Components (largely unchanged)
+│   ├── admin/                         # Admin components (unchanged)
+│   ├── app/                           # Main application components (minor updates for loading states)
+│   ├── auth/                          # Authentication components (updated for server auth)
+│   │   ├── AuthContext.js             # Updated to use JWT tokens and API
+│   │   └── LoginForm.js               # Updated for server authentication
+│   ├── common/                        # Reusable components (unchanged)
+│   ├── messages/                      # Message-related components (updated for server pagination)
+│   └── users/                         # User-related components (minor updates)
+│
+├── services/                          # Service layer (major updates)
+│   ├── api.js                         # New centralized API service for server communication
+│   ├── auth/                          # Authentication services (updated)
+│   │   ├── index.js                   # Updated entry point
+│   │   ├── authentication.js          # Server authentication integration
+│   │   ├── roles.js                   # Role checking logic
+│   │   ├── permissions.js             # Permission checking logic
+│   │   └── sessionManagement.js       # JWT session management
+│   ├── channel/                       # Channel management (updated for API)
+│   │   └── channelService.js          # Channel operations using API
+│   ├── message/                       # Message services (updated for API)
+│   │   └── messageService.js          # Message operations using API and WebSocket
+│   └── user/                          # User management (updated for API)
+│       └── userService.js             # User operations using API
+│
+└── utils/                             # Utilities (updated)
+    ├── encryption.js                  # Client-side encryption (updated for E2E)
+    ├── logger.js                      # Enhanced logging with server integration
+    ├── storage.js                     # Repurposed as caching layer with IndexedDB
+    ├── validation.js                  # Input validation logic (unchanged)
+    ├── offlineQueue.js                # New offline message queue
+    └── syncManager.js                 # New synchronization management
+```

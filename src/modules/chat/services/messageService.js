@@ -2,7 +2,6 @@
 // WebSocket client for HIPAA-compliant chat messaging
 
 import { logChatEvent } from '../utils/logger.js';
-import { encryptMessage, decryptMessage } from '../utils/encryption.js';
 import { getCurrentUser, getAuthToken, isAuthenticated } from './auth';
 import { saveMessage } from '../utils/storage.js';
 
@@ -27,8 +26,14 @@ const CONNECTION_STATUS = {
   AUTH_FAILED: 'auth_failed'
 };
 
-// Active channel tracking
-let activeChannel = localStorage.getItem('crmplus_chat_active_channel') || 'general';
+// Active channel tracking - Use the default UUID format channel ID
+let activeChannel = localStorage.getItem('crmplus_chat_active_channel') || '00000000-0000-0000-0000-000000000001'; // Default channel UUID
+
+// Channel ID mapping for human-readable names
+const CHANNEL_ID_MAP = {
+  'general': '00000000-0000-0000-0000-000000000001',
+  'announcements': '00000000-0000-0000-0000-000000000002'
+};
 
 // Listeners
 let messageListeners = [];
@@ -42,10 +47,25 @@ let channelListListeners = [];
  */
 function initMessageService() {
   // Ensure active channel is set
-  activeChannel = localStorage.getItem('crmplus_chat_active_channel') || 'general';
+  activeChannel = localStorage.getItem('crmplus_chat_active_channel') || CHANNEL_ID_MAP.general;
   
   logChatEvent('system', 'Message service initialized');
   return true;
+}
+
+/**
+ * Convert channel name to UUID if needed
+ * @param {string} channelId - Channel ID or name
+ * @returns {string} UUID format channel ID
+ */
+function getChannelUUID(channelId) {
+  // Check if it's already a UUID
+  if (channelId && channelId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+    return channelId;
+  }
+  
+  // Look up in channel map
+  return CHANNEL_ID_MAP[channelId] || CHANNEL_ID_MAP.general;
 }
 
 /**
@@ -98,6 +118,12 @@ function connectToServer() {
         try {
           const message = JSON.parse(event.data);
           handleIncomingMessage(message);
+
+          // Also dispatch a custom event for other components to listen to
+          const customEvent = new CustomEvent('ws_message', { 
+            detail: message
+          });
+          window.dispatchEvent(customEvent);
         } catch (parseError) {
           console.error('[MessageService] Error parsing message:', parseError, event.data);
         }
@@ -246,6 +272,9 @@ function sendChatMessage(text, channelId = null, recipientId = null) {
   // Use active channel if not specified
   channelId = channelId || activeChannel;
   
+  // Convert channel name to UUID if needed
+  const uuidChannelId = getChannelUUID(channelId);
+  
   // Prepare message object for both WebSocket and local storage
   const messageId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
   const timestamp = new Date().toISOString();
@@ -257,46 +286,38 @@ function sendChatMessage(text, channelId = null, recipientId = null) {
     sender: currentUser.username,
     senderDisplayName: currentUser.displayName || currentUser.username,
     timestamp: timestamp,
-    channel: channelId,
+    channel: channelId, // Use the original channel ID/name for display
     recipient: recipientId
   };
   
-  // WebSocket message format
+  // Server message format - use UUID for channel ID
   const message = {
-    type: 'chat_message',
-    payload: {
-      id: messageId,
-      text: text.trim(),
-      sender: currentUser.id,
-      senderUsername: currentUser.username,
-      timestamp: timestamp,
-      channelId,
-      recipientId
-    }
+    type: 'send_message',
+    messageId: messageId,
+    text: text.trim(),
+    channelId: uuidChannelId, // Send UUID format to the server
+    recipientId: recipientId,
+    timestamp: timestamp
   };
   
-  // Try to encrypt and send through WebSocket if connected
+  // Send via WebSocket
   let wsSuccess = false;
   if (socket && socket.readyState === WebSocket.OPEN) {
     try {
-      // Encrypt the message
-      const encryptedMessage = encryptMessage(message);
-      
-      // Send through WebSocket
-      wsSuccess = sendWebSocketMessage(encryptedMessage);
+      wsSuccess = sendWebSocketMessage(message);
+      console.log('[MessageService] Message sent via WebSocket:', message);
     } catch (error) {
       console.warn('[MessageService] Error sending message via WebSocket:', error);
       // Continue with local handling despite WebSocket failure
     }
   }
   
-  // IMPORTANT: For local development or when WebSocket is unavailable,
-  // save the message locally and notify listeners directly
+  // Save message locally to ensure UI is immediately updated
+  saveMessage(localMessage);
+  
+  // If WebSocket message failed, notify listeners directly to show the message
   if (!wsSuccess) {
-    console.log('[MessageService] Using local message handling');
-    
-    // Save message to local storage
-    saveMessage(localMessage);
+    console.log('[MessageService] Using local message handling for failed WebSocket message');
     
     // Notify listeners directly (simulate received message)
     setTimeout(() => {
@@ -385,15 +406,25 @@ function attemptReconnection() {
 function handleIncomingMessage(message) {
   try {
     switch (message.type) {
+      case 'new_message':
       case 'chat_message':
-        // Decrypt message
-        const decryptedMessage = decryptMessage(message);
+        // Handle the message data
+        const messageData = message.data || message;
+        
+        // Convert server message format to local format if needed
+        const localMessage = {
+          id: messageData.id || messageData.messageId,
+          text: messageData.text,
+          sender: messageData.senderUsername || messageData.sender,
+          timestamp: messageData.timestamp,
+          channel: messageData.channelId || messageData.channel
+        };
         
         // Save message
-        saveMessage(decryptedMessage);
+        saveMessage(localMessage);
         
         // Notify listeners
-        notifyMessageListeners([decryptedMessage]);
+        notifyMessageListeners([localMessage]);
         break;
       
       case 'authentication_response':
@@ -404,12 +435,21 @@ function handleIncomingMessage(message) {
         notifyUserListListeners(message.users);
         break;
       
-      case 'channel_list':
+      case 'channel_list_response':
+        // Update channel ID mapping with server response
+        if (message.channels && Array.isArray(message.channels)) {
+          message.channels.forEach(channel => {
+            if (channel.id && channel.name) {
+              CHANNEL_ID_MAP[channel.name.toLowerCase()] = channel.id;
+            }
+          });
+        }
+        
         notifyChannelListListeners(message.channels);
         break;
       
       case 'error':
-        console.error('[MessageService] Server error:', message.payload);
+        console.error('[MessageService] Server error:', message.error);
         break;
       
       default:
@@ -429,6 +469,12 @@ function handleAuthenticationResponse(response) {
     console.log('[MessageService] Authentication successful');
     logChatEvent('auth', 'WebSocket authentication successful');
     updateConnectionStatus(CONNECTION_STATUS.CONNECTED); // Ensure status is updated on success
+    
+    // Request channel list after successful authentication
+    requestChannelList();
+    
+    // Automatically join the active channel
+    switchChannel(activeChannel);
   } else {
     console.error('[MessageService] Authentication failed:', response.reason);
     logChatEvent('auth', 'WebSocket authentication failed', { 
@@ -440,10 +486,6 @@ function handleAuthenticationResponse(response) {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.close(1000, 'Authentication failed');
     }
-    
-    // Notify user about authentication failure
-    // This depends on your UI notification system
-    // Example: notificationSystem.showError(`Chat authentication failed: ${response.reason}`);
   }
 }
 
@@ -606,13 +648,16 @@ function requestChannelList() {
 function switchChannel(channelId) {
   if (!channelId || !isAuthenticated()) return;
   
+  // Convert channel name to UUID if needed
+  const uuidChannelId = getChannelUUID(channelId);
+  
   // Store active channel
   activeChannel = channelId;
   localStorage.setItem('crmplus_chat_active_channel', channelId);
   
   const requestMessage = {
     type: 'channel_join',
-    channel: channelId,
+    channel: uuidChannelId, // Send UUID format to the server
     timestamp: new Date().toISOString()
   };
   

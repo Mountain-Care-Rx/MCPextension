@@ -25,6 +25,20 @@ const DEFAULT_ADMIN = {
   displayName: 'Admin'
 };
 
+// List of valid test users
+const VALID_USERS = {
+  'user1': {
+    password: 'password1',
+    role: 'user',
+    displayName: 'Test User 1'
+  },
+  'user2': {
+    password: 'password2',
+    role: 'user',
+    displayName: 'Test User 2'
+  }
+};
+
 /**
  * Notify authentication listeners about state changes
  * @param {Object} [prevUser] - Previous user object (optional)
@@ -124,6 +138,14 @@ function loadSavedAuth() {
     }
     
     if (authToken && currentUser) {
+      // Check token expiration
+      if (currentUser.tokenExpires && currentUser.tokenExpires < Date.now()) {
+        console.warn('[CRM Extension] Saved token expired');
+        // Clear expired token
+        logout('Token expired');
+        return;
+      }
+      
       // Set initial activity timestamp
       lastActivity = Date.now();
       
@@ -237,79 +259,41 @@ async function login(username, password) {
     // Log login attempt (without password)
     logChatEvent('auth', 'Login attempt', { username });
     
-    // Get server URL from storage
-    const serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
-    const httpServerUrl = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://');
-    
-    // In a real implementation, the following would be a request to the server
-    // For demo purposes, we'll check against the hard-coded admin credentials
-    // or check with the server for other users
-    
     let authResponse = null;
     
-    // Check if using default admin credentials
+    // Check if using valid credentials
     if (username === DEFAULT_ADMIN.username && password === DEFAULT_ADMIN.password) {
-      // Simulate successful admin login
+      // Simulate successful admin login with secure token
       authResponse = {
         success: true,
+        // In a real implementation, use a more secure token format like JWT
         token: 'admin_' + Date.now().toString(36) + Math.random().toString(36).substr(2),
         user: {
           id: 'admin_' + Math.random().toString(36).substr(2),
           username: DEFAULT_ADMIN.username,
           role: DEFAULT_ADMIN.role,
           displayName: DEFAULT_ADMIN.displayName,
-          isAdmin: true
+          isAdmin: true,
+          // Add token expiration timestamp for security
+          tokenExpires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+        }
+      };
+    } else if (VALID_USERS[username] && VALID_USERS[username].password === password) {
+      // Valid test user
+      authResponse = {
+        success: true,
+        token: 'user_' + Date.now().toString(36) + username.replace(/[^a-z0-9]/gi, '') + Math.random().toString(36).substr(2),
+        user: {
+          id: 'user_' + username.replace(/[^a-z0-9]/gi, ''),
+          username: username,
+          role: VALID_USERS[username].role,
+          displayName: VALID_USERS[username].displayName,
+          tokenExpires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
         }
       };
     } else {
-      // Try to authenticate with server
-      try {
-        const response = await fetch(`${httpServerUrl}/auth/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ username, password })
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Login failed');
-        }
-        
-        authResponse = await response.json();
-      } catch (serverError) {
-        console.error('[CRM Extension] Server auth error:', serverError);
-        
-        // For demo/dev purposes only - in production we would fail here
-        // This simulates local authentication when server is not available
-        if (getSetting('allow_local_auth', false)) {
-          const localUsers = getSetting('local_users', []);
-          const user = localUsers.find(u => u.username === username);
-          
-          if (user && user.password === password) { // In real app, passwords would be hashed
-            authResponse = {
-              success: true,
-              token: 'local_' + Date.now().toString(36) + Math.random().toString(36).substr(2),
-              user: {
-                id: user.id || 'user_' + Math.random().toString(36).substr(2),
-                username: user.username,
-                role: user.role || 'user',
-                displayName: user.displayName || user.username,
-                isLocal: true
-              }
-            };
-          } else {
-            throw new Error('Invalid username or password');
-          }
-        } else {
-          throw new Error('Server authentication failed');
-        }
-      }
-    }
-    
-    if (!authResponse || !authResponse.success) {
-      throw new Error('Authentication failed');
+      // Invalid credentials
+      throw new Error('Invalid username or password');
     }
     
     // Store authentication data
@@ -398,11 +382,28 @@ function logout(reason = 'User logout') {
 }
 
 /**
+ * Check if token is valid (not expired)
+ * @returns {boolean} Token validity
+ */
+function isTokenValid() {
+  if (!authToken || !currentUser) return false;
+  
+  // Check if token has expired
+  if (currentUser.tokenExpires && currentUser.tokenExpires < Date.now()) {
+    console.warn('[CRM Extension] Token expired');
+    logout('Token expired');
+    return false;
+  }
+  
+  return true;
+}
+
+/**
  * Check if user is authenticated
  * @returns {boolean} Authentication status
  */
 function isAuthenticated() {
-  return !!authToken && !!currentUser;
+  return !!authToken && !!currentUser && isTokenValid();
 }
 
 /**
@@ -433,5 +434,6 @@ export {
   hasPermission,
   getSessionStatus,
   addAuthListener,
-  removeAuthListener
+  removeAuthListener,
+  isTokenValid
 };

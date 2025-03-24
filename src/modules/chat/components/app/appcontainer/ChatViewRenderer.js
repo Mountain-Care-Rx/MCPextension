@@ -3,6 +3,8 @@
 
 import MessageInput from '../../messages/MessageInput.js';
 import { getChannelMessages } from '../../../utils/storage.js';
+import { sendChatMessage } from '../../../services/messageService.js';
+import { joinChannel } from '../../../services/channel/channelService.js';
 
 /**
  * Render the chat view
@@ -11,11 +13,13 @@ import { getChannelMessages } from '../../../utils/storage.js';
  * @returns {HTMLElement} The rendered chat view
  */
 export function renderChatView(container, options = {}) {
+  // Updated parameters: channels, users, and new connectionStatus
   const {
     showUserList = true,
     selectedChannel = 'general',
-    mockChannels = [],
-    mockUsers = [],
+    channels = [],
+    users = [],
+    connectionStatus = 'disconnected',
     onChannelSelect = () => {},
     onUserSelect = () => {},
     toggleUserList = () => {}
@@ -30,14 +34,17 @@ export function renderChatView(container, options = {}) {
     backgroundColor: '#ffffff'
   });
   
-  // Create sidebar for channels
-  const sidebar = createSidebar(mockChannels, selectedChannel, onChannelSelect);
+  // Create sidebar for channels (passing connectionStatus)
+  const sidebar = createSidebar(channels, selectedChannel, onChannelSelect, connectionStatus);
   
-  // Create main content area for chat
-  const chatArea = createChatArea(selectedChannel, mockChannels, toggleUserList, mockUsers);
+  // Create main content area for chat (passing connectionStatus)
+  const chatArea = createChatArea(selectedChannel, channels, toggleUserList, users, connectionStatus);
   
   // Create collapsible users panel
-  const userPanel = createUserPanel(mockUsers, onUserSelect);
+  let userPanel;
+  if (showUserList) {
+    userPanel = createUserPanel(users, onUserSelect);
+  }
   
   // Apply more compact sizing to each panel
   applyStyles(sidebar, {
@@ -51,7 +58,7 @@ export function renderChatView(container, options = {}) {
     minWidth: '250px'   // Smaller minimum width
   });
   
-  if (showUserList) {
+  if (showUserList && userPanel) {
     applyStyles(userPanel, {
       flex: '0 0 200px',  // More compact fixed width
       minWidth: '180px',  // Smaller minimum width
@@ -63,7 +70,7 @@ export function renderChatView(container, options = {}) {
   layout.appendChild(sidebar);
   layout.appendChild(chatArea);
   
-  if (showUserList) {
+  if (showUserList && userPanel) {
     layout.appendChild(userPanel);
   }
   
@@ -76,9 +83,10 @@ export function renderChatView(container, options = {}) {
  * @param {Array} channels - Channel list
  * @param {string} selectedChannel - ID of selected channel
  * @param {Function} onChannelSelect - Channel selection callback
+ * @param {string} connectionStatus - Current connection status
  * @returns {HTMLElement} Sidebar element
  */
-function createSidebar(channels, selectedChannel, onChannelSelect) {
+function createSidebar(channels, selectedChannel, onChannelSelect, connectionStatus) {
   const sidebar = document.createElement('div');
   applyStyles(sidebar, {
     height: '100%',
@@ -86,13 +94,13 @@ function createSidebar(channels, selectedChannel, onChannelSelect) {
     display: 'flex',
     flexDirection: 'column',
     backgroundColor: '#f8f9fa',
-    overflow: 'hidden' // Prevent overflow
+    overflow: 'hidden'
   });
   
   // Sidebar header - more compact
   const sidebarHeader = document.createElement('div');
   applyStyles(sidebarHeader, {
-    padding: '10px 12px', // Reduced padding
+    padding: '10px 12px',
     borderBottom: '1px solid #e0e0e0',
     display: 'flex',
     justifyContent: 'space-between',
@@ -103,19 +111,28 @@ function createSidebar(channels, selectedChannel, onChannelSelect) {
   headingText.textContent = 'Channels';
   applyStyles(headingText, {
     margin: '0',
-    fontSize: '16px', // Smaller font
+    fontSize: '16px',
     fontWeight: 'bold'
   });
   
-  // Channel count badge
+  // Channel count badge with connection-based color
+  let badgeBgColor = '#e0e0e0'; // Default gray
+  if (connectionStatus === 'connected') {
+    badgeBgColor = '#4CAF50'; // Green
+  } else if (connectionStatus === 'connecting') {
+    badgeBgColor = '#FFC107'; // Yellow
+  } else if (connectionStatus === 'disconnected' || connectionStatus === 'error') {
+    badgeBgColor = '#F44336'; // Red
+  }
+  
   const channelCount = document.createElement('span');
   channelCount.textContent = channels.length.toString();
   applyStyles(channelCount, {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: badgeBgColor,
     color: '#333',
     borderRadius: '12px',
-    padding: '1px 6px', // Smaller padding
-    fontSize: '11px', // Smaller font
+    padding: '1px 6px',
+    fontSize: '11px',
     fontWeight: 'bold'
   });
   
@@ -127,12 +144,12 @@ function createSidebar(channels, selectedChannel, onChannelSelect) {
   applyStyles(channelsContainer, {
     flex: '1',
     overflowY: 'auto',
-    padding: '4px 0' // Reduced padding
+    padding: '4px 0'
   });
   
-  // Group channels by type
-  const publicChannels = channels.filter(channel => channel.type === 'public');
-  const privateChannels = channels.filter(channel => channel.type === 'private');
+  // Group channels by type (supporting both 'type' and 'isPrivate' formats)
+  const publicChannels = channels.filter(channel => channel.type === 'public' || (!channel.type && !channel.isPrivate));
+  const privateChannels = channels.filter(channel => channel.type === 'private' || (channel.isPrivate));
   
   // Add public channels
   if (publicChannels.length > 0) {
@@ -144,28 +161,46 @@ function createSidebar(channels, selectedChannel, onChannelSelect) {
     addChannelGroup(channelsContainer, 'PRIVATE CHANNELS', privateChannels, selectedChannel, onChannelSelect);
   }
   
+  // If no channels, add empty state messaging based on connection status
+  if (channels.length === 0) {
+    const noChannelsMessage = document.createElement('div');
+    if (connectionStatus === 'connected') {
+      noChannelsMessage.textContent = 'No channels available. Create a new channel to get started.';
+    } else if (connectionStatus === 'connecting') {
+      noChannelsMessage.textContent = 'Loading channels...';
+    } else {
+      noChannelsMessage.textContent = 'Cannot load channels. Check your connection.';
+    }
+    applyStyles(noChannelsMessage, {
+      padding: '10px',
+      textAlign: 'center',
+      color: '#666'
+    });
+    channelsContainer.appendChild(noChannelsMessage);
+  }
+  
   // Add new channel button - more compact
   const newChannelButton = document.createElement('button');
   applyStyles(newChannelButton, {
-    margin: '8px', // Reduced margin
-    padding: '6px 0', // Reduced padding
+    margin: '8px',
+    padding: '6px 0',
     backgroundColor: '#2196F3',
     color: 'white',
     border: 'none',
     borderRadius: '4px',
-    fontSize: '13px', // Smaller font
+    fontSize: '13px',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '6px', // Reduced gap
+    gap: '6px',
     fontWeight: 'bold'
   });
   
   const plusIcon = document.createElement('span');
   plusIcon.textContent = '+';
   applyStyles(plusIcon, {
-    fontSize: '16px' // Smaller font
+    fontSize: '16px'
   });
   
   const buttonText = document.createElement('span');
@@ -174,13 +209,24 @@ function createSidebar(channels, selectedChannel, onChannelSelect) {
   newChannelButton.appendChild(plusIcon);
   newChannelButton.appendChild(buttonText);
   
-  // Add hover effect
+  // Disable new channel button when not connected
+  if (connectionStatus !== 'connected') {
+    newChannelButton.disabled = true;
+    newChannelButton.style.cursor = 'not-allowed';
+    newChannelButton.style.opacity = '0.5';
+  }
+  
+  // Hover effect
   newChannelButton.addEventListener('mouseover', () => {
-    newChannelButton.style.backgroundColor = '#1976D2';
+    if (!newChannelButton.disabled) {
+      newChannelButton.style.backgroundColor = '#1976D2';
+    }
   });
   
   newChannelButton.addEventListener('mouseout', () => {
-    newChannelButton.style.backgroundColor = '#2196F3';
+    if (!newChannelButton.disabled) {
+      newChannelButton.style.backgroundColor = '#2196F3';
+    }
   });
   
   // Add components to sidebar
@@ -200,11 +246,11 @@ function createSidebar(channels, selectedChannel, onChannelSelect) {
  * @param {Function} onChannelSelect - Channel selection callback
  */
 function addChannelGroup(container, title, channels, selectedChannel, onChannelSelect) {
-  // Create group header
+  // Group header
   const groupHeader = document.createElement('div');
   applyStyles(groupHeader, {
-    padding: '8px 12px 4px', // More compact padding
-    fontSize: '10px', // Smaller font
+    padding: '8px 12px 4px',
+    fontSize: '10px',
     color: '#666',
     fontWeight: 'bold',
     textTransform: 'uppercase',
@@ -212,19 +258,17 @@ function addChannelGroup(container, title, channels, selectedChannel, onChannelS
   });
   groupHeader.textContent = title;
   
-  // Create channel list
+  // Channel list container
   const channelList = document.createElement('div');
   applyStyles(channelList, {
-    marginBottom: '10px' // Reduced margin
+    marginBottom: '10px'
   });
   
-  // Add channels
   channels.forEach(channel => {
     const channelItem = createChannelItem(channel, channel.id === selectedChannel, onChannelSelect);
     channelList.appendChild(channelItem);
   });
   
-  // Add to container
   container.appendChild(groupHeader);
   container.appendChild(channelList);
 }
@@ -239,22 +283,23 @@ function addChannelGroup(container, title, channels, selectedChannel, onChannelS
 function createChannelItem(channel, isActive, onChannelSelect) {
   const item = document.createElement('div');
   applyStyles(item, {
-    padding: '6px 12px 6px 10px', // More compact padding
+    padding: '6px 12px 6px 10px',
     display: 'flex',
     alignItems: 'center',
     cursor: 'pointer',
-    fontSize: '13px', // Smaller font
+    fontSize: '13px',
     color: isActive ? '#2196F3' : '#333',
     backgroundColor: isActive ? 'rgba(33, 150, 243, 0.08)' : 'transparent',
-    borderLeft: isActive ? '3px solid #2196F3' : '3px solid transparent' // Thinner border
+    borderLeft: isActive ? '3px solid #2196F3' : '3px solid transparent'
   });
   
-  // Globe icon for channel type
+  // Icon: use channel.type if available; otherwise check isPrivate
   const icon = document.createElement('span');
-  icon.textContent = channel.type === 'public' ? '🌐' : '🔒';
+  const channelType = channel.type ? channel.type : (channel.isPrivate ? 'private' : 'public');
+  icon.textContent = channelType === 'public' ? '🌐' : '🔒';
   applyStyles(icon, {
-    marginRight: '8px', // Reduced margin
-    fontSize: '14px', // Smaller font
+    marginRight: '8px',
+    fontSize: '14px',
     opacity: '0.7'
   });
   
@@ -269,37 +314,38 @@ function createChannelItem(channel, isActive, onChannelSelect) {
     textOverflow: 'ellipsis'
   });
   
-  // Unread indicator
+  // Unread indicator if any
   if (channel.unread && channel.unread > 0) {
     const badge = document.createElement('span');
     badge.textContent = channel.unread > 99 ? '99+' : channel.unread;
     applyStyles(badge, {
-      minWidth: '18px', // Smaller badge
-      height: '18px', // Smaller badge
+      minWidth: '18px',
+      height: '18px',
       backgroundColor: isActive ? '#2196F3' : '#f44336',
       color: 'white',
       borderRadius: '9px',
-      fontSize: '11px', // Smaller font
+      fontSize: '11px',
       fontWeight: 'bold',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '0 4px' // Reduced padding
+      padding: '0 4px'
     });
     
     item.appendChild(badge);
   }
   
-  // Add components to item
+  // Assemble item
   item.appendChild(icon);
   item.appendChild(name);
   
-  // Add event listener for channel selection
+  // When channel is clicked, select it and join via WebSocket
   item.addEventListener('click', () => {
     onChannelSelect(channel);
+    joinChannel(channel.id);
   });
   
-  // Add hover effect
+  // Hover effects
   item.addEventListener('mouseover', () => {
     if (!isActive) {
       item.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
@@ -320,46 +366,46 @@ function createChannelItem(channel, isActive, onChannelSelect) {
  * @param {string} selectedChannel - ID of selected channel
  * @param {Array} channels - Channel list
  * @param {Function} toggleUserList - Toggle user list callback
- * @param {Array} mockUsers - List of mock users
+ * @param {Array} users - List of users
+ * @param {string} connectionStatus - Current connection status
  * @returns {HTMLElement} Chat area element
  */
-function createChatArea(selectedChannel, channels, toggleUserList, mockUsers) {
+function createChatArea(selectedChannel, channels, toggleUserList, users, connectionStatus) {
   const chatArea = document.createElement('div');
   applyStyles(chatArea, {
     flex: '1',
     display: 'flex',
     flexDirection: 'column',
     backgroundColor: '#fff',
-    width: '100%' // FIXED: Ensure the chat area takes full width
+    width: '100%'
   });
   
-  // Get channel info
+  // Get channel info (support both formats)
   const channel = channels.find(c => c.id === selectedChannel) || { 
     id: 'general', 
     name: 'General', 
-    type: 'public' 
+    type: 'public'
   };
   
-  // Chat header with channel info
-  const chatHeader = createChatHeader(channel, toggleUserList);
+  // Chat header with channel info and connection status
+  const chatHeader = createChatHeader(channel, toggleUserList, connectionStatus);
   
-  // Messages container
-  const messagesContainer = createMessagesContainer(channel);
+  // Messages container now checks for stored messages and shows appropriate placeholder
+  const messagesContainer = createMessagesContainer(channel, connectionStatus);
   
-  // Chat input area container
+  // Chat input container
   const inputContainer = document.createElement('div');
   applyStyles(inputContainer, {
-    width: '100%' // FIXED: Ensure input takes full width
+    width: '100%'
   });
   
-  // Create MessageInput component
+  // MessageInput component with connection-aware placeholder
   const messageInput = new MessageInput(inputContainer, {
     channelId: channel.id,
-    placeholder: `Message #${channel.name}`,
+    placeholder: connectionStatus === 'connected' ? `Message #${channel.name}` : `Cannot send message while ${connectionStatus}`,
     maxLength: 2000
   });
   
-  // Add components to chat area
   chatArea.appendChild(chatHeader);
   chatArea.appendChild(messagesContainer);
   chatArea.appendChild(inputContainer);
@@ -368,15 +414,16 @@ function createChatArea(selectedChannel, channels, toggleUserList, mockUsers) {
 }
 
 /**
- * Create chat header with channel info
+ * Create chat header with channel info and connection status indicator
  * @param {Object} channel - Channel object
  * @param {Function} toggleUserList - Toggle user list callback
+ * @param {string} connectionStatus - Current connection status
  * @returns {HTMLElement} Chat header element
  */
-function createChatHeader(channel, toggleUserList) {
+function createChatHeader(channel, toggleUserList, connectionStatus) {
   const header = document.createElement('div');
   applyStyles(header, {
-    padding: '10px 12px', // Reduced padding
+    padding: '10px 12px',
     borderBottom: '1px solid #e0e0e0',
     display: 'flex',
     justifyContent: 'space-between',
@@ -385,26 +432,26 @@ function createChatHeader(channel, toggleUserList) {
     width: '100%'
   });
   
-  // Channel info
+  // Channel info section
   const channelInfo = document.createElement('div');
   applyStyles(channelInfo, {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px' // Reduced gap
+    gap: '8px'
   });
   
   // Channel icon
   const channelIcon = document.createElement('span');
   channelIcon.textContent = channel.type === 'public' ? '🌐' : '🔒';
   applyStyles(channelIcon, {
-    fontSize: '16px' // Smaller font
+    fontSize: '16px'
   });
   
   // Channel name
   const channelName = document.createElement('div');
   channelName.textContent = channel.name;
   applyStyles(channelName, {
-    fontSize: '16px', // Smaller font
+    fontSize: '16px',
     fontWeight: 'bold'
   });
   
@@ -412,8 +459,8 @@ function createChatHeader(channel, toggleUserList) {
   const channelType = document.createElement('span');
   channelType.textContent = channel.type === 'public' ? 'Public' : 'Private';
   applyStyles(channelType, {
-    fontSize: '10px', // Smaller font
-    padding: '2px 8px', // Reduced padding
+    fontSize: '10px',
+    padding: '2px 8px',
     borderRadius: '10px',
     backgroundColor: channel.type === 'public' ? '#e3f2fd' : '#fff3e0',
     color: channel.type === 'public' ? '#1565c0' : '#e65100'
@@ -423,25 +470,33 @@ function createChatHeader(channel, toggleUserList) {
   channelInfo.appendChild(channelName);
   channelInfo.appendChild(channelType);
   
-  // Actions area
+  // Connection status indicator if not connected
+  if (connectionStatus !== 'connected') {
+    const statusIndicator = document.createElement('span');
+    if (connectionStatus === 'connecting') {
+      statusIndicator.textContent = '🔄 Connecting...';
+      statusIndicator.style.color = '#FFC107';
+    } else {
+      statusIndicator.textContent = '⚠️ Disconnected';
+      statusIndicator.style.color = '#F44336';
+    }
+    channelInfo.appendChild(statusIndicator);
+  }
+  
+  // Actions area with buttons
   const actions = document.createElement('div');
   applyStyles(actions, {
     display: 'flex',
-    gap: '8px' // Reduced gap
+    gap: '8px'
   });
   
-  // Search button
   const searchButton = createIconButton('🔍', 'Search in channel');
-  
-  // Toggle users button
   const toggleUsersButton = createIconButton('👥', 'Toggle team members');
   toggleUsersButton.addEventListener('click', toggleUserList);
   
-  // Add buttons to actions
   actions.appendChild(searchButton);
   actions.appendChild(toggleUsersButton);
   
-  // Add components to header
   header.appendChild(channelInfo);
   header.appendChild(actions);
   
@@ -459,36 +514,36 @@ function createIconButton(icon, title) {
   button.textContent = icon;
   button.title = title;
   applyStyles(button, {
-    width: '28px', // Smaller size
-    height: '28px', // Smaller size
+    width: '28px',
+    height: '28px',
     borderRadius: '4px',
     backgroundColor: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '14px', // Smaller font
+    fontSize: '14px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center'
   });
-
-  // Add hover effect
+  
   button.addEventListener('mouseover', () => {
     button.style.backgroundColor = '#f5f5f5';
   });
-
+  
   button.addEventListener('mouseout', () => {
     button.style.backgroundColor = 'transparent';
   });
-
+  
   return button;
 }
 
 /**
  * Create the messages container for the chat area
  * @param {Object} channel - Channel object
+ * @param {string} connectionStatus - Current connection status
  * @returns {HTMLElement} Messages container element
  */
-function createMessagesContainer(channel) {
+function createMessagesContainer(channel, connectionStatus) {
   const container = document.createElement('div');
   applyStyles(container, {
     flex: '1',
@@ -497,50 +552,119 @@ function createMessagesContainer(channel) {
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
-    width: '100%', // FIXED: Ensure container takes full width
-    minHeight: '200px' // FIXED: Ensure minimum height
+    width: '100%',
+    minHeight: '200px'
   });
 
-  // Placeholder message
-  const placeholderMessage = document.createElement('div');
-  applyStyles(placeholderMessage, {
-    margin: 'auto',
-    textAlign: 'center',
+  // Attempt to load messages from storage
+  const messages = getChannelMessages(channel.id);
+  if (messages && messages.length > 0) {
+    messages.forEach(message => {
+      container.appendChild(createMessageElement(message));
+    });
+  } else {
+    // Placeholder message when no messages exist
+    const placeholderMessage = document.createElement('div');
+    applyStyles(placeholderMessage, {
+      margin: 'auto',
+      textAlign: 'center',
+      color: '#666',
+      padding: '20px',
+      backgroundColor: '#f8f9fa',
+      borderRadius: '8px',
+      maxWidth: '80%'
+    });
+    
+    const placeholderIcon = document.createElement('div');
+    placeholderIcon.textContent = '💬';
+    applyStyles(placeholderIcon, {
+      fontSize: '48px',
+      marginBottom: '12px'
+    });
+    
+    const placeholderTitle = document.createElement('div');
+    placeholderTitle.textContent = `Welcome to #${channel.name}`;
+    applyStyles(placeholderTitle, {
+      fontSize: '18px',
+      fontWeight: 'bold',
+      marginBottom: '8px'
+    });
+    
+    const placeholderText = document.createElement('div');
+    if (connectionStatus === 'connected') {
+      placeholderText.textContent = 'This is the start of your conversation. Messages are encrypted and will expire after 24 hours.';
+    } else if (connectionStatus === 'connecting') {
+      placeholderText.textContent = 'Connecting to chat...';
+    } else {
+      placeholderText.textContent = 'Cannot load messages. Check your connection.';
+    }
+    applyStyles(placeholderText, {
+      fontSize: '14px'
+    });
+    
+    placeholderMessage.appendChild(placeholderIcon);
+    placeholderMessage.appendChild(placeholderTitle);
+    placeholderMessage.appendChild(placeholderText);
+    
+    container.appendChild(placeholderMessage);
+  }
+  
+  return container;
+}
+
+/**
+ * Create a message element for display in the chat
+ * @param {Object} message - Message data
+ * @returns {HTMLElement} Message element
+ */
+function createMessageElement(message) {
+  // Create container for the message
+  const messageElement = document.createElement('div');
+  applyStyles(messageElement, {
+    padding: '8px',
+    borderBottom: '1px solid #e0e0e0',
+    display: 'flex',
+    flexDirection: 'column'
+  });
+  
+  // Avatar with sender's initial
+  const avatar = document.createElement('div');
+  const initial = (message.senderDisplayName || message.sender || 'U').charAt(0).toUpperCase();
+  avatar.textContent = initial;
+  const hue = generateColorFromString(message.sender || '');
+  applyStyles(avatar, {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    backgroundColor: `hsl(${hue}, 70%, 80%)`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '4px',
+    fontWeight: 'bold'
+  });
+  
+  // Header with sender name and timestamp
+  const header = document.createElement('div');
+  header.textContent = `${message.sender || 'Unknown'} • ${formatTimestamp(message.timestamp)}`;
+  applyStyles(header, {
+    fontSize: '12px',
     color: '#666',
-    padding: '20px',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
-    maxWidth: '80%'
+    marginBottom: '4px'
   });
   
-  const placeholderIcon = document.createElement('div');
-  placeholderIcon.textContent = '💬';
-  applyStyles(placeholderIcon, {
-    fontSize: '48px',
-    marginBottom: '12px'
-  });
-  
-  const placeholderTitle = document.createElement('div');
-  placeholderTitle.textContent = `Welcome to #${channel.name}`;
-  applyStyles(placeholderTitle, {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    marginBottom: '8px'
-  });
-  
-  const placeholderText = document.createElement('div');
-  placeholderText.textContent = 'This is the start of your conversation. Messages are encrypted and will expire after 24 hours.';
-  applyStyles(placeholderText, {
+  // Message text content
+  const text = document.createElement('div');
+  text.textContent = message.text;
+  applyStyles(text, {
     fontSize: '14px'
   });
   
-  placeholderMessage.appendChild(placeholderIcon);
-  placeholderMessage.appendChild(placeholderTitle);
-  placeholderMessage.appendChild(placeholderText);
+  messageElement.appendChild(avatar);
+  messageElement.appendChild(header);
+  messageElement.appendChild(text);
   
-  container.appendChild(placeholderMessage);
-
-  return container;
+  return messageElement;
 }
 
 /**
@@ -562,7 +686,7 @@ function createUserPanel(users, onUserSelect) {
   // Panel header - more compact
   const panelHeader = document.createElement('div');
   applyStyles(panelHeader, {
-    padding: '10px 12px', // Reduced padding
+    padding: '10px 12px',
     borderBottom: '1px solid #e0e0e0',
     display: 'flex',
     justifyContent: 'space-between',
@@ -573,7 +697,7 @@ function createUserPanel(users, onUserSelect) {
   heading.textContent = 'Team Members';
   applyStyles(heading, {
     margin: '0',
-    fontSize: '16px', // Smaller font
+    fontSize: '16px',
     fontWeight: 'bold'
   });
   
@@ -584,8 +708,8 @@ function createUserPanel(users, onUserSelect) {
     backgroundColor: '#e0e0e0',
     color: '#333',
     borderRadius: '12px',
-    padding: '1px 6px', // Smaller padding
-    fontSize: '11px', // Smaller font
+    padding: '1px 6px',
+    fontSize: '11px',
     fontWeight: 'bold'
   });
   
@@ -595,7 +719,7 @@ function createUserPanel(users, onUserSelect) {
   // Search box - more compact
   const searchBox = document.createElement('div');
   applyStyles(searchBox, {
-    padding: '8px 12px', // Reduced padding
+    padding: '8px 12px',
     borderBottom: '1px solid #e0e0e0'
   });
 
@@ -604,17 +728,17 @@ function createUserPanel(users, onUserSelect) {
     display: 'flex',
     alignItems: 'center',
     backgroundColor: 'white',
-    borderRadius: '16px', // Smaller radius
+    borderRadius: '16px',
     border: '1px solid #ddd',
-    padding: '0 10px' // Reduced padding
+    padding: '0 10px'
   });
   
   const searchIcon = document.createElement('span');
   searchIcon.textContent = '🔍';
   applyStyles(searchIcon, {
-    fontSize: '12px', // Smaller font
+    fontSize: '12px',
     color: '#666',
-    marginRight: '6px' // Reduced margin
+    marginRight: '6px'
   });
 
   const searchInput = document.createElement('input');
@@ -622,10 +746,10 @@ function createUserPanel(users, onUserSelect) {
   searchInput.placeholder = 'Search users...';
   applyStyles(searchInput, {
     width: '100%',
-    padding: '6px 0', // Reduced padding
+    padding: '6px 0',
     border: 'none',
     borderRadius: '16px',
-    fontSize: '13px', // Smaller font
+    fontSize: '13px',
     outline: 'none'
   });
 
@@ -638,7 +762,7 @@ function createUserPanel(users, onUserSelect) {
   applyStyles(usersContainer, {
     flex: '1',
     overflowY: 'auto',
-    padding: '4px 0' // Reduced padding
+    padding: '4px 0'
   });
 
   // Group users by status
@@ -683,8 +807,8 @@ function addUserGroup(container, title, users, onUserSelect) {
   // Create group header - more compact
   const groupHeader = document.createElement('div');
   applyStyles(groupHeader, {
-    padding: '8px 12px 4px', // Reduced padding
-    fontSize: '10px', // Smaller font
+    padding: '8px 12px 4px',
+    fontSize: '10px',
     color: '#666',
     fontWeight: 'bold',
     textTransform: 'uppercase',
@@ -695,7 +819,7 @@ function addUserGroup(container, title, users, onUserSelect) {
   // Create user list
   const userList = document.createElement('div');
   applyStyles(userList, {
-    marginBottom: '10px' // Reduced margin
+    marginBottom: '10px'
   });
   
   // Add users
@@ -721,7 +845,7 @@ function createUserItem(user, isOnline, onUserSelect) {
   applyStyles(item, {
     display: 'flex',
     alignItems: 'center',
-    padding: '6px 12px', // Reduced padding
+    padding: '6px 12px',
     cursor: 'pointer',
     opacity: isOnline ? '1' : '0.7'
   });
@@ -729,10 +853,10 @@ function createUserItem(user, isOnline, onUserSelect) {
   // Status indicator
   const statusIndicator = document.createElement('div');
   applyStyles(statusIndicator, {
-    width: '6px', // Smaller size
-    height: '6px', // Smaller size
+    width: '6px',
+    height: '6px',
     borderRadius: '50%',
-    marginRight: '8px' // Reduced margin
+    marginRight: '8px'
   });
   
   // Set status color
@@ -754,13 +878,13 @@ function createUserItem(user, isOnline, onUserSelect) {
   avatar.textContent = initial;
   
   // Generate color based on username
-  const hue = generateColorFromString(user.username);
+  const hue = generateColorFromString(user.username || '');
   const bgColor = `hsl(${hue}, 70%, 80%)`;
   const textColor = `hsl(${hue}, 70%, 30%)`;
   
   applyStyles(avatar, {
-    width: '28px', // Smaller size
-    height: '28px', // Smaller size
+    width: '28px',
+    height: '28px',
     borderRadius: '50%',
     backgroundColor: bgColor,
     color: textColor,
@@ -768,8 +892,8 @@ function createUserItem(user, isOnline, onUserSelect) {
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: 'bold',
-    fontSize: '14px', // Smaller font
-    marginRight: '8px' // Reduced margin
+    fontSize: '14px',
+    marginRight: '8px'
   });
   
   // User info
@@ -783,7 +907,7 @@ function createUserItem(user, isOnline, onUserSelect) {
   displayName.textContent = user.displayName || user.username;
   applyStyles(displayName, {
     fontWeight: 'medium',
-    fontSize: '13px' // Smaller font
+    fontSize: '13px'
   });
   
   // Role badge for admin/moderator - smaller
@@ -791,12 +915,12 @@ function createUserItem(user, isOnline, onUserSelect) {
     const roleBadge = document.createElement('span');
     roleBadge.textContent = user.role;
     applyStyles(roleBadge, {
-      fontSize: '9px', // Smaller font
+      fontSize: '9px',
       backgroundColor: user.role === 'admin' ? '#f44336' : '#2196F3',
       color: 'white',
-      padding: '1px 4px', // Reduced padding
-      borderRadius: '8px', // Smaller radius
-      marginLeft: '4px', // Reduced margin
+      padding: '1px 4px',
+      borderRadius: '8px',
+      marginLeft: '4px',
       textTransform: 'uppercase',
       fontWeight: 'bold'
     });
@@ -804,20 +928,20 @@ function createUserItem(user, isOnline, onUserSelect) {
     displayName.appendChild(roleBadge);
   }
   
-  // Status text if available
+  userInfo.appendChild(displayName);
+
+  // If there's a status message
   if (user.statusMessage) {
     const statusText = document.createElement('div');
     statusText.textContent = user.statusMessage;
     applyStyles(statusText, {
-      fontSize: '11px', // Smaller font
+      fontSize: '11px',
       color: '#666',
-      marginTop: '1px' // Reduced margin
+      marginTop: '1px'
     });
     
     userInfo.appendChild(statusText);
   }
-  
-  userInfo.appendChild(displayName);
   
   // Message icon button for direct messaging - smaller
   const messageButton = document.createElement('button');
@@ -827,8 +951,8 @@ function createUserItem(user, isOnline, onUserSelect) {
     backgroundColor: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '14px', // Smaller font
-    padding: '2px', // Reduced padding
+    fontSize: '14px',
+    padding: '2px',
     borderRadius: '4px'
   });
   
@@ -851,7 +975,7 @@ function createUserItem(user, isOnline, onUserSelect) {
     onUserSelect(user);
   });
   
-  // Add hover effect for item
+  // Hover effect for item
   item.addEventListener('mouseover', () => {
     item.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
   });
@@ -860,13 +984,33 @@ function createUserItem(user, isOnline, onUserSelect) {
     item.style.backgroundColor = 'transparent';
   });
   
-  // Add components to item
+  // Assemble item
   item.appendChild(statusIndicator);
   item.appendChild(avatar);
   item.appendChild(userInfo);
   item.appendChild(messageButton);
   
   return item;
+}
+
+/**
+ * Format a timestamp into a relative time (Today/Yesterday) or full date
+ * @param {number|string|Date} timestamp - Input timestamp
+ * @returns {string} Formatted time
+ */
+function formatTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffTime = now - date;
+  const oneDay = 24 * 60 * 60 * 1000;
+  if (diffTime < oneDay && date.getDate() === now.getDate()) {
+    // Same day: show time in HH:MM format
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } else if (diffTime < 2 * oneDay && date.getDate() === now.getDate() - 1) {
+    return 'Yesterday';
+  } else {
+    return date.toLocaleDateString();
+  }
 }
 
 /**

@@ -18,6 +18,15 @@ let connectionStatus = 'disconnected';
 let reconnectAttempts = 0;
 let heartbeatInterval = null;
 
+// Connection status constants
+const CONNECTION_STATUS = {
+  DISCONNECTED: 'disconnected',
+  CONNECTING: 'connecting',
+  CONNECTED: 'connected',
+  ERROR: 'error',
+  AUTH_FAILED: 'auth_failed'
+};
+
 // Active channel tracking
 let activeChannel = localStorage.getItem('crmplus_chat_active_channel') || 'general';
 
@@ -55,20 +64,20 @@ function connectToServer() {
       console.log(`[MessageService] Attempting to connect to ${WS_URL}`);
       
       // Update connection status
-      updateConnectionStatus('connecting');
+      updateConnectionStatus(CONNECTION_STATUS.CONNECTING);
       
       // Create WebSocket connection
       socket = new WebSocket(WS_URL);
       
       // Connection opened
       socket.onopen = () => {
-        console.log('[MessageService] WebSocket connection established');
+        console.log('[MessageService] WebSocket connection established to', WS_URL);
         
         // Reset reconnect attempts
         reconnectAttempts = 0;
         
-        // Update connection status
-        updateConnectionStatus('connected');
+        // Update connection status - still pending authentication
+        // Will be updated to connected after successful auth
         
         // Start heartbeat
         startHeartbeat();
@@ -76,29 +85,33 @@ function connectToServer() {
         // Authenticate connection
         authenticateConnection();
         
+        // Log client info
+        console.log('[MessageService] Client connected, user:', getCurrentUser()?.username);
+        
         // Resolve promise
         resolve(true);
       };
       
       // Listen for messages
       socket.onmessage = (event) => {
+        console.log('[MessageService] Message received:', event.data);
         try {
           const message = JSON.parse(event.data);
           handleIncomingMessage(message);
         } catch (parseError) {
-          console.error('[MessageService] Error parsing message:', parseError);
+          console.error('[MessageService] Error parsing message:', parseError, event.data);
         }
       };
       
       // Connection closed
       socket.onclose = (event) => {
-        console.warn('[MessageService] WebSocket connection closed', event);
+        console.warn('[MessageService] WebSocket connection closed', event.code, event.reason);
         
         // Stop heartbeat
         stopHeartbeat();
         
         // Update connection status
-        updateConnectionStatus('disconnected');
+        updateConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
         
         // Attempt reconnection if not intentionally closed
         if (event.code !== 1000) {
@@ -113,7 +126,7 @@ function connectToServer() {
         console.error('[MessageService] WebSocket error:', error);
         
         // Update connection status
-        updateConnectionStatus('error');
+        updateConnectionStatus(CONNECTION_STATUS.ERROR);
         
         // Attempt reconnection
         attemptReconnection();
@@ -124,7 +137,7 @@ function connectToServer() {
       console.error('[MessageService] Connection error:', error);
       
       // Update connection status
-      updateConnectionStatus('error');
+      updateConnectionStatus(CONNECTION_STATUS.ERROR);
       
       // Attempt reconnection
       attemptReconnection();
@@ -156,7 +169,7 @@ function disconnectFromServer() {
     stopHeartbeat();
     
     // Update connection status
-    updateConnectionStatus('disconnected');
+    updateConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
     
     console.log('[MessageService] Disconnected from server');
   } catch (error) {
@@ -175,19 +188,23 @@ function authenticateConnection() {
   
   if (!currentUser || !authToken) {
     console.warn('[MessageService] Cannot authenticate: No user or token');
+    updateConnectionStatus(CONNECTION_STATUS.AUTH_FAILED);
+    socket.close(1000, 'Not authenticated');
     return;
   }
   
+  // Use consistent message format for authentication
   const authMessage = {
     type: 'authenticate',
-    payload: {
-      userId: currentUser.id,
-      username: currentUser.username,
-      token: authToken
+    token: authToken,
+    user: {
+      id: currentUser.id,
+      username: currentUser.username
     }
   };
   
   sendWebSocketMessage(authMessage);
+  console.log('[MessageService] Authentication attempt sent', { username: currentUser.username });
 }
 
 /**
@@ -343,7 +360,7 @@ function attemptReconnection() {
   // Check if max reconnect attempts reached
   if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
     console.error('[MessageService] Max reconnection attempts reached');
-    updateConnectionStatus('error');
+    updateConnectionStatus(CONNECTION_STATUS.ERROR);
     return;
   }
   
@@ -411,11 +428,22 @@ function handleAuthenticationResponse(response) {
   if (response.success) {
     console.log('[MessageService] Authentication successful');
     logChatEvent('auth', 'WebSocket authentication successful');
+    updateConnectionStatus(CONNECTION_STATUS.CONNECTED); // Ensure status is updated on success
   } else {
     console.error('[MessageService] Authentication failed:', response.reason);
     logChatEvent('auth', 'WebSocket authentication failed', { 
       reason: response.reason 
     });
+    updateConnectionStatus(CONNECTION_STATUS.AUTH_FAILED);
+    
+    // Close the socket on authentication failure
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.close(1000, 'Authentication failed');
+    }
+    
+    // Notify user about authentication failure
+    // This depends on your UI notification system
+    // Example: notificationSystem.showError(`Chat authentication failed: ${response.reason}`);
   }
 }
 
@@ -603,7 +631,7 @@ function updateServerUrl(url) {
   localStorage.setItem('crmplus_chat_server_url', url);
   
   // Disconnect and reconnect if currently connected
-  if (connectionStatus === 'connected' || connectionStatus === 'connecting') {
+  if (connectionStatus === CONNECTION_STATUS.CONNECTED || connectionStatus === CONNECTION_STATUS.CONNECTING) {
     disconnectFromServer();
     setTimeout(connectToServer, 1000);
   }

@@ -98,7 +98,10 @@ class AdminPanel {
       flex: '1',
       padding: '20px',
       backgroundColor: '#ffffff',
-      overflowY: 'auto'
+      overflowY: 'auto',
+      display: 'block', // Ensure visibility
+      position: 'relative',
+      zIndex: '1' // Make sure it's not covered by something else
     });
     
     // Append tab content to panel
@@ -112,8 +115,15 @@ class AdminPanel {
    * Render the content for the active tab
    */
   renderActiveTab() {
+    console.log(`[AdminPanel] renderActiveTab called for: ${this.activeTab}`);
+    
     // Destroy existing tab components
     this.destroyExistingManagers();
+    
+    // Clear tab content first
+    if (this.tabContent) {
+      this.tabContent.innerHTML = '';
+    }
     
     // Use AdminPanelTabs to render the appropriate content
     AdminPanelTabs.renderTab(this.activeTab, this.tabContent, {
@@ -151,16 +161,31 @@ class AdminPanel {
    * @param {string} tabId - ID of the tab to switch to
    */
   switchTab(tabId) {
-    if (this.activeTab === tabId) return;
+    console.log(`[AdminPanel] switchTab called with tabId: ${tabId}, current activeTab: ${this.activeTab}`);
     
-    // Update active tab
-    this.activeTab = tabId;
-    
-    // Log tab switch
-    logChatEvent('admin', `Switched to ${tabId} tab`);
-    
-    // Re-render the tab content without recreating the entire panel
-    this.renderActiveTab();
+    try {
+      // Make tab ID lowercase for consistency
+      const normalizedTabId = tabId.toLowerCase();
+      
+      if (this.activeTab === normalizedTabId) return;
+      
+      // Update active tab
+      this.activeTab = normalizedTabId;
+      
+      // Make sure header knows about the tab change too
+      if (this.header && this.header.updateActiveTab) {
+        this.header.updateActiveTab(normalizedTabId);
+      }
+      
+      // Re-render the tab content without recreating the entire panel
+      this.renderActiveTab();
+      
+      // Log tab switch
+      console.log(`[AdminPanel] Successfully switched to ${normalizedTabId} tab`);
+      logChatEvent('admin', `Switched to ${normalizedTabId} tab`);
+    } catch (error) {
+      console.error("[AdminPanel] Error switching tabs:", error);
+    }
   }
   
   /**

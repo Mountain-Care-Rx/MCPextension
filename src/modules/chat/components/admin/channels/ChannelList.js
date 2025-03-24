@@ -1,641 +1,591 @@
-// chat/components/channels/ChannelList.js
-// Channel list component for HIPAA-compliant chat
+// components/messages/ChannelList.js
+// Component to display the list of channels
 
-import {
-    getAvailableChannels,
-    addChannelListener,
-    setActiveChannel,
-    getActiveChannel,
-    createChannel,
-    hasPermission
-  } from '../../../services/channelService.js';
-  import { getCurrentUser, isAuthenticated } from '../../../services/auth';
-  import { logChatEvent } from '../../../utils/logger.js';
+import { getAvailableChannels, joinChannel } from '../../services/channel/channelService';
+import { logChatEvent } from '../../utils/logger';
+
+/**
+ * Channel List Component
+ * Displays a list of available channels
+ */
+class ChannelList {
+  /**
+   * Create a new ChannelList
+   * @param {Object} options - Configuration options
+   * @param {Array} options.channels - List of channels to display
+   * @param {string} options.selectedChannel - Currently selected channel
+   * @param {Function} options.onChannelSelect - Channel selection callback
+   * @param {string} options.connectionStatus - Current connection status
+   */
+  constructor(options = {}) {
+    this.options = {
+      channels: [],
+      selectedChannel: 'general',
+      onChannelSelect: () => {},
+      connectionStatus: 'disconnected',
+      ...options
+    };
+    
+    // State
+    this.channels = this.options.channels || [];
+    this.isLoading = false;
+    
+    // DOM elements
+    this.element = null;
+    this.channelList = null;
+    this.loadingIndicator = null;
+    this.errorMessage = null;
+    
+    // Bind methods
+    this.render = this.render.bind(this);
+    this.renderChannelItem = this.renderChannelItem.bind(this);
+    this.handleChannelClick = this.handleChannelClick.bind(this);
+    this.refreshChannels = this.refreshChannels.bind(this);
+  }
   
-  class ChannelList {
-    constructor(container, onChannelSelect = null) {
-      this.container = container;
-      this.onChannelSelect = onChannelSelect;
-      this.channelListElement = null;
-      this.channels = [];
-      this.activeChannel = getActiveChannel();
-      this.unsubscribeListener = null;
-      
-      // Bind methods
-      this.render = this.render.bind(this);
-      this.updateChannelList = this.updateChannelList.bind(this);
-      this.handleChannelClick = this.handleChannelClick.bind(this);
-      this.showCreateChannelModal = this.showCreateChannelModal.bind(this);
-      this.handleCreateChannel = this.handleCreateChannel.bind(this);
-      
-      // Initialize
-      this.initialize();
-    }
+  /**
+   * Render the channel list component
+   * @returns {HTMLElement} Channel list element
+   */
+  render() {
+    // Create main container
+    this.element = document.createElement('div');
+    this.element.className = 'channel-list-container';
+    this.applyStyles(this.element, {
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      borderRight: '1px solid #e1e4e8',
+      backgroundColor: '#f7f9fb'
+    });
     
-    /**
-     * Initialize the channel list
-     */
-    initialize() {
-      // Create container element
-      this.channelListElement = document.createElement('div');
-      this.channelListElement.className = 'channel-list';
-      this.applyStyles(this.channelListElement, {
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100%',
-        height: '100%',
-        overflow: 'hidden'
-      });
-      
-      // Add to container
-      if (this.container) {
-        this.container.appendChild(this.channelListElement);
-      }
-      
-      // Subscribe to channel updates
-      this.unsubscribeListener = addChannelListener(this.updateChannelList);
-      
-      // Render initial state
-      this.render();
-      
-      // Log initialization
-      logChatEvent('ui', 'Channel list component initialized');
-    }
+    // Create header
+    const header = document.createElement('div');
+    header.className = 'channel-list-header';
+    this.applyStyles(header, {
+      padding: '16px',
+      borderBottom: '1px solid #e1e4e8',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center'
+    });
     
-    /**
-     * Update the channel list
-     * @param {Array} channels - Updated channel list
-     */
-    updateChannelList(channels) {
-      this.channels = channels;
-      this.render();
-    }
+    // Header title
+    const title = document.createElement('h2');
+    title.textContent = 'Channels';
+    this.applyStyles(title, {
+      margin: '0',
+      fontSize: '16px',
+      fontWeight: 'bold'
+    });
     
-    /**
-     * Render the channel list
-     */
-    render() {
-      if (!this.channelListElement) return;
-      
-      // Clear existing content
-      this.channelListElement.innerHTML = '';
-      
-      // Create header
-      const header = document.createElement('div');
-      header.className = 'channel-list-header';
-      this.applyStyles(header, {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '12px 16px',
-        borderBottom: '1px solid #e0e0e0',
-        backgroundColor: '#f5f5f5'
-      });
-      
-      const headerTitle = document.createElement('h3');
-      headerTitle.textContent = 'Channels';
-      this.applyStyles(headerTitle, {
-        margin: '0',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        color: '#333'
-      });
-      header.appendChild(headerTitle);
-      
-      // Add create channel button if user has permission
-      const canCreateChannel = isAuthenticated() && hasPermission('channel.create');
-      if (canCreateChannel) {
-        const createButton = document.createElement('button');
-        createButton.innerHTML = '&#43;'; // Plus sign
-        createButton.title = 'Create Channel';
-        this.applyStyles(createButton, {
-          backgroundColor: '#2196F3',
-          color: 'white',
-          border: 'none',
-          borderRadius: '50%',
-          width: '24px',
-          height: '24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '16px',
-          cursor: 'pointer',
-          outline: 'none'
-        });
-        
-        createButton.addEventListener('click', this.showCreateChannelModal);
-        header.appendChild(createButton);
-      }
-      
-      this.channelListElement.appendChild(header);
-      
-      // Create scrollable channel container
-      const channelContainer = document.createElement('div');
-      channelContainer.className = 'channel-list-container';
-      this.applyStyles(channelContainer, {
-        flex: '1',
-        overflowY: 'auto',
-        padding: '8px 0'
-      });
-      
-      // Group channels by type
-      const publicChannels = this.channels.filter(c => c.type === 'public');
-      const privateChannels = this.channels.filter(c => c.type === 'private');
-      
-      // Add public channels
-      if (publicChannels.length > 0) {
-        const publicHeader = this.createChannelGroupHeader('Public Channels');
-        channelContainer.appendChild(publicHeader);
-        
-        publicChannels.forEach(channel => {
-          const channelItem = this.createChannelItem(channel);
-          channelContainer.appendChild(channelItem);
-        });
-      }
-      
-      // Add private channels
-      if (privateChannels.length > 0) {
-        const privateHeader = this.createChannelGroupHeader('Private Channels');
-        channelContainer.appendChild(privateHeader);
-        
-        privateChannels.forEach(channel => {
-          const channelItem = this.createChannelItem(channel);
-          channelContainer.appendChild(channelItem);
-        });
-      }
-      
-      // Add empty state if no channels
-      if (this.channels.length === 0) {
-        const emptyState = document.createElement('div');
-        emptyState.className = 'empty-state';
-        this.applyStyles(emptyState, {
-          padding: '20px',
-          textAlign: 'center',
-          color: '#666'
-        });
-        
-        emptyState.textContent = 'No channels available';
-        channelContainer.appendChild(emptyState);
-      }
-      
-      this.channelListElement.appendChild(channelContainer);
-    }
+    // Channel count
+    const count = document.createElement('span');
+    count.className = 'channel-count';
+    count.textContent = this.channels.length;
+    this.applyStyles(count, {
+      display: 'inline-block',
+      background: '#e1e4e8',
+      color: '#586069',
+      fontSize: '12px',
+      fontWeight: 'bold',
+      padding: '2px 6px',
+      borderRadius: '10px',
+      marginLeft: '5px'
+    });
     
-    /**
-     * Create a channel group header
-     * @param {string} title - Group title
-     * @returns {HTMLElement} Header element
-     */
-    createChannelGroupHeader(title) {
-      const header = document.createElement('div');
-      header.className = 'channel-group-header';
-      this.applyStyles(header, {
-        padding: '6px 16px',
-        fontSize: '12px',
-        fontWeight: 'bold',
-        color: '#666',
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px'
-      });
-      
-      header.textContent = title;
-      return header;
-    }
+    // Refresh button
+    const refreshButton = document.createElement('button');
+    refreshButton.title = 'Refresh Channels';
+    refreshButton.innerHTML = '↻';
+    this.applyStyles(refreshButton, {
+      background: 'transparent',
+      border: 'none',
+      color: '#586069',
+      cursor: 'pointer',
+      fontSize: '16px',
+      padding: '4px',
+      borderRadius: '4px'
+    });
     
-    /**
-     * Create a channel item
-     * @param {Object} channel - Channel data
-     * @returns {HTMLElement} Channel item element
-     */
-    createChannelItem(channel) {
-      const item = document.createElement('div');
-      item.className = 'channel-item';
-      item.setAttribute('data-channel-id', channel.id);
-      
-      const isActive = channel.id === this.activeChannel;
-      
-      this.applyStyles(item, {
-        display: 'flex',
-        alignItems: 'center',
-        padding: '8px 16px',
-        cursor: 'pointer',
-        backgroundColor: isActive ? '#e3f2fd' : 'transparent',
-        borderLeft: isActive ? '3px solid #2196F3' : '3px solid transparent',
-        transition: 'background-color 0.2s'
-      });
-      
-      // Create channel icon
-      const icon = document.createElement('span');
-      icon.className = 'channel-icon';
-      icon.innerHTML = channel.type === 'public' ? '&#127760;' : '&#128274;'; // Globe or Lock
-      this.applyStyles(icon, {
-        marginRight: '8px',
-        fontSize: '14px'
-      });
-      
-      // Create channel name
-      const name = document.createElement('span');
-      name.className = 'channel-name';
-      name.textContent = channel.name;
-      this.applyStyles(name, {
-        flex: '1',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-        fontWeight: isActive ? 'bold' : 'normal'
-      });
-      
-      // Add unread indicator if needed
-      if (channel.unreadCount && channel.unreadCount > 0) {
-        const unread = document.createElement('span');
-        unread.className = 'unread-indicator';
-        unread.textContent = channel.unreadCount > 99 ? '99+' : channel.unreadCount;
-        this.applyStyles(unread, {
-          backgroundColor: '#f44336',
-          color: 'white',
-          borderRadius: '10px',
-          padding: '2px 6px',
-          fontSize: '10px',
-          fontWeight: 'bold'
-        });
-        
-        item.appendChild(unread);
-      }
-      
-      // Add event listener
-      item.addEventListener('click', () => this.handleChannelClick(channel));
-      
-      // Append elements
-      item.appendChild(icon);
-      item.appendChild(name);
-      
-      return item;
-    }
+    refreshButton.addEventListener('click', this.refreshChannels);
     
-    /**
-     * Handle channel click
-     * @param {Object} channel - Selected channel
-     */
-    handleChannelClick(channel) {
-      // Set active channel
-      setActiveChannel(channel.id);
-      this.activeChannel = channel.id;
-      
-      // Call callback if provided
-      if (this.onChannelSelect && typeof this.onChannelSelect === 'function') {
-        this.onChannelSelect(channel);
-      }
-      
-      // Update UI
-      this.render();
-      
-      // Log channel selection
-      logChatEvent('ui', 'Channel selected', { channelId: channel.id, channelName: channel.name });
-    }
+    // Add elements to header
+    title.appendChild(count);
+    header.appendChild(title);
+    header.appendChild(refreshButton);
+    this.element.appendChild(header);
     
-    /**
-     * Show create channel modal
-     */
-    showCreateChannelModal() {
-      // Create modal overlay
-      const overlay = document.createElement('div');
-      overlay.className = 'modal-overlay';
-      this.applyStyles(overlay, {
-        position: 'fixed',
-        top: '0',
-        left: '0',
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: '1000'
+    // Create the actual channel list
+    this.channelList = document.createElement('div');
+    this.channelList.className = 'channels';
+    this.applyStyles(this.channelList, {
+      flex: '1',
+      overflowY: 'auto',
+      padding: '8px 0'
+    });
+    
+    // Create loading indicator
+    this.loadingIndicator = document.createElement('div');
+    this.loadingIndicator.className = 'loading-indicator';
+    this.loadingIndicator.textContent = 'Loading channels...';
+    this.applyStyles(this.loadingIndicator, {
+      padding: '16px',
+      textAlign: 'center',
+      color: '#586069',
+      display: this.isLoading ? 'block' : 'none'
+    });
+    
+    // Create error message
+    this.errorMessage = document.createElement('div');
+    this.errorMessage.className = 'error-message';
+    this.applyStyles(this.errorMessage, {
+      padding: '16px',
+      textAlign: 'center',
+      color: '#cb2431',
+      display: 'none'
+    });
+    
+    // Add loading indicator and error message to the list container
+    this.element.appendChild(this.loadingIndicator);
+    this.element.appendChild(this.errorMessage);
+    
+    // Render channels
+    if (this.channels && this.channels.length > 0) {
+      this.channels.forEach(channel => {
+        const channelItem = this.renderChannelItem(channel);
+        this.channelList.appendChild(channelItem);
       });
-      
-      // Create modal content
-      const modal = document.createElement('div');
-      modal.className = 'modal-content';
-      this.applyStyles(modal, {
-        backgroundColor: 'white',
-        borderRadius: '4px',
-        width: '90%',
-        maxWidth: '400px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        overflow: 'hidden'
-      });
-      
-      // Create modal header
-      const modalHeader = document.createElement('div');
-      modalHeader.className = 'modal-header';
-      this.applyStyles(modalHeader, {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+    } else if (!this.isLoading) {
+      // Show no channels message when not loading
+      const noChannels = document.createElement('div');
+      noChannels.className = 'no-channels';
+      noChannels.textContent = this.options.connectionStatus === 'connected' ? 
+                              'No channels available' : 
+                              'Channels will appear when connected';
+      this.applyStyles(noChannels, {
         padding: '16px',
-        borderBottom: '1px solid #e0e0e0',
-        backgroundColor: '#f5f5f5'
+        textAlign: 'center',
+        color: '#586069',
+        fontStyle: 'italic'
       });
-      
-      const modalTitle = document.createElement('h3');
-      modalTitle.textContent = 'Create New Channel';
-      this.applyStyles(modalTitle, {
-        margin: '0',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        color: '#333'
-      });
-      
-      const closeButton = document.createElement('button');
-      closeButton.innerHTML = '&times;';
-      closeButton.title = 'Close';
-      this.applyStyles(closeButton, {
-        backgroundColor: 'transparent',
-        border: 'none',
-        fontSize: '20px',
-        color: '#666',
-        cursor: 'pointer',
-        padding: '0',
-        width: '24px',
-        height: '24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      });
-      
-      closeButton.addEventListener('click', () => {
-        document.body.removeChild(overlay);
-      });
-      
-      modalHeader.appendChild(modalTitle);
-      modalHeader.appendChild(closeButton);
-      modal.appendChild(modalHeader);
-      
-      // Create modal body
-      const modalBody = document.createElement('div');
-      modalBody.className = 'modal-body';
-      this.applyStyles(modalBody, {
-        padding: '16px'
-      });
-      
-      // Create form
-      const form = document.createElement('form');
-      form.className = 'channel-form';
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        this.handleCreateChannel(form, overlay);
-      });
-      
-      // Channel name field
-      const nameGroup = document.createElement('div');
-      this.applyStyles(nameGroup, {
-        marginBottom: '16px'
-      });
-      
-      const nameLabel = document.createElement('label');
-      nameLabel.htmlFor = 'channel-name';
-      nameLabel.textContent = 'Channel Name';
-      this.applyStyles(nameLabel, {
-        display: 'block',
-        marginBottom: '8px',
-        fontWeight: 'bold'
-      });
-      
-      const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.id = 'channel-name';
-      nameInput.name = 'name';
-      nameInput.required = true;
-      nameInput.placeholder = 'Enter channel name';
-      this.applyStyles(nameInput, {
-        display: 'block',
-        width: '100%',
-        padding: '8px',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
-        boxSizing: 'border-box'
-      });
-      
-      nameGroup.appendChild(nameLabel);
-      nameGroup.appendChild(nameInput);
-      form.appendChild(nameGroup);
-      
-      // Channel description field
-      const descGroup = document.createElement('div');
-      this.applyStyles(descGroup, {
-        marginBottom: '16px'
-      });
-      
-      const descLabel = document.createElement('label');
-      descLabel.htmlFor = 'channel-description';
-      descLabel.textContent = 'Description';
-      this.applyStyles(descLabel, {
-        display: 'block',
-        marginBottom: '8px',
-        fontWeight: 'bold'
-      });
-      
-      const descInput = document.createElement('textarea');
-      descInput.id = 'channel-description';
-      descInput.name = 'description';
-      descInput.placeholder = 'Enter channel description (optional)';
-      this.applyStyles(descInput, {
-        display: 'block',
-        width: '100%',
-        padding: '8px',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
-        boxSizing: 'border-box',
-        minHeight: '80px',
-        resize: 'vertical'
-      });
-      
-      descGroup.appendChild(descLabel);
-      descGroup.appendChild(descInput);
-      form.appendChild(descGroup);
-      
-      // Channel type field
-      const typeGroup = document.createElement('div');
-      this.applyStyles(typeGroup, {
-        marginBottom: '16px'
-      });
-      
-      const typeLabel = document.createElement('label');
-      typeLabel.textContent = 'Channel Type';
-      this.applyStyles(typeLabel, {
-        display: 'block',
-        marginBottom: '8px',
-        fontWeight: 'bold'
-      });
-      
-      const typeOptions = document.createElement('div');
-      this.applyStyles(typeOptions, {
-        display: 'flex',
-        gap: '16px'
-      });
-      
-      // Public option
-      const publicOption = document.createElement('div');
-      this.applyStyles(publicOption, {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px'
-      });
-      
-      const publicInput = document.createElement('input');
-      publicInput.type = 'radio';
-      publicInput.id = 'channel-type-public';
-      publicInput.name = 'type';
-      publicInput.value = 'public';
-      publicInput.checked = true;
-      
-      const publicLabel = document.createElement('label');
-      publicLabel.htmlFor = 'channel-type-public';
-      publicLabel.textContent = 'Public';
-      
-      publicOption.appendChild(publicInput);
-      publicOption.appendChild(publicLabel);
-      
-      // Private option
-      const privateOption = document.createElement('div');
-      this.applyStyles(privateOption, {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px'
-      });
-      
-      const privateInput = document.createElement('input');
-      privateInput.type = 'radio';
-      privateInput.id = 'channel-type-private';
-      privateInput.name = 'type';
-      privateInput.value = 'private';
-      
-      const privateLabel = document.createElement('label');
-      privateLabel.htmlFor = 'channel-type-private';
-      privateLabel.textContent = 'Private';
-      
-      privateOption.appendChild(privateInput);
-      privateOption.appendChild(privateLabel);
-      
-      typeOptions.appendChild(publicOption);
-      typeOptions.appendChild(privateOption);
-      typeGroup.appendChild(typeLabel);
-      typeGroup.appendChild(typeOptions);
-      form.appendChild(typeGroup);
-      
-      // Submit button
-      const submitBtn = document.createElement('button');
-      submitBtn.type = 'submit';
-      submitBtn.textContent = 'Create Channel';
-      this.applyStyles(submitBtn, {
-        backgroundColor: '#2196F3',
+      this.channelList.appendChild(noChannels);
+    }
+    
+    // Add channel list to container
+    this.element.appendChild(this.channelList);
+    
+    // Create "New Channel" button for admins
+    // TODO: Check if user has admin permissions
+    const currentUser = window.hipaaChat && window.hipaaChat.currentUser;
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    
+    if (isAdmin) {
+      const newChannelButton = document.createElement('button');
+      newChannelButton.className = 'new-channel-button';
+      newChannelButton.textContent = 'New Channel';
+      this.applyStyles(newChannelButton, {
+        margin: '16px',
+        padding: '8px 16px',
+        backgroundColor: '#0366d6',
         color: 'white',
         border: 'none',
         borderRadius: '4px',
-        padding: '10px 16px',
         cursor: 'pointer',
         fontWeight: 'bold',
-        marginTop: '8px'
+        textAlign: 'center'
       });
       
-      form.appendChild(submitBtn);
-      modalBody.appendChild(form);
-      modal.appendChild(modalBody);
-      
-      // Add modal to overlay
-      overlay.appendChild(modal);
-      
-      // Add overlay to body
-      document.body.appendChild(overlay);
-      
-      // Focus name input
-      nameInput.focus();
-    }
-    
-    /**
-     * Handle create channel form submission
-     * @param {HTMLFormElement} form - The form element
-     * @param {HTMLElement} overlay - The modal overlay element
-     */
-    async handleCreateChannel(form, overlay) {
-      // Get form data
-      const formData = new FormData(form);
-      const channelName = formData.get('name');
-      const channelDescription = formData.get('description');
-      const channelType = formData.get('type');
-      
-      // Validate
-      if (!channelName) {
-        alert('Channel name is required');
-        return;
-      }
-      
-      try {
-        // Prepare channel data
-        const channelData = {
-          name: channelName,
-          description: channelDescription,
-          type: channelType || 'public'
-        };
-        
-        // Create channel
-        const result = await createChannel(channelData);
-        
-        if (result.success) {
-          // Close modal
-          document.body.removeChild(overlay);
-          
-          // Set as active channel
-          setActiveChannel(result.channel.id);
-          this.activeChannel = result.channel.id;
-          
-          // Log creation
-          logChatEvent('ui', 'Channel created', { 
-            channelId: result.channel.id,
-            channelName: result.channel.name,
-            channelType: result.channel.type
-          });
-          
-          // Call callback if provided
-          if (this.onChannelSelect && typeof this.onChannelSelect === 'function') {
-            this.onChannelSelect(result.channel);
-          }
+      newChannelButton.addEventListener('click', () => {
+        if (typeof this.options.onNewChannel === 'function') {
+          this.options.onNewChannel();
         } else {
-          alert('Error creating channel: ' + result.error);
+          // Fallback if no handler provided
+          console.log('Create new channel clicked, but no handler provided');
+          alert('Create new channel functionality coming soon!');
         }
-      } catch (error) {
-        console.error('[CRM Extension] Error creating channel:', error);
-        alert('An error occurred while creating the channel');
-      }
+      });
+      
+      this.element.appendChild(newChannelButton);
     }
     
-    /**
-     * Apply CSS styles to an element
-     * @param {HTMLElement} element - Element to style
-     * @param {Object} styles - Styles to apply
-     */
-    applyStyles(element, styles) {
-      Object.assign(element.style, styles);
+    return this.element;
+  }
+  
+  /**
+   * Render a single channel item
+   * @param {Object} channel - Channel data
+   * @returns {HTMLElement} Channel item element
+   */
+  renderChannelItem(channel) {
+    // Handle both formats: full channel object or just channel ID
+    const channelId = typeof channel === 'string' ? channel : channel.id;
+    const channelName = typeof channel === 'string' ? channel : (channel.name || channelId);
+    const channelDescription = typeof channel === 'string' ? '' : (channel.description || '');
+    const isPrivate = typeof channel === 'string' ? false : !!channel.isPrivate;
+    
+    // Create item container
+    const item = document.createElement('div');
+    item.className = 'channel-item';
+    item.dataset.channelId = channelId;
+    
+    // Determine if this is the selected channel
+    const isSelected = this.options.selectedChannel === channelId;
+    
+    this.applyStyles(item, {
+      padding: '10px 16px',
+      borderLeft: isSelected ? '3px solid #0366d6' : '3px solid transparent',
+      backgroundColor: isSelected ? 'rgba(3, 102, 214, 0.08)' : 'transparent',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    });
+    
+    // Add hover effect
+    item.addEventListener('mouseover', () => {
+      if (!isSelected) {
+        item.style.backgroundColor = 'rgba(3, 102, 214, 0.04)';
+      }
+    });
+    
+    item.addEventListener('mouseout', () => {
+      if (!isSelected) {
+        item.style.backgroundColor = 'transparent';
+      }
+    });
+    
+    // Channel icon based on public/private status
+    const icon = document.createElement('span');
+    icon.textContent = isPrivate ? '🔒' : '#';
+    this.applyStyles(icon, {
+      fontWeight: isPrivate ? 'normal' : 'bold',
+      color: isSelected ? '#0366d6' : '#586069',
+      width: '20px',
+      textAlign: 'center'
+    });
+    
+    // Channel name
+    const name = document.createElement('span');
+    name.className = 'channel-name';
+    name.textContent = channelName;
+    this.applyStyles(name, {
+      flex: '1',
+      fontWeight: isSelected ? 'bold' : 'normal',
+      color: isSelected ? '#0366d6' : '#24292e',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    });
+    
+    // Unread indicator (placeholder for future functionality)
+    // This would typically show the count of unread messages
+    // const unread = document.createElement('span');
+    // unread.className = 'unread-count';
+    // this.applyStyles(unread, {
+    //   display: 'none', // Hide for now
+    //   backgroundColor: '#0366d6',
+    //   color: 'white',
+    //   borderRadius: '10px',
+    //   padding: '0 6px',
+    //   fontSize: '12px',
+    //   fontWeight: 'bold'
+    // });
+    
+    // Add channel elements
+    item.appendChild(icon);
+    item.appendChild(name);
+    // item.appendChild(unread);
+    
+    // Add tooltip with description if available
+    if (channelDescription) {
+      item.title = channelDescription;
     }
     
-    /**
-     * Cleanup resources
-     */
-    destroy() {
-      // Unsubscribe from channel updates
-      if (this.unsubscribeListener) {
-        this.unsubscribeListener();
-        this.unsubscribeListener = null;
+    // Add click handler
+    item.addEventListener('click', () => this.handleChannelClick(channel));
+    
+    return item;
+  }
+  
+  /**
+   * Handle channel click
+   * @param {Object|string} channel - Channel that was clicked
+   */
+  handleChannelClick(channel) {
+    // Get channel ID
+    const channelId = typeof channel === 'string' ? channel : channel.id;
+    
+    // Don't do anything if already selected
+    if (this.options.selectedChannel === channelId) {
+      return;
+    }
+    
+    // Check connection status
+    if (this.options.connectionStatus !== 'connected') {
+      console.warn('Cannot join channel when not connected');
+      // Show a notification to the user
+      const event = new CustomEvent('show_notification', {
+        detail: {
+          type: 'error',
+          message: 'Cannot join channel when not connected to server'
+        }
+      });
+      window.dispatchEvent(event);
+      return;
+    }
+    
+    console.log(`[ChannelList] Channel clicked: ${channelId}`);
+    
+    // Attempt to join the channel via WebSocket
+    joinChannel(channelId)
+      .then(success => {
+        if (success) {
+          // Call the selection callback
+          if (typeof this.options.onChannelSelect === 'function') {
+            this.options.onChannelSelect(channel);
+          }
+          
+          // Log channel selection
+          logChatEvent('chat', 'Selected channel', { channelId });
+          
+          // Update selected channel highlight in UI
+          this.updateSelectedChannel(channelId);
+        } else {
+          console.warn(`[ChannelList] Failed to join channel: ${channelId}`);
+          
+          // Show failure notification
+          const event = new CustomEvent('show_notification', {
+            detail: {
+              type: 'error',
+              message: 'Failed to join channel. Please try again.'
+            }
+          });
+          window.dispatchEvent(event);
+        }
+      })
+      .catch(error => {
+        console.error('[ChannelList] Error joining channel:', error);
+        
+        // Show error notification
+        const event = new CustomEvent('show_notification', {
+          detail: {
+            type: 'error',
+            message: `Error joining channel: ${error.message}`
+          }
+        });
+        window.dispatchEvent(event);
+      });
+  }
+  
+  /**
+   * Update selected channel in UI
+   * @param {string} channelId - Selected channel ID
+   */
+  updateSelectedChannel(channelId) {
+    if (!this.channelList) return;
+    
+    // Update local state
+    this.options.selectedChannel = channelId;
+    
+    // Update UI
+    const items = this.channelList.querySelectorAll('.channel-item');
+    
+    items.forEach(item => {
+      if (item.dataset.channelId === channelId) {
+        // Selected channel
+        this.applyStyles(item, {
+          borderLeft: '3px solid #0366d6',
+          backgroundColor: 'rgba(3, 102, 214, 0.08)'
+        });
+        
+        // Update text color
+        const nameElement = item.querySelector('.channel-name');
+        if (nameElement) {
+          this.applyStyles(nameElement, {
+            fontWeight: 'bold',
+            color: '#0366d6'
+          });
+        }
+        
+        const iconElement = item.firstChild;
+        if (iconElement) {
+          this.applyStyles(iconElement, {
+            color: '#0366d6'
+          });
+        }
+      } else {
+        // Unselected channels
+        this.applyStyles(item, {
+          borderLeft: '3px solid transparent',
+          backgroundColor: 'transparent'
+        });
+        
+        // Update text color
+        const nameElement = item.querySelector('.channel-name');
+        if (nameElement) {
+          this.applyStyles(nameElement, {
+            fontWeight: 'normal',
+            color: '#24292e'
+          });
+        }
+        
+        const iconElement = item.firstChild;
+        if (iconElement) {
+          this.applyStyles(iconElement, {
+            color: '#586069'
+          });
+        }
+      }
+    });
+  }
+  
+  /**
+   * Refresh channel list from server
+   */
+  async refreshChannels() {
+    if (this.isLoading) return;
+    
+    // Check connection status
+    if (this.options.connectionStatus !== 'connected') {
+      console.warn('[ChannelList] Cannot refresh channels when not connected');
+      
+      // Show error message
+      if (this.errorMessage) {
+        this.errorMessage.textContent = 'Cannot refresh channels when not connected to server';
+        this.errorMessage.style.display = 'block';
       }
       
-      // Remove from DOM
-      if (this.channelListElement && this.channelListElement.parentNode) {
-        this.channelListElement.parentNode.removeChild(this.channelListElement);
+      // Show notification
+      const event = new CustomEvent('show_notification', {
+        detail: {
+          type: 'error',
+          message: 'Cannot refresh channels when not connected to server'
+        }
+      });
+      window.dispatchEvent(event);
+      
+      return;
+    }
+    
+    try {
+      // Show loading state
+      this.isLoading = true;
+      
+      if (this.loadingIndicator) {
+        this.loadingIndicator.style.display = 'block';
       }
       
-      // Log destruction
-      logChatEvent('ui', 'Channel list component destroyed');
+      if (this.errorMessage) {
+        this.errorMessage.style.display = 'none';
+      }
+      
+      // Fetch channels
+      const channels = await getAvailableChannels();
+      
+      // Update state
+      this.channels = channels;
+      
+      // Update UI if needed
+      if (this.channelList) {
+        // Clear existing channels
+        this.channelList.innerHTML = '';
+        
+        // Render channels
+        if (channels && channels.length > 0) {
+          channels.forEach(channel => {
+            const channelItem = this.renderChannelItem(channel);
+            this.channelList.appendChild(channelItem);
+          });
+        } else {
+          // Show no channels message
+          const noChannels = document.createElement('div');
+          noChannels.className = 'no-channels';
+          noChannels.textContent = 'No channels available';
+          this.applyStyles(noChannels, {
+            padding: '16px',
+            textAlign: 'center',
+            color: '#586069',
+            fontStyle: 'italic'
+          });
+          this.channelList.appendChild(noChannels);
+        }
+        
+        // Update channel count in header
+        const countElement = this.element.querySelector('.channel-count');
+        if (countElement) {
+          countElement.textContent = channels.length;
+        }
+      }
+      
+      // Log channel refresh
+      logChatEvent('chat', 'Refreshed channel list', { 
+        count: channels.length
+      });
+    } catch (error) {
+      console.error('[ChannelList] Error refreshing channels:', error);
+      
+      // Show error message
+      if (this.errorMessage) {
+        this.errorMessage.textContent = `Error refreshing channels: ${error.message}`;
+        this.errorMessage.style.display = 'block';
+      }
+      
+      // Show notification
+      const event = new CustomEvent('show_notification', {
+        detail: {
+          type: 'error',
+          message: `Error refreshing channels: ${error.message}`
+        }
+      });
+      window.dispatchEvent(event);
+      
+      // Log error
+      logChatEvent('error', 'Channel refresh failed', { 
+        error: error.message
+      });
+    } finally {
+      // Reset loading state
+      this.isLoading = false;
+      
+      if (this.loadingIndicator) {
+        this.loadingIndicator.style.display = 'none';
+      }
     }
   }
   
-  export default ChannelList;
+  /**
+   * Update the component with new options
+   * @param {Object} newOptions - New options to apply
+   */
+  update(newOptions = {}) {
+    // Update options
+    this.options = {
+      ...this.options,
+      ...newOptions
+    };
+    
+    // Update channels if provided
+    if (newOptions.channels) {
+      this.channels = newOptions.channels;
+    }
+    
+    // Update selected channel if needed
+    if (newOptions.selectedChannel && 
+        this.channelList && 
+        newOptions.selectedChannel !== this.options.selectedChannel) {
+      this.updateSelectedChannel(newOptions.selectedChannel);
+    }
+  }
+  
+  /**
+   * Apply CSS styles to an element
+   * @param {HTMLElement} element - Element to style
+   * @param {Object} styles - Styles to apply
+   */
+  applyStyles(element, styles) {
+    Object.assign(element.style, styles);
+  }
+}
+
+export default ChannelList;

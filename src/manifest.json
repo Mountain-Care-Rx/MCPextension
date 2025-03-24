@@ -1,6 +1,6 @@
 {
   "name": "CRM+",
-  "version": "2025.03.22",
+  "version": "2025.03.23",
   "description": "Enhanced CRM Tool for MtnCareRx",
   "manifest_version": 3,
   "update_url": "https://latteralus.github.io/MCPextension/updates.xml",

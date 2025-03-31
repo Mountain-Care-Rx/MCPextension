@@ -2,6 +2,7 @@
 // Modal for creating new users
 
 import { createUser } from '../../../services/auth';
+import { getAllDepartments } from '../../../services/userService.js'; // Import department service
 import { logChatEvent } from '../../../utils/logger.js';
 import { validateUsername, validatePassword, validateEmail } from '../../../utils/validation.js';
 import ModalBase from '../../common/ModalBase.js';
@@ -27,12 +28,19 @@ class CreateUserModal extends ModalBase {
       onSuccess: () => {},
       ...options
     };
-    
+
+    this.departments = []; // To store fetched departments
+    this.departmentSelectElement = null; // Reference to the select element
+
     // Bind methods
     this.handleCreateUser = this.handleCreateUser.bind(this);
     this.showFormError = this.showFormError.bind(this);
+    this.fetchAndPopulateDepartments = this.fetchAndPopulateDepartments.bind(this);
+
+    // Fetch departments when modal is created
+    this.fetchAndPopulateDepartments();
   }
-  
+
   /**
    * Render the modal content
    * @returns {HTMLElement} Modal content
@@ -117,7 +125,38 @@ class CreateUserModal extends ModalBase {
     roleGroup.appendChild(roleLabel);
     roleGroup.appendChild(roleSelect);
     form.appendChild(roleGroup);
-    
+
+    // Department selection
+    const departmentGroup = document.createElement('div');
+     this.applyStyles(departmentGroup, { marginBottom: '15px' });
+
+    const departmentLabel = document.createElement('label');
+    departmentLabel.textContent = 'Department';
+    departmentLabel.htmlFor = 'user-department';
+    this.applyStyles(departmentLabel, { display: 'block', marginBottom: '5px', fontWeight: 'bold' });
+
+    this.departmentSelectElement = document.createElement('select');
+    this.departmentSelectElement.id = 'user-department';
+    this.departmentSelectElement.name = 'departmentId'; // Use departmentId for submission
+    this.applyStyles(this.departmentSelectElement, {
+        width: '100%',
+        padding: '8px 12px',
+        border: '1px solid #ced4da',
+        borderRadius: '4px',
+        boxSizing: 'border-box'
+    });
+
+    // Add a default "Select Department" option (optional)
+    const defaultOption = document.createElement('option');
+    defaultOption.value = ''; // No department selected
+    defaultOption.textContent = '-- Select Department (Optional) --';
+    this.departmentSelectElement.appendChild(defaultOption);
+
+    // Departments will be populated asynchronously
+    departmentGroup.appendChild(departmentLabel);
+    departmentGroup.appendChild(this.departmentSelectElement);
+    form.appendChild(departmentGroup);
+
     // Error message area
     const errorMessage = document.createElement('div');
     errorMessage.id = 'create-user-error';
@@ -244,7 +283,8 @@ class CreateUserModal extends ModalBase {
       email: formData.get('email'),
       password: formData.get('password'),
       confirmPassword: formData.get('confirmPassword'),
-      role: formData.get('role')
+      role: formData.get('role'),
+      departmentId: formData.get('departmentId') || null // Get departmentId, default to null if empty
     };
     
     // Validate form data
@@ -329,6 +369,57 @@ class CreateUserModal extends ModalBase {
       errorElement.style.display = 'none';
     }, 5000);
   }
+
+ /**
+  * Fetches departments and populates the select dropdown.
+  */
+ async fetchAndPopulateDepartments() {
+   if (!this.departmentSelectElement) return;
+
+   // Indicate loading state? (e.g., disable select)
+   this.departmentSelectElement.disabled = true;
+   const loadingOption = document.createElement('option');
+   loadingOption.textContent = 'Loading departments...';
+   this.departmentSelectElement.appendChild(loadingOption);
+
+
+   try {
+     this.departments = await getAllDepartments();
+     // Clear existing options except the default
+     while (this.departmentSelectElement.options.length > 1) {
+         this.departmentSelectElement.remove(1);
+     }
+
+     // Populate with fetched departments
+     this.departments.forEach(dept => {
+       const option = document.createElement('option');
+       option.value = dept.id; // Use department ID as value
+       option.textContent = dept.name;
+       this.departmentSelectElement.appendChild(option);
+     });
+     logChatEvent('admin', 'Populated department dropdown', { count: this.departments.length });
+   } catch (error) {
+     logChatEvent('error', 'Failed to fetch or populate departments', { error: error.message });
+     // Optionally display an error to the user in the modal
+     this.showFormError(document.getElementById('create-user-error'), 'Could not load departments.');
+     // Remove loading/error option if fetch fails
+      while (this.departmentSelectElement.options.length > 1) {
+         this.departmentSelectElement.remove(1);
+     }
+      const errorOption = document.createElement('option');
+      errorOption.textContent = 'Error loading';
+      errorOption.disabled = true;
+      this.departmentSelectElement.appendChild(errorOption);
+
+   } finally {
+       // Re-enable select after loading (or error)
+       this.departmentSelectElement.disabled = false;
+       // Remove loading option if it exists
+       if (loadingOption.parentNode === this.departmentSelectElement) {
+           this.departmentSelectElement.removeChild(loadingOption);
+       }
+   }
+ }
 }
 
 export default CreateUserModal;

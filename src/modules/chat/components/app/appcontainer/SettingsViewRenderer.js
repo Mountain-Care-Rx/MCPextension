@@ -9,7 +9,13 @@
  */
 export function renderSettingsView(container, options = {}) {
     const {
-      onLogout = () => console.log('Logout not implemented')
+      settings = { theme: 'Light', fontSize: 'Medium', enable2FA: false, globalNotifications: 'all' }, // Added default globalNotifications
+      onLogout = () => console.log('Logout not implemented'),
+      onThemeChange = (theme) => console.log('Theme change not handled:', theme),
+      onFontSizeChange = (size) => console.log('Font size change not handled:', size),
+      onChangePasswordClick = () => console.log('Change password click not handled'),
+      on2FAChange = (enabled) => console.log('2FA change not handled:', enabled),
+      onGlobalNotificationChange = (level) => console.log('Global notification change not handled:', level) // Added handler prop
     } = options;
 
     // Create settings layout with improved styling
@@ -80,8 +86,23 @@ export function renderSettingsView(container, options = {}) {
           }
         ]
       },
-      { 
-        title: 'Account', 
+      {
+        title: 'Notifications',
+        icon: '🔔',
+        description: 'Manage how you receive notifications.',
+        settings: [
+          {
+            name: 'Global Default',
+            type: 'select',
+            options: ['all', 'mentions', 'none'], // Match server/model levels
+            defaultValue: 'all', // Default if not loaded
+            settingKey: 'globalNotifications' // Key in the settings object
+          }
+          // TODO: Add UI for per-channel/per-DM overrides later
+        ]
+      },
+      {
+        title: 'Account',
         icon: '👤',
         description: 'Manage your account settings.',
         settings: [
@@ -97,7 +118,8 @@ export function renderSettingsView(container, options = {}) {
     
     // Create settings sections
     categories.forEach(category => {
-      const section = createSettingsSection(category, onLogout);
+      // Pass all relevant options down
+      const section = createSettingsSection(category, options);
       settingsContainer.appendChild(section);
     });
     
@@ -108,10 +130,10 @@ export function renderSettingsView(container, options = {}) {
   /**
    * Create a settings section
    * @param {Object} category - Category data
-   * @param {Function} onLogout - Logout callback
+   * @param {Object} options - Options containing settings state and handlers
    * @returns {HTMLElement} Settings section element
    */
-  function createSettingsSection(category, onLogout) {
+  function createSettingsSection(category, options) {
     const section = document.createElement('div');
     applyStyles(section, {
       marginBottom: '24px',
@@ -170,7 +192,8 @@ export function renderSettingsView(container, options = {}) {
       });
       
       category.settings.forEach(setting => {
-        const settingRow = createSettingControl(setting, onLogout);
+        // Pass the full options object to the control creator
+        const settingRow = createSettingControl(setting, options);
         settingsList.appendChild(settingRow);
       });
       
@@ -182,11 +205,14 @@ export function renderSettingsView(container, options = {}) {
   
   /**
    * Create a setting control
-   * @param {Object} setting - Setting data
-   * @param {Function} onLogout - Logout callback
+   * @param {Object} setting - Setting data (name, type, label, options, etc.)
+   * @param {Object} options - Options containing settings state and handlers
    * @returns {HTMLElement} Setting control element
    */
-  function createSettingControl(setting, onLogout) {
+  function createSettingControl(setting, options) {
+    // Destructure all handlers passed in options
+    const { settings, onLogout, onThemeChange, onFontSizeChange, onChangePasswordClick, on2FAChange, onGlobalNotificationChange } = options;
+
     const row = document.createElement('div');
     applyStyles(row, {
       display: 'flex',
@@ -227,24 +253,48 @@ export function renderSettingsView(container, options = {}) {
             optionElement.value = option;
             optionElement.textContent = option;
             
-            // Set default value if exists
-            if (option === setting.defaultValue) {
+            // Set selected value based on current settings
+            if (setting.name === 'Theme' && option === settings.theme) {
               optionElement.selected = true;
+            } else if (setting.name === 'Font Size' && option === settings.fontSize) {
+               optionElement.selected = true;
+            } else if (!settings.theme && !settings.fontSize && option === setting.defaultValue) {
+               // Fallback to defaultValue if settings aren't loaded yet (shouldn't happen often)
+               optionElement.selected = true;
             }
             
             control.appendChild(optionElement);
-          });
-        }
-        break;
+          }); // End of forEach loop
+
+          // Add change listener based on setting name or key
+          if (setting.name === 'Theme') {
+            control.addEventListener('change', (e) => onThemeChange(e.target.value));
+          } else if (setting.name === 'Font Size') {
+            control.addEventListener('change', (e) => onFontSizeChange(e.target.value));
+          } else if (setting.name === 'Global Default') { // Handle new setting
+              control.addEventListener('change', (e) => onGlobalNotificationChange(e.target.value));
+          }
+        } // End of if (setting.options && setting.options.length)
+      break; // End of case 'select'
         
       case 'checkbox':
         control = document.createElement('input');
         control.type = 'checkbox';
+        // Set initial state based on settings
+        if (setting.name === 'Two-Factor Authentication') {
+            control.checked = !!settings.enable2FA;
+            // Add change listener
+            control.addEventListener('change', (e) => on2FAChange(e.target.checked));
+        }
         break;
         
       case 'button':
         control = document.createElement('button');
         control.textContent = setting.label;
+        // Add click listener for specific buttons
+        if (setting.name === 'Change Password') {
+            control.addEventListener('click', onChangePasswordClick);
+        }
         applyStyles(control, {
           padding: '8px 12px',
           backgroundColor: '#fff',

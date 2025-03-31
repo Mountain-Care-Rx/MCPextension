@@ -13,6 +13,7 @@ import { getActiveChannel } from './services/messageService.js';
 import authContext from './components/auth/AuthContext.js'; // Fixed path: './components/auth/AuthContext.js'
 import config from './config.js';
 import { initChatUI, destroyChatUI } from './initChatUI.js';
+import './styles/main.css'; // Load global styles
 
 // Flag to track initialization status
 let isInitialized = false;

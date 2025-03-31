@@ -6,12 +6,13 @@ import {
   connectToServer, 
   getConnectionStatus, 
   addConnectionStatusListener,
-  requestChannelList
+  requestChannelList,
+  addTypingStatusListener // Added import
 } from '../../services/messageService.js';
-import { 
+import {
   getAvailableChannels, 
   addChannelListListener 
-} from '../../services/channel/channelService.js';
+} from '../../services/channelService.js';
 import { logChatEvent } from '../../utils/logger.js';
 import { initChat, isChatInitialized } from '../../index.js';
 
@@ -24,6 +25,10 @@ import { createCustomHeader } from './appcontainer/HeaderRenderer.js';
 import { renderChatView } from './appcontainer/ChatViewRenderer.js'; 
 import { renderAdminView } from './appcontainer/AdminViewRenderer.js';
 import { renderSettingsView } from './appcontainer/SettingsViewRenderer.js';
+
+// Import common components and specific auth functions
+import ChangePasswordModal from '../common/ChangePasswordModal.js';
+import { changePassword } from '../../services/auth/authentication.js'; // Import the specific function
 
 /**
  * Main Application Container Component
@@ -51,13 +56,21 @@ class AppContainer {
     
     // Data state
     this.channels = [];
-    this.users = [];
-    this.messages = {};
+    this.users = []; // Note: This might not be actively updated/used everywhere yet
+    this.messages = {}; // Note: This might not be actively updated/used everywhere yet
+    this.typingUsers = {}; // { channelId/dmUserId: { userId: { username, timeoutId } } }
+    this.settings = { // Added settings state
+        theme: 'Light',
+        fontSize: 'Medium',
+        enable2FA: false,
+        globalNotifications: 'all' // Added global notification pref default
+    };
     
     // Unsubscribe functions
     this.unsubscribeConnectionStatus = null;
     this.unsubscribeChannelList = null;
-    
+    this.unsubscribeTypingStatus = null; // Added unsubscribe
+
     // Bind methods
     this.render = this.render.bind(this);
     this.handleConnectionStatusChange = this.handleConnectionStatusChange.bind(this);
@@ -69,7 +82,12 @@ class AppContainer {
     this.toggleUserList = this.toggleUserList.bind(this);
     this.toggleChatVisibility = this.toggleChatVisibility.bind(this);
     this.handleLogout = this.handleLogout.bind(this);
-    
+    this.applyTheme = this.applyTheme.bind(this); // Bind theme/font methods
+    this.applyFontSize = this.applyFontSize.bind(this);
+    this.handleChangePasswordClick = this.handleChangePasswordClick.bind(this); // Bind password change
+    this.handleTypingStatusUpdate = this.handleTypingStatusUpdate.bind(this); // Bind typing handler
+    this.handleGlobalNotificationChange = this.handleGlobalNotificationChange.bind(this); // Bind notification handler
+
     // Initialize
     this.initialize();
   }
@@ -126,7 +144,9 @@ class AppContainer {
       
       // Add to container
       this.container.appendChild(this.appElement);
-      
+
+      // Load initial settings
+      this.loadSettings();
       
       // CRITICAL FIX: Assign the toggle function to the global window object
       // This ensures it's accessible from the header bar's chat button
@@ -143,7 +163,10 @@ class AppContainer {
       
       // Subscribe to channel list changes
       this.unsubscribeChannelList = addChannelListListener(this.handleChannelListChange);
-      
+  
+      // Subscribe to typing status updates
+      this.unsubscribeTypingStatus = addTypingStatusListener(this.handleTypingStatusUpdate);
+  
       // Get initial connection status
       this.connectionStatus = getConnectionStatus();
       
@@ -382,7 +405,268 @@ class AppContainer {
       console.error('[AppContainer] Logout error:', error);
     }
   }
-  
+
+  /**
+   * Load settings from local storage
+   */
+  loadSettings() {
+    try {
+      const savedSettings = localStorage.getItem('crmplus_chat_settings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        // Merge saved settings with defaults, ensuring no undefined values
+        this.settings = {
+          theme: parsedSettings.theme || 'Light',
+          fontSize: parsedSettings.fontSize || 'Medium',
+          enable2FA: !!parsedSettings.enable2FA, // Ensure boolean
+          globalNotifications: parsedSettings.globalNotifications || 'all' // Load global pref
+        };
+        logChatEvent('ui', 'Loaded settings from storage', this.settings);
+        // Apply loaded theme/font size
+        this.applyTheme(this.settings.theme);
+        this.applyFontSize(this.settings.fontSize);
+      } else {
+         logChatEvent('ui', 'No saved settings found, using defaults.');
+         // Defaults are applied before loadSettings is called in initialize
+      }
+    } catch (error) {
+      console.error('[AppContainer] Error loading settings:', error);
+      logChatEvent('error', 'Failed to load settings', { error: error.message });
+      // Use default settings on error
+      this.settings = { theme: 'Light', fontSize: 'Medium', enable2FA: false };
+      // Apply default theme/font size on error
+      this.applyTheme(this.settings.theme);
+      this.applyFontSize(this.settings.fontSize);
+    }
+  }
+
+  /**
+   * Save settings to local storage
+   */
+  saveSettings() {
+    try {
+      localStorage.setItem('crmplus_chat_settings', JSON.stringify(this.settings));
+      logChatEvent('ui', 'Saved settings to storage', this.settings);
+    } catch (error) {
+      console.error('[AppContainer] Error saving settings:', error);
+      logChatEvent('error', 'Failed to save settings', { error: error.message });
+    }
+  }
+
+  /**
+   * Handle theme change
+   * @param {string} newTheme - Selected theme
+   */
+  handleThemeChange(newTheme) {
+    this.settings.theme = newTheme;
+    this.saveSettings();
+    this.applyTheme(newTheme); // Apply theme change
+    logChatEvent('ui', 'Theme changed', { theme: newTheme });
+  }
+
+   /**
+   * Handle font size change
+   * @param {string} newSize - Selected font size
+   */
+  handleFontSizeChange(newSize) {
+    this.settings.fontSize = newSize;
+    this.saveSettings();
+    this.applyFontSize(newSize); // Apply font size change
+     logChatEvent('ui', 'Font size changed', { size: newSize });
+  }
+
+  /**
+   * Handle 2FA checkbox change
+   * @param {boolean} isEnabled - Whether 2FA is enabled
+   */
+  handle2FAChange(isEnabled) {
+     this.settings.enable2FA = isEnabled;
+     this.saveSettings();
+     // TODO: Implement actual 2FA setup/disable logic (likely involves API calls)
+     logChatEvent('ui', '2FA setting changed', { enabled: isEnabled });
+     alert(`2FA ${isEnabled ? 'enabled' : 'disabled'} (UI only - backend not implemented)`);
+  }
+
+  /**
+   * Handle global notification preference change
+   * @param {string} newLevel - Selected level ('all', 'mentions', 'none')
+   */
+  async handleGlobalNotificationChange(newLevel) {
+     this.settings.globalNotifications = newLevel;
+     this.saveSettings(); // Save locally immediately
+
+     logChatEvent('ui', 'Global notification setting changed', { level: newLevel });
+
+     // Call backend API to update preference
+     try {
+        const token = getAuthToken();
+        if (!token) throw new Error('Not authenticated');
+        // TODO: Use configurable base URL
+        const serverUrl = localStorage.getItem('crmplus_chat_server_url')?.replace('ws', 'http') || 'http://localhost:3000';
+
+        const response = await fetch(`${serverUrl}/api/notification-preferences`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                contextType: 'global',
+                contextId: null,
+                notificationLevel: newLevel
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Server error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        logChatEvent('api', 'Updated global notification preference on server', { result });
+        if (this.notificationSystem) {
+            this.notificationSystem.showSuccess('Global notification preference saved.');
+        }
+
+     } catch (error) {
+        logChatEvent('error', 'Failed to save global notification preference to server', { error: error.message });
+        console.error('[AppContainer] Error saving global notification preference:', error);
+        if (this.notificationSystem) {
+            this.notificationSystem.showError('Failed to save notification preference.');
+        }
+        // Optionally revert local setting if save fails?
+        // this.settings.globalNotifications = previousLevel; // Need to store previous level
+        // this.saveSettings();
+     }
+  }
+
+  /**
+   * Handle click on "Change Password" button
+   */
+  handleChangePasswordClick() {
+    logChatEvent('ui', 'Change password button clicked');
+
+    // Define the callback for when the modal submits
+    const handleSubmit = async ({ currentPassword, newPassword }) => {
+      try {
+        const result = await changePassword(currentPassword, newPassword);
+        if (result.success) {
+          // Show success notification (using the existing system if available)
+          if (this.notificationSystem) {
+            this.notificationSystem.showSuccess('Password changed successfully!');
+          } else {
+            alert('Password changed successfully!'); // Fallback alert
+          }
+          return { success: true }; // Signal success to the modal
+        } else {
+          // Let the modal display the specific error from the result
+          return { success: false, error: result.error || 'An unknown error occurred.' };
+        }
+      } catch (error) {
+        console.error('[AppContainer] Change password submission error:', error);
+        // Provide a generic error for unexpected issues
+        return { success: false, error: 'An unexpected error occurred during password change.' };
+      }
+    };
+
+    // Define the cancel callback (optional, ModalBase handles basic close)
+    const handleCancel = () => {
+      logChatEvent('ui', 'Change password modal cancelled');
+    };
+
+    // Instantiate and show the modal
+    const modal = new ChangePasswordModal(handleSubmit, handleCancel);
+    modal.show(); // Assumes ModalBase has a show() method
+  }
+
+  /**
+   * Handle incoming typing status updates.
+   * @param {Object} statusUpdate - { userId, username, isTyping, channelId?, isDirectMessage?, senderId? }
+   */
+  handleTypingStatusUpdate(statusUpdate) {
+    const { userId, username, isTyping, channelId, isDirectMessage, senderId } = statusUpdate;
+    const currentUser = getCurrentUser();
+
+    // Ignore updates from self
+    if (!currentUser || userId === currentUser.id) {
+      return;
+    }
+
+    // Determine the context key (channelId or the other user's ID for DMs)
+    let contextKey = null;
+    if (isDirectMessage) {
+        // For DMs, the context is the *other* user involved.
+        // If the current user is the recipient (senderId is the typing user), the key is senderId.
+        // If the current user is the sender (userId is the typing user), the key is userId.
+        // This assumes the server sends senderId for DMs. Let's use userId for simplicity for now,
+        // assuming the UI knows which DM conversation is active based on this.selectedUser.
+        // TODO: Refine DM context key logic if needed based on how DMs are tracked.
+        contextKey = userId; // Or potentially senderId depending on server message structure
+    } else {
+        contextKey = channelId;
+    }
+
+    if (!contextKey) return; // No valid context
+
+    // Initialize context if it doesn't exist
+    if (!this.typingUsers[contextKey]) {
+      this.typingUsers[contextKey] = {};
+    }
+
+    const contextTypers = this.typingUsers[contextKey];
+
+    // Clear existing timeout for this user in this context
+    if (contextTypers[userId] && contextTypers[userId].timeoutId) {
+      clearTimeout(contextTypers[userId].timeoutId);
+    }
+
+    if (isTyping) {
+      // Add/update user in typing list for this context
+      contextTypers[userId] = {
+        username: username,
+        // Set a timeout to automatically remove the user if no 'stop typing' is received
+        timeoutId: setTimeout(() => {
+          // Simulate a stop event if timeout expires
+          this.handleTypingStatusUpdate({ ...statusUpdate, isTyping: false });
+        }, 5000) // Auto-remove after 5 seconds
+      };
+    } else {
+      // Remove user from typing list for this context
+      delete contextTypers[userId];
+    }
+
+    // Trigger a re-render ONLY if the typing status affects the currently viewed context
+    // TODO: Need a reliable way to know the currently viewed DM user (e.g., this.selectedUser)
+    const isViewingChannel = this.currentView === 'chat' && !this.selectedUser && this.selectedChannel === contextKey;
+    const isViewingDM = this.currentView === 'chat' && this.selectedUser && this.selectedUser.id === contextKey; // Assuming this.selectedUser exists
+
+    if (isViewingChannel || isViewingDM) {
+        this.render(); // Re-render to update the typing indicator display
+    }
+  }
+
+  /**
+   * Apply the selected theme to the main app element
+   * @param {string} theme - Theme name ('Light', 'Dark', 'System')
+   */
+  applyTheme(theme) {
+    if (!this.appElement) return;
+    const themeValue = theme ? theme.toLowerCase() : 'light'; // Default to light if undefined
+    this.appElement.setAttribute('data-theme', themeValue);
+    logChatEvent('ui', 'Applied theme', { theme: themeValue });
+  }
+
+  /**
+   * Apply the selected font size to the main app element
+   * @param {string} size - Font size name ('Small', 'Medium', 'Large')
+   */
+  applyFontSize(size) {
+    if (!this.appElement) return;
+    const sizeValue = size ? size.toLowerCase() : 'medium'; // Default to medium if undefined
+    this.appElement.setAttribute('data-font-size', sizeValue);
+     logChatEvent('ui', 'Applied font size', { size: sizeValue });
+  }
+
   /**
    * Render the application
    */
@@ -458,11 +742,18 @@ class AppContainer {
       try {
         if (this.currentView === 'chat') {
           // Chat view - channels, messages, and users
+          // Determine current context key for typing indicators
+          // TODO: Need reliable this.selectedUser for DMs
+          const currentContextKey = this.selectedUser ? this.selectedUser.id : this.selectedChannel;
+          const currentTypingUsers = this.typingUsers[currentContextKey] || {};
+
           renderChatView(mainContent, {
             showUserList: this.showUserList,
             selectedChannel: this.selectedChannel,
+            selectedUser: this.selectedUser, // Pass selected user for DM context
             channels: this.channels,
-            users: this.users,
+            users: this.users, // Pass full user list if needed by user panel
+            typingUsers: Object.values(currentTypingUsers), // Pass array of {username, timeoutId}
             connectionStatus: this.connectionStatus,
             onChannelSelect: this.handleChannelSelect,
             onUserSelect: this.handleUserSelect,
@@ -478,7 +769,13 @@ class AppContainer {
         } else if (this.currentView === 'settings') {
           // Settings view
           renderSettingsView(mainContent, {
+            settings: this.settings, // Pass current settings state
             onLogout: this.handleLogout,
+            onThemeChange: this.handleThemeChange, // Pass handlers
+            onFontSizeChange: this.handleFontSizeChange,
+            onChangePasswordClick: this.handleChangePasswordClick,
+            on2FAChange: this.handle2FAChange, // 2FA UI exists but logic is stubbed
+            onGlobalNotificationChange: this.handleGlobalNotificationChange, // Pass new handler
             connectionStatus: this.connectionStatus
           });
         }

@@ -4,7 +4,7 @@
 import MessageInput from '../../messages/MessageInput.js';
 import { getChannelMessages } from '../../../utils/storage.js';
 import { sendChatMessage } from '../../../services/messageService.js';
-import { joinChannel } from '../../../services/channel/channelService.js';
+import { joinChannel } from '../../../services/channelService.js';
 
 /**
  * Render the chat view
@@ -17,8 +17,10 @@ export function renderChatView(container, options = {}) {
   const {
     showUserList = true,
     selectedChannel = 'general',
+    selectedUser = null, // Added for DM context
     channels = [],
     users = [],
+    typingUsers = [], // Added typingUsers array [{ username, timeoutId }]
     connectionStatus = 'disconnected',
     onChannelSelect = () => {},
     onUserSelect = () => {},
@@ -392,7 +394,21 @@ function createChatArea(selectedChannel, channels, toggleUserList, users, connec
   
   // Messages container now checks for stored messages and shows appropriate placeholder
   const messagesContainer = createMessagesContainer(channel, connectionStatus);
-  
+
+  // Typing indicator area (initially hidden)
+  const typingIndicatorArea = document.createElement('div');
+  typingIndicatorArea.id = `typing-indicator-${channel.id || 'dm'}`; // Unique ID
+  typingIndicatorArea.className = 'typing-indicator-area';
+  applyStyles(typingIndicatorArea, {
+      height: '20px', // Reserve space
+      padding: '0 12px',
+      fontSize: '12px',
+      color: '#666',
+      fontStyle: 'italic',
+      minHeight: '20px' // Ensure space is kept even when empty
+  });
+  // Content will be updated dynamically
+
   // Chat input container
   const inputContainer = document.createElement('div');
   applyStyles(inputContainer, {
@@ -408,8 +424,13 @@ function createChatArea(selectedChannel, channels, toggleUserList, users, connec
   
   chatArea.appendChild(chatHeader);
   chatArea.appendChild(messagesContainer);
+  chatArea.appendChild(typingIndicatorArea); // Add typing indicator area
+
+  // Update typing indicator text
+  updateTypingIndicator(typingIndicatorArea, typingUsers);
+
   chatArea.appendChild(inputContainer);
-  
+
   return chatArea;
 }
 
@@ -1033,6 +1054,25 @@ function generateColorFromString(str) {
  */
 function applyStyles(element, styles) {
   Object.assign(element.style, styles);
+}
+
+/**
+ * Updates the text content of the typing indicator area.
+ * @param {HTMLElement} indicatorElement - The div element for the indicator.
+ * @param {Array<{username: string}>} typingUsers - Array of users currently typing.
+ */
+function updateTypingIndicator(indicatorElement, typingUsers) {
+    if (!indicatorElement) return;
+
+    if (typingUsers.length === 0) {
+        indicatorElement.textContent = ''; // Clear indicator
+    } else if (typingUsers.length === 1) {
+        indicatorElement.textContent = `${typingUsers[0].username} is typing...`;
+    } else if (typingUsers.length === 2) {
+        indicatorElement.textContent = `${typingUsers[0].username} and ${typingUsers[1].username} are typing...`;
+    } else {
+        indicatorElement.textContent = 'Several people are typing...';
+    }
 }
 
 export default { renderChatView };

@@ -24,7 +24,7 @@ This document outlines the modular architecture of the HIPAA-compliant chat appl
 │   │   │   └── EditChannelModal.js     # Modal component that allows administrators to edit existing channels
 │   │   ├── roles/                      # Role-related components
 │   │   │   ├── CreateRoleModal.js      # Modal component that allows administrators to create new roles
-│   │   │   ├── DeleteRoleModal.js      # Modal component that confirms role deletion
+│   │   │   ├── DeleteRoleModal.js        # Modal component that confirms role deletion
 │   │   │   ├── EditRoleModal.js        # Modal component that allows administrators to edit existing roles
 │   │   │   ├── PermissionSelector.js   # Permission selection component that allows administrators to select multiple permissions for roles
 │   │   │   ├── RoleTable.js            # Role table component that displays roles in a table format with pagination and actions
@@ -61,19 +61,16 @@ This document outlines the modular architecture of the HIPAA-compliant chat appl
 │   │   └── UserStatus.js               # User status component
 ├── services/
 │   ├── auth/                           # Authentication and permissions
-│   │   ├── index.js                    # TODO: Investigate and document the purpose of this file
+│   │   ├── index.js
 │   │   ├── authentication.js
 │   │   ├── roles.js
 │   │   ├── permissions.js
 │   │   ├── userOperations.js
 │   │   ├── userImport.js
 │   │   └── sessionManagement.js
-│   ├── channel/                        # Channel management services
-│   │   └── channelService.js
-│   ├── message/                        # Message services
-│   │   └── messageService.js
-│   └── user/                           # User management services
-│   │   └── userService.js
+│   ├── channelService.js
+│   ├── messageService.js
+│   └── userService.js
 ├── utils/
 │   ├── encryption.js                   # Message encryption
 │   ├── logger.js                       # HIPAA audit logging
@@ -100,7 +97,7 @@ Each renderer is responsible for a specific part of the UI:
 - `HeaderRenderer.js` - Creates the application header with navigation, user info, and connection status
 - `ChatViewRenderer.js` - Renders the main chat interface with channels, messages, and user list
 - `AdminViewRenderer.js` - Renders the admin panel for user/channel management
-  - **[UPDATED]** Now properly instantiates the AdminPanel class instead of creating a mock UI
+│   - **[UPDATED]** Now properly instantiates the AdminPanel class instead of creating a mock UI
 - `SettingsViewRenderer.js` - Renders the settings interface
 
 ### Support Components

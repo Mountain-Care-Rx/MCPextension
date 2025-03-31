@@ -45,10 +45,16 @@ export const {
   resetUserPassword,
   forceLogoutUser,
   
-  generateUserImportTemplate
+  generateUserImportTemplate,
+  
+  // Add the missing exports here
+  registerUser,
+  updateUserProfile,
+  updateUserRole
 } = {
   ...userOperations,
   ...roles,
   ...permissions,
-  ...userImport
+  ...userImport,
+  ...authentication  // Ensure authentication module is included if any functions come from there
 };

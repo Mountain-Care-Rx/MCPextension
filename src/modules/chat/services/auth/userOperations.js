@@ -3,7 +3,7 @@
 
 import { logChatEvent } from '../../utils/logger.js';
 import { getSetting, saveSetting } from '../../utils/storage.js';
-import { getCurrentUser, isAuthenticated, hasPermission } from './authentication.js';
+import { getCurrentUser, isAuthenticated, hasPermission, getAuthToken } from './authentication.js'; // Added getAuthToken
 
 /**
  * Create a new user (admin-only function)
@@ -13,7 +13,7 @@ import { getCurrentUser, isAuthenticated, hasPermission } from './authentication
 export async function createUser(userData) {
   try {
     const currentUser = getCurrentUser();
-    
+
     // Check if current user is admin
     if (!isAuthenticated() || currentUser.role !== 'admin') {
       return {
@@ -21,99 +21,55 @@ export async function createUser(userData) {
         error: 'Administrator privileges required to create users'
       };
     }
-    
+
     // Basic validation
     if (!userData.username || !userData.password) {
-      return { 
-        success: false, 
-        error: 'Username and password are required' 
+      return {
+        success: false,
+        error: 'Username and password are required'
       };
     }
-    
+
     // Get server URL from storage
     const serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
     const httpServerUrl = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://');
-    
+
     // Send request to server
     try {
-      const response = await fetch(`${httpServerUrl}/admin/users`, {
+      const response = await fetch(`${httpServerUrl}/api/users`, { // Corrected endpoint
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('crmplus_chat_auth_token')}`
+          'Authorization': `Bearer ${getAuthToken()}` // Use getAuthToken
         },
         body: JSON.stringify(userData)
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to create user');
       }
-      
+
       const newUser = await response.json();
-      
+
       // Log user creation
-      logChatEvent('auth', 'Admin created user', { 
+      logChatEvent('auth', 'Admin created user', {
         username: newUser.username,
         role: newUser.role || 'user'
       });
-      
+
       return {
         success: true,
         user: newUser
       };
     } catch (serverError) {
       console.error('[CRM Extension] Server create user error:', serverError);
-      
-      // For demo/dev purposes only
-      if (getSetting('allow_local_auth', false)) {
-        // Create local user
-        const localUsers = getSetting('local_users', []);
-        
-        // Check if username already exists
-        if (localUsers.some(u => u.username === userData.username)) {
-          return { 
-            success: false, 
-            error: 'Username already exists' 
-          };
-        }
-        
-        const newUser = {
-          id: `user_${Date.now().toString(36)}`,
-          ...userData,
-          role: userData.role || 'user',
-          displayName: userData.displayName || userData.username,
-          createdAt: new Date().toISOString(),
-          createdBy: currentUser.id
-        };
-        
-        localUsers.push(newUser);
-        saveSetting('local_users', localUsers);
-        
-        // Log local user creation
-        logChatEvent('auth', 'Local user created', { 
-          username: newUser.username,
-          role: newUser.role,
-          isLocal: true
-        });
-        
-        return {
-          success: true,
-          user: {
-            id: newUser.id,
-            username: newUser.username,
-            displayName: newUser.displayName,
-            role: newUser.role,
-            isLocal: true
-          }
-        };
-      }
-      
+      // Removed local fallback logic
       throw new Error('Server request failed: ' + serverError.message);
     }
   } catch (error) {
     console.error('[CRM Extension] Create user error:', error);
-    
+
     return {
       success: false,
       error: error.message
@@ -130,119 +86,73 @@ export async function createUser(userData) {
 export async function updateUser(userId, userData) {
   try {
     const currentUser = getCurrentUser();
-    
+
     if (!isAuthenticated()) {
-      return { 
-        success: false, 
-        error: 'Authentication required' 
+      return {
+        success: false,
+        error: 'Authentication required'
       };
     }
-    
+
     // Check permissions - can update self or need admin permissions
     if (userId !== currentUser.id && currentUser.role !== 'admin') {
-      return { 
-        success: false, 
-        error: 'Permission denied' 
+      return {
+        success: false,
+        error: 'Permission denied'
       };
     }
-    
+
     if (!userId) {
-      return { 
-        success: false, 
-        error: 'User ID is required' 
+      return {
+        success: false,
+        error: 'User ID is required'
       };
     }
-    
+
     // Get server URL from storage
     const serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
     const httpServerUrl = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://');
-    
+
     // Send request to server
     try {
-      const response = await fetch(`${httpServerUrl}/admin/users/${userId}`, {
+      const response = await fetch(`${httpServerUrl}/api/users/${userId}`, { // Corrected endpoint
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('crmplus_chat_auth_token')}`
+          'Authorization': `Bearer ${getAuthToken()}` // Use getAuthToken
         },
         body: JSON.stringify(userData)
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update user');
       }
-      
+
       const updatedUser = await response.json();
-      
+
       // Log user update
-      logChatEvent('auth', 'User updated', { 
+      logChatEvent('auth', 'User updated', {
         userId,
         updatedFields: Object.keys(userData).join(', ')
       });
-      
+
       return {
         success: true,
         user: updatedUser
       };
     } catch (serverError) {
+      // Catch errors specifically from the fetch/server interaction
       console.error('[CRM Extension] Server update user error:', serverError);
-      
-      // For demo/dev purposes only
-      if (getSetting('allow_local_auth', false)) {
-        const localUsers = getSetting('local_users', []);
-        const userIndex = localUsers.findIndex(u => u.id === userId);
-        
-        if (userIndex === -1) {
-          return { 
-            success: false, 
-            error: 'User not found' 
-          };
-        }
-        
-        // Create updated user (preserve sensitive fields)
-        const updatedUser = {
-          ...localUsers[userIndex],
-          displayName: userData.displayName || localUsers[userIndex].displayName,
-          email: userData.email || localUsers[userIndex].email
-        };
-        
-        // If admin is updating, also allow role update
-        if (currentUser.role === 'admin' && userData.role) {
-          updatedUser.role = userData.role;
-        }
-        
-        // Update user
-        localUsers[userIndex] = updatedUser;
-        saveSetting('local_users', localUsers);
-        
-        // Log successful update
-        logChatEvent('auth', 'Updated local user', { 
-          userId,
-          updatedFields: Object.keys(userData).join(', '),
-          isLocal: true
-        });
-        
-        return {
-          success: true,
-          user: {
-            id: updatedUser.id,
-            username: updatedUser.username,
-            displayName: updatedUser.displayName,
-            role: updatedUser.role,
-            email: updatedUser.email,
-            isLocal: true
-          }
-        };
-      }
-      
+      // Re-throw the error to be caught by the outer catch block
       throw new Error('Server request failed: ' + serverError.message);
     }
   } catch (error) {
+    // Catch errors from the overall updateUser function execution (including the re-thrown serverError)
     console.error('[CRM Extension] Update user error:', error);
-    
     return {
       success: false,
+      // Return the specific error message caught
       error: error.message
     };
   }
@@ -256,77 +166,53 @@ export async function updateUser(userId, userData) {
 export async function deleteUser(userId) {
   try {
     const currentUser = getCurrentUser();
-    
+
     if (!isAuthenticated()) {
       return { success: false, error: 'Authentication required' };
     }
-    
+
     // Check if current user is admin
     if (currentUser.role !== 'admin') {
       return { success: false, error: 'Administrator privileges required to delete users' };
     }
-    
+
     if (!userId) {
       throw new Error('User ID is required');
     }
-    
+
     // Prevent deleting self
     if (userId === currentUser.id) {
       return { success: false, error: 'Cannot delete your own account' };
     }
-    
+
     // Get server URL from storage
     const serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
     const httpServerUrl = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://');
-    
+
     // Send delete request to server
     try {
-      const response = await fetch(`${httpServerUrl}/admin/users/${userId}`, {
+      const response = await fetch(`${httpServerUrl}/api/users/${userId}`, { // Corrected endpoint
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('crmplus_chat_auth_token')}`
+          'Authorization': `Bearer ${getAuthToken()}` // Use getAuthToken
         }
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to delete user');
       }
-      
+
       // Log successful user deletion
       logChatEvent('auth', 'Admin deleted user', {
         adminUsername: currentUser.username,
         targetUserId: userId
       });
-      
+
       return { success: true };
     } catch (serverError) {
       console.error('[CRM Extension] Server delete user error:', serverError);
-      
-      // For demo/dev purposes only
-      if (getSetting('allow_local_auth', false)) {
-        const localUsers = getSetting('local_users', []);
-        const userIndex = localUsers.findIndex(u => u.id === userId);
-        
-        if (userIndex >= 0) {
-          const username = localUsers[userIndex].username;
-          localUsers.splice(userIndex, 1);
-          saveSetting('local_users', localUsers);
-          
-          // Log successful local user deletion
-          logChatEvent('auth', 'Admin deleted local user', {
-            adminUsername: currentUser.username,
-            targetUserId: userId,
-            targetUsername: username,
-            isLocal: true
-          });
-          
-          return { success: true };
-        } else {
-          throw new Error('User not found');
-        }
-      }
-      
+      // Removed local fallback logic
       throw new Error('Server request failed: ' + serverError.message);
     }
   } catch (error) {
@@ -337,74 +223,64 @@ export async function deleteUser(userId) {
 }
 
 /**
- * Get all users
- * @returns {Promise<Object>} Users retrieval result
+ * Reset a user's password (admin function)
+ * @param {string} targetUserId - ID of the user whose password to reset
+ * @param {string} newPassword - The new password
+ * @returns {Promise<Object>} Password reset result
  */
-export async function getAllUsers() {
+export async function resetUserPassword(targetUserId, newPassword) {
   try {
     const currentUser = getCurrentUser();
-    
-    if (!isAuthenticated()) {
-      return { success: false, error: 'Authentication required' };
+
+    // Check if current user is authenticated and is an admin
+    if (!isAuthenticated() || currentUser.role !== 'admin') {
+      return {
+        success: false,
+        error: 'Administrator privileges required to reset passwords'
+      };
     }
-    
-    if (!hasPermission('user.view')) {
-      return { success: false, error: 'Permission denied' };
+
+    if (!targetUserId || !newPassword) {
+      return {
+        success: false,
+        error: 'Target User ID and new password are required'
+      };
     }
-    
+
     // Get server URL from storage
     const serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
     const httpServerUrl = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://');
-    
+    const token = getAuthToken();
+
     // Send request to server
-    try {
-      const response = await fetch(`${httpServerUrl}/admin/users`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('crmplus_chat_auth_token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to get users');
-      }
-      
-      const users = await response.json();
-      
-      return {
-        success: true,
-        users: users
-      };
-    } catch (serverError) {
-      console.error('[CRM Extension] Server get users error:', serverError);
-      
-      // For demo/dev purposes only
-      if (getSetting('allow_local_auth', false)) {
-        // Get local users (excluding passwords)
-        const localUsers = getSetting('local_users', []).map(user => ({
-          id: user.id,
-          username: user.username,
-          displayName: user.displayName,
-          role: user.role,
-          createdAt: user.createdAt,
-          isLocal: true
-        }));
-        
-        return {
-          success: true,
-          users: localUsers
-        };
-      }
-      
-      throw new Error('Server request failed: ' + serverError.message);
+    const response = await fetch(`${httpServerUrl}/api/users/${targetUserId}/password`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        newPassword: newPassword,
+        adminOverride: true // Signal admin action
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({})); // Try to parse error, default to empty object
+      throw new Error(errorData.error || `Failed to reset password: Server returned ${response.status}`);
     }
+
+    // Log successful password reset
+    logChatEvent('auth', 'Admin reset user password', {
+      adminUsername: currentUser.username,
+      targetUserId: targetUserId
+    });
+
+    return { success: true };
+
   } catch (error) {
-    console.error('[CRM Extension] Get users error:', error);
-    
-    return {
-      success: false,
-      error: error.message
-    };
+    console.error('[CRM Extension] Reset user password error:', error);
+    logChatEvent('auth', 'Admin password reset failed', { error: error.message });
+    return { success: false, error: error.message };
   }
 }

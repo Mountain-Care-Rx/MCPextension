@@ -32,7 +32,7 @@ export async function getAllRoles() {
     
     // Send request to server
     try {
-      const response = await fetch(`${httpServerUrl}/admin/roles`, {
+      const response = await fetch(`${httpServerUrl}/api/roles`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('crmplus_chat_auth_token')}`
@@ -133,7 +133,7 @@ export async function createRole(roleData) {
     
     // Send request to server
     try {
-      const response = await fetch(`${httpServerUrl}/admin/roles`, {
+      const response = await fetch(`${httpServerUrl}/api/roles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -240,7 +240,7 @@ export async function updateRole(roleId, roleData) {
     
     // Send request to server
     try {
-      const response = await fetch(`${httpServerUrl}/admin/roles/${roleId}`, {
+      const response = await fetch(`${httpServerUrl}/api/roles/${roleId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -365,7 +365,7 @@ export async function deleteRole(roleId) {
     
     // Send request to server
     try {
-      const response = await fetch(`${httpServerUrl}/admin/roles/${roleId}`, {
+      const response = await fetch(`${httpServerUrl}/api/roles/${roleId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('crmplus_chat_auth_token')}`

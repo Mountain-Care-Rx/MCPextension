@@ -120,9 +120,10 @@ class UserTable {
     });
     
     const headerRow = document.createElement('tr');
-    
-    const headers = ['Username', 'Display Name', 'Role', 'Status', 'Last Login', 'Actions'];
-    
+
+    // Add 'Department' to headers
+    const headers = ['Username', 'Display Name', 'Role', 'Department', 'Status', 'Last Login', 'Actions'];
+
     headers.forEach(headerText => {
       const th = document.createElement('th');
       th.textContent = headerText;
@@ -152,8 +153,9 @@ class UserTable {
         textAlign: 'center',
         color: '#6c757d'
       });
+      // Update colspan to match new header count
       noUsersCell.colSpan = headers.length;
-      
+
       noUsersRow.appendChild(noUsersCell);
       tbody.appendChild(noUsersRow);
     } else {
@@ -295,15 +297,25 @@ class UserTable {
         }
         
         actionsCell.appendChild(actionsContainer);
-        
-        // Add cells to row
+
+        // Department cell
+        const departmentCell = document.createElement('td');
+        // Assuming user object now has department_name from the updated model queries
+        departmentCell.textContent = user.department_name || '-'; // Display name or '-'
+        this.applyStyles(departmentCell, {
+          padding: '12px 15px',
+          borderBottom: '1px solid #dee2e6'
+        });
+
+        // Add cells to row in the correct order
         row.appendChild(usernameCell);
         row.appendChild(displayNameCell);
         row.appendChild(roleCell);
+        row.appendChild(departmentCell); // Add department cell here
         row.appendChild(statusCell);
         row.appendChild(lastLoginCell);
         row.appendChild(actionsCell);
-        
+
         tbody.appendChild(row);
       });
     }

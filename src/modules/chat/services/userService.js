@@ -21,6 +21,7 @@ export const UserStatus = {
   ONLINE: 'online',
   AWAY: 'away',
   BUSY: 'busy',
+  OFFLINE: 'offline', // Added offline status
   INVISIBLE: 'invisible'
 };
 
@@ -139,99 +140,6 @@ export async function deleteUser(userId) {
       success: false,
       error: error.message
     };
-  }
-}
-
-/**
- * Set user status
- * @param {string} status - New user status
- * @returns {Promise<boolean>} Status update success
- */
-export async function setUserStatus(status) {
-  try {
-    // Validate status
-    if (!Object.values(UserStatus).includes(status)) {
-      throw new Error(`Invalid status: ${status}`);
-    }
-    
-    // Check authentication
-    if (!isAuthenticated()) {
-      throw new Error('Not authenticated');
-    }
-    
-    const currentUser = getCurrentUser();
-    
-    // Get server URL
-    const serverUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
-    const httpServerUrl = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://');
-    
-    // Prepare status update payload
-    const statusUpdatePayload = {
-      userId: currentUser.id,
-      status: status,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Send status update to server
-    const response = await fetch(`${httpServerUrl}/api/users/status`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getAuthToken()}`
-      },
-      body: JSON.stringify(statusUpdatePayload)
-    });
-    
-    // Handle server response
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to update status');
-    }
-    
-    // Update local user data
-    const updatedUser = { 
-      ...currentUser, 
-      status,
-      lastStatusUpdate: new Date().toISOString()
-    };
-    
-    // Save to local storage
-    saveUser(updatedUser);
-    
-    // Notify listeners
-    notifyUserStatusListeners();
-    
-    // Log status change
-    logChatEvent('user', 'User status updated', { 
-      userId: currentUser.id, 
-      status 
-    });
-    
-    return true;
-  } catch (error) {
-    console.error('[CRM Extension] Error setting user status:', error);
-    
-    // Fallback for local authentication or offline mode
-    if (getSetting('allow_local_auth', false)) {
-      const localUsers = getSetting('local_users', []);
-      const userIndex = localUsers.findIndex(u => u.id === currentUser.id);
-      
-      if (userIndex !== -1) {
-        // Update local user status
-        localUsers[userIndex].status = status;
-        localUsers[userIndex].lastStatusUpdate = new Date().toISOString();
-        
-        // Save local users
-        saveSetting('local_users', localUsers);
-        
-        // Notify listeners
-        notifyUserStatusListeners();
-        
-        return true;
-      }
-    }
-    
-    return false;
   }
 }
 
@@ -373,65 +281,208 @@ function notifyUserStatusListeners() {
 }
 
 /**
- * Get all users (cached and online)
- * @returns {Array} Array of all users
+ * Get all users, fetching from the server if authenticated.
+ * @returns {Promise<Array>} Promise resolving to an array of all users.
  */
-export function getAllUsers() {
+export async function getAllUsers() {
   try {
-    const cachedUsers = getUsers();
-    const onlineUserIds = onlineUsers.map(u => u.id);
-    
-    // Mark cached users as online/offline
-    const mergedUsers = cachedUsers.map(user => ({
-      ...user,
-      online: onlineUserIds.includes(user.id),
-      status: user.status || UserStatus.ONLINE
-    }));
-    
-    // Add any online users not in cache
-    onlineUsers.forEach(onlineUser => {
-      if (!mergedUsers.some(u => u.id === onlineUser.id)) {
-        mergedUsers.push({
-          ...onlineUser,
-          online: true
+    if (isAuthenticated()) {
+      const token = getAuthToken();
+      // TODO: Use a configurable base URL for API calls
+      const serverUrl = localStorage.getItem('crmplus_chat_server_url')?.replace('ws', 'http') || 'http://localhost:3000';
+      
+      try {
+        const response = await fetch(`${serverUrl}/api/users`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
+
+        if (response.ok) {
+          const serverUsers = await response.json();
+          
+          // Assuming serverUsers is an array like [{ id, username, role, status?, ... }]
+          if (Array.isArray(serverUsers)) {
+             // Update local cache and potentially online status based on fetched data
+             // For simplicity, just saving them to cache for now.
+             // A more robust implementation might merge status.
+             serverUsers.forEach(user => saveUser(user));
+             logChatEvent('user', 'Fetched user list from server', { count: serverUsers.length });
+             return serverUsers;
+          } else {
+             console.error('[CRM Extension] Invalid user list format received from server:', serverUsers);
+             logChatEvent('error', 'Invalid user list format from server');
+          }
+        } else {
+          console.error(`[CRM Extension] Failed to fetch users from server: ${response.status}`);
+          logChatEvent('error', 'Failed to fetch user list', { status: response.status });
+        }
+      } catch (fetchError) {
+        console.error('[CRM Extension] Error fetching users from server:', fetchError);
+        logChatEvent('error', 'Error fetching user list', { error: fetchError.message });
+        // Fall through to return cached users on fetch error
       }
-    });
-    
-    return mergedUsers;
+    }
+
+    // Fallback: Return locally cached users if not authenticated or fetch failed
+    console.warn('[CRM Extension] Returning cached user list');
+    const cachedUsers = getUsers();
+    return cachedUsers;
+
   } catch (error) {
-    console.error('[CRM Extension] Error getting all users:', error);
-    return [];
+    console.error('[CRM Extension] Error in getAllUsers:', error);
+    return []; // Return empty array on unexpected error
   }
 }
 
 /**
- * Search for users by name or username
+ * Search for users by name or username via API
  * @param {string} query - Search query
- * @returns {Array} Matching users
+ * @returns {Promise<Array>} Promise resolving to an array of matching users
  */
-export function searchUsers(query) {
+export async function searchUsers(query) {
   try {
-    if (!query || typeof query !== 'string') return getAllUsers();
-    
-    const normalizedQuery = query.toLowerCase();
-    const allUsers = getAllUsers();
-    
-    return allUsers.filter(user => 
-      user.username.toLowerCase().includes(normalizedQuery) ||
-      (user.displayName && 
-       user.displayName.toLowerCase().includes(normalizedQuery))
-    );
+    // If no query, return all users (or handle as needed)
+    if (!query || typeof query !== 'string' || query.trim() === '') {
+      // Decide if returning all users or empty array is better here
+      // Returning empty for now to match server search behavior
+      return [];
+    }
+
+    if (!isAuthenticated()) {
+      console.warn('[UserService] Cannot search users: Not authenticated');
+      return [];
+    }
+
+    const token = getAuthToken();
+    const serverUrl = localStorage.getItem('crmplus_chat_server_url')?.replace('ws', 'http') || 'http://localhost:3000';
+
+    // Construct search criteria - search by username or name (first/last)
+    const searchCriteria = {
+      criteria: {
+        username: query, // Search username field
+        name: query      // Search first_name or last_name fields
+      },
+      limit: 50 // Limit results for efficiency
+    };
+
+    const response = await fetch(`${serverUrl}/api/users/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(searchCriteria)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Server search failed: ${response.status}`);
+    }
+
+    const searchResult = await response.json();
+    logChatEvent('user', 'User search performed', { query, count: searchResult.users?.length || 0 });
+
+    // Return the users array from the response
+    return searchResult.users || [];
+
   } catch (error) {
-    console.error('[CRM Extension] Error searching users:', error);
-    return [];
+    console.error('[CRM Extension] Error searching users via API:', error);
+    logChatEvent('error', 'User search failed', { query, error: error.message });
+    return []; // Return empty array on error
+  }
+}
+
+/**
+ * Update the presence status of a user based on WebSocket events.
+ * @param {string} userId - The ID of the user.
+ * @param {'online' | 'offline'} status - The new presence status.
+ */
+export function updateUserPresence(userId, status) {
+  if (!userId) return;
+
+  const isOnline = status === 'online';
+  logChatEvent('user', 'Updating user presence', { userId, status });
+
+  try {
+    // Update onlineUsers array
+    const userIndexInOnline = onlineUsers.findIndex(u => u.id === userId);
+
+    if (isOnline && userIndexInOnline === -1) {
+      // User came online, try to get full details from cache or add basic info
+      const cachedUser = getUserById(userId); // Use existing function to check cache
+      if (cachedUser) {
+        onlineUsers.push({ ...cachedUser, online: true, status: 'online', lastSeen: new Date().toISOString() });
+      } else {
+        // If user not in cache (should be rare if getAllUsers was called), add basic info
+        // Ideally, we'd fetch full details via API here if needed.
+        onlineUsers.push({ id: userId, username: `User_${userId.substring(0, 4)}`, online: true, status: 'online', lastSeen: new Date().toISOString() });
+        console.warn(`[UserService] User ${userId} joined but not found in cache.`);
+      }
+    } else if (!isOnline && userIndexInOnline !== -1) {
+      // User went offline
+      onlineUsers.splice(userIndexInOnline, 1);
+    }
+
+    // Update cached user data (if user exists in cache)
+    const cachedUsers = getUsers();
+    const userIndexInCache = cachedUsers.findIndex(u => u.id === userId);
+    if (userIndexInCache !== -1) {
+      cachedUsers[userIndexInCache].online = isOnline;
+      cachedUsers[userIndexInCache].status = isOnline ? UserStatus.ONLINE : UserStatus.OFFLINE; // Assuming OFFLINE status exists or needs adding
+      cachedUsers[userIndexInCache].lastSeen = new Date().toISOString();
+      saveUser(cachedUsers[userIndexInCache]); // Save the updated user to storage
+    }
+
+    // Notify listeners
+    notifyUserStatusListeners();
+
+  } catch (error) {
+    console.error('[CRM Extension] Error updating user presence:', error);
+  }
+}
+
+/**
+ * Fetch all departments from the server.
+ * @returns {Promise<Array>} Promise resolving to an array of department objects.
+ */
+export async function getAllDepartments() {
+  try {
+    if (!isAuthenticated()) {
+      console.warn('[UserService] Cannot fetch departments: Not authenticated');
+      return [];
+    }
+
+    const token = getAuthToken();
+    // TODO: Use a configurable base URL for API calls
+    const serverUrl = localStorage.getItem('crmplus_chat_server_url')?.replace('ws', 'http') || 'http://localhost:3000';
+
+    const response = await fetch(`${serverUrl}/api/departments`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (response.ok) {
+      const departments = await response.json();
+      logChatEvent('admin', 'Fetched department list from server', { count: departments?.length || 0 });
+      return departments || [];
+    } else {
+      console.error(`[CRM Extension] Failed to fetch departments from server: ${response.status}`);
+      logChatEvent('error', 'Failed to fetch department list', { status: response.status });
+      return []; // Return empty on error
+    }
+  } catch (error) {
+    console.error('[CRM Extension] Error fetching departments:', error);
+    logChatEvent('error', 'Error fetching department list', { error: error.message });
+    return []; // Return empty on error
   }
 }
 
 // Export as default for additional flexibility
 export default {
   UserStatus,
-  setUserStatus,
+  updateUserPresence, // Added export
   addUserStatusListener,
   getOnlineUsers,
   getUserById,
@@ -442,5 +493,6 @@ export default {
   initUserService,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  getAllDepartments // Added export
 };

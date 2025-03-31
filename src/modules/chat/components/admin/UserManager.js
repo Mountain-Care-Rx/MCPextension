@@ -1,16 +1,24 @@
 // chat/components/admin/UserManager.js
 // User management component for HIPAA-compliant chat
 
-import { 
-  getAllUsers, 
-  getCurrentUser, 
+import {
+  // getAllUsers is now imported from userService
+  getCurrentUser,
   hasPermission,
-  deleteUser as authDeleteUser,
-  updateUserRole,
-  createUser as createUserAccount,
-  resetUserPassword as resetUserPwd,
-  importUsers as importMultipleUsers
+  // Use service layer functions which might delegate to auth/userOperations
+  // deleteUser as authDeleteUser,
+  // updateUserRole,
+  // createUser as createUserAccount,
+  resetUserPassword as resetUserPwd, // Keep this if it's specific auth logic
+  importUsers as importMultipleUsers // Keep this if it's specific auth logic
 } from '../../services/auth';
+// Import main user CRUD operations from userService
+import {
+    getAllUsers,
+    createUser,
+    updateUser,
+    deleteUser
+} from '../../services/userService.js';
 import { logChatEvent } from '../../utils/logger.js';
 import UserTable from './users/UserTable.js';
 import UserToolbar from './users/UserToolbar.js';
@@ -500,17 +508,45 @@ class UserManager {
   
   /**
    * Handle user edit
-   * @param {Object} user - Edited user
+   * @param {Object} updatedUserData - Edited user data from the modal (should include id, displayName, email, role, departmentId)
    */
-  async handleEditUser(user) {
+  async handleEditUser(updatedUserData) {
+    // Note: The EditUserModal's onSuccess callback provides the *updated* user data object.
+    // We need to call the updateUser service function with the ID and the changes.
+    if (!updatedUserData || !updatedUserData.id) {
+        console.error('[UserManager] Invalid data received from EditUserModal:', updatedUserData);
+        alert('Failed to save user changes: Invalid data.');
+        return;
+    }
+
+    const userId = updatedUserData.id;
+    // Extract only the fields that should be sent for update
+    const updatePayload = {
+        displayName: updatedUserData.displayName,
+        email: updatedUserData.email,
+        role: updatedUserData.role, // Assuming role is handled by updateUser endpoint now
+        departmentId: updatedUserData.departmentId // Include departmentId
+    };
+
+
     try {
-      // Reload users to get the updated user
-      await this.loadUsers();
-      
-      // Log success
-      logChatEvent('admin', 'User edited successfully', { username: user.username });
+      // Call the updateUser service function
+      const result = await updateUser(userId, updatePayload);
+
+      if (result.success) {
+         logChatEvent('admin', 'User edited successfully via service', { userId: userId });
+         // Reload users to reflect the changes in the table
+         await this.loadUsers();
+      } else {
+         console.error('[UserManager] Failed to update user via service:', result.error);
+         alert(`Failed to save user changes: ${result.error || 'Unknown error'}`);
+         // Optionally, re-render to keep modal state consistent if needed,
+         // but typically modal would handle showing the error and stay open.
+      }
+
     } catch (error) {
-      console.error('[UserManager] Error after editing user:', error);
+      console.error('[UserManager] Error calling updateUser service:', error);
+      alert('An unexpected error occurred while saving user changes.');
     }
   }
   

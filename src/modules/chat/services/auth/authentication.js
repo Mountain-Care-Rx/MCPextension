@@ -17,14 +17,6 @@ let lastActivity = Date.now();
 let sessionTimeoutId = null;
 let authListeners = [];
 
-// Default admin credentials for initial setup
-const DEFAULT_ADMIN = {
-  username: 'CBarnett',
-  password: 'Admin123', // In a real app, this would be hashed and not stored in code
-  role: 'admin',
-  displayName: 'Admin'
-};
-
 // List of valid test users
 const VALID_USERS = {
   'user1': {
@@ -261,41 +253,55 @@ async function login(username, password) {
     
     let authResponse = null;
     
-    // Check if using valid credentials
-    if (username === DEFAULT_ADMIN.username && password === DEFAULT_ADMIN.password) {
-      // Simulate successful admin login with secure token
-      authResponse = {
-        success: true,
-        // In a real implementation, use a more secure token format like JWT
-        token: 'admin_' + Date.now().toString(36) + Math.random().toString(36).substr(2),
-        user: {
-          id: 'admin_' + Math.random().toString(36).substr(2),
-          username: DEFAULT_ADMIN.username,
-          role: DEFAULT_ADMIN.role,
-          displayName: DEFAULT_ADMIN.displayName,
-          isAdmin: true,
-          // Add token expiration timestamp for security
-          tokenExpires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+    // For real authentication, connect to your server
+    try {
+      // Send credentials to your authentication endpoint
+      const response = await fetch('/api/auth/login', { // TODO: Use configurable base URL
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+      });
+      
+      // Process server response
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Assuming server response includes { success: true, token: '...', user: {...} } on success
+        // Or { success: false, error: '...' } on failure
+        if (data.token && data.user) {
+          authResponse = data; // Store the entire response which should include token and user
+        } else {
+          // Use error message from server if available, otherwise generic message
+          throw new Error(data.error || 'Authentication failed: Invalid response from server');
         }
-      };
-    } else if (VALID_USERS[username] && VALID_USERS[username].password === password) {
-      // Valid test user
-      authResponse = {
-        success: true,
-        token: 'user_' + Date.now().toString(36) + username.replace(/[^a-z0-9]/gi, '') + Math.random().toString(36).substr(2),
-        user: {
-          id: 'user_' + username.replace(/[^a-z0-9]/gi, ''),
-          username: username,
-          role: VALID_USERS[username].role,
-          displayName: VALID_USERS[username].displayName,
-          tokenExpires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+      } else {
+        // Handle non-OK HTTP responses (e.g., 401, 403, 500)
+        let errorMsg = `Authentication failed: Server responded with status ${response.status}`;
+        try {
+          // Try to parse error details from response body
+          const errorData = await response.json();
+          if (errorData && errorData.error) {
+            errorMsg = errorData.error;
+          }
+        } catch (e) {
+          // Ignore if response body is not JSON or empty
         }
-      };
-    } else {
-      // Invalid credentials
-      throw new Error('Invalid username or password');
+        throw new Error(errorMsg);
+      }
+    } catch (serverError) {
+      // Log the actual error and re-throw a user-friendly error
+      console.error('[CRM Extension] Server authentication request failed:', serverError);
+      // Provide a more generic error to the user unless it's a specific message from the server
+      throw new Error(serverError.message.startsWith('Authentication failed:') ? serverError.message : 'Authentication failed: Could not connect to the server or invalid credentials.');
     }
     
+    // Ensure authResponse is valid before proceeding
+    if (!authResponse || !authResponse.token || !authResponse.user) {
+        throw new Error('Authentication failed: Invalid response received from server.');
+    }
+
     // Store authentication data
     authToken = authResponse.token;
     currentUser = authResponse.user;
@@ -331,6 +337,94 @@ async function login(username, password) {
     });
     
     console.error('[CRM Extension] Login error:', error);
+    
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Update user profile information
+ * @param {Object} updates - Profile updates
+ * @returns {Promise<Object>} Update result
+ */
+async function updateUserProfile(updates) {
+  try {
+    // Check if user is authenticated
+    if (!isAuthenticated()) {
+      throw new Error('User must be authenticated to update profile');
+    }
+    
+    // Log profile update attempt
+    logChatEvent('auth', 'Profile update attempt', { 
+      username: currentUser.username 
+    });
+    
+    // In real implementation, this would call the server API
+    // For now, update the local user object
+    const updatedUser = {
+      ...currentUser,
+      ...updates,
+      // Don't allow overriding critical properties
+      id: currentUser.id,
+      username: currentUser.username,
+      role: currentUser.role
+    };
+    
+    // Update current user
+    currentUser = updatedUser;
+    
+    // Save to local storage
+    localStorage.setItem(USER_INFO_KEY, JSON.stringify(currentUser));
+    
+    // Notify listeners
+    notifyAuthListeners();
+    
+    return {
+      success: true,
+      user: currentUser,
+      message: 'Profile updated successfully'
+    };
+  } catch (error) {
+    console.error('[CRM Extension] Profile update error:', error);
+    
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Update user role (admin function)
+ * @param {string} userId - User ID to update
+ * @param {string} newRole - New role to assign
+ * @returns {Promise<Object>} Update result
+ */
+async function updateUserRole(userId, newRole) {
+  try {
+    // Check if user has admin permission
+    if (!hasPermission('user:manage')) {
+      throw new Error('Insufficient permissions to update user roles');
+    }
+    
+    // Log role update attempt
+    logChatEvent('auth', 'Role update attempt', { 
+      updatedUserId: userId,
+      newRole: newRole,
+      performedBy: currentUser?.username
+    });
+    
+    // In real implementation, this would call the server API
+    // For now, return success
+    return {
+      success: true,
+      message: `Role updated to ${newRole} for user ${userId}`
+    };
+  } catch (error) {
+    console.error('[CRM Extension] Role update error:', error);
     
     return {
       success: false,
@@ -422,6 +516,62 @@ function getAuthToken() {
   return authToken;
 }
 
+/**
+ * Change the current user's password.
+ * @param {string} currentPassword - The user's current password.
+ * @param {string} newPassword - The desired new password.
+ * @returns {Promise<{success: boolean, error?: string}>} Result of the operation.
+ */
+async function changePassword(currentPassword, newPassword) {
+  if (!isAuthenticated()) {
+    return { success: false, error: 'User not authenticated.' };
+  }
+
+  const token = getAuthToken();
+  if (!token) {
+    return { success: false, error: 'Authentication token not found.' };
+  }
+
+  logChatEvent('auth', 'Attempting password change', { username: getCurrentUser()?.username });
+
+  try {
+    // TODO: Use configurable base URL from config.js
+    const response = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+
+    if (response.ok) {
+      // Assuming server sends back { success: true } or similar on success
+      // No need to parse body if just checking status, but could if server sends data
+      logChatEvent('auth', 'Password changed successfully', { username: getCurrentUser()?.username });
+      return { success: true };
+    } else {
+      // Try to get error message from server response
+      let errorMsg = `Password change failed: Server responded with status ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData && errorData.error) {
+          errorMsg = errorData.error; // Use specific server error
+        }
+      } catch (e) {
+        // Ignore if response body is not JSON or empty
+        console.warn('[changePassword] Could not parse error response body:', e);
+      }
+      logChatEvent('error', 'Password change failed', { username: getCurrentUser()?.username, status: response.status, error: errorMsg });
+      return { success: false, error: errorMsg };
+    }
+  } catch (error) {
+    console.error('[CRM Extension] Change password request failed:', error);
+    logChatEvent('error', 'Password change network/request error', { username: getCurrentUser()?.username, error: error.message });
+    return { success: false, error: 'Password change failed: Could not connect to the server.' };
+  }
+}
+
 // Export all functions
 export {
   login,
@@ -435,5 +585,9 @@ export {
   getSessionStatus,
   addAuthListener,
   removeAuthListener,
-  isTokenValid
+  isTokenValid,
+  // registerUser, // Removed as self-registration is disabled
+  updateUserProfile,  // Added missing export
+  updateUserRole,     // Added missing export
+  changePassword      // Added new function
 };

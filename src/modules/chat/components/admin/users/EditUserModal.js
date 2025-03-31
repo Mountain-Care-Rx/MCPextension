@@ -2,6 +2,7 @@
 // Modal for editing existing users
 
 import { updateUser, updateUserRole, getCurrentUser } from '../../../services/auth';
+import { getAllDepartments } from '../../../services/userService.js'; // Import department service
 import { logChatEvent } from '../../../utils/logger.js';
 import { validateEmail } from '../../../utils/validation.js';
 import ModalBase from '../../common/ModalBase.js';
@@ -30,11 +31,18 @@ class EditUserModal extends ModalBase {
       ...options
     };
     
+    this.departments = []; // To store fetched departments
+    this.departmentSelectElement = null; // Reference to the select element
+
     // Bind methods
     this.handleEditUser = this.handleEditUser.bind(this);
     this.showFormError = this.showFormError.bind(this);
+    this.fetchAndPopulateDepartments = this.fetchAndPopulateDepartments.bind(this);
+
+    // Fetch departments when modal is created
+    this.fetchAndPopulateDepartments();
   }
-  
+
   /**
    * Render the modal content
    * @returns {HTMLElement} Modal content
@@ -120,7 +128,38 @@ class EditUserModal extends ModalBase {
       hiddenRole.value = user.role || 'user';
       form.appendChild(hiddenRole);
     }
-    
+
+    // Department selection
+    const departmentGroup = document.createElement('div');
+    this.applyStyles(departmentGroup, { marginBottom: '15px' });
+
+    const departmentLabel = document.createElement('label');
+    departmentLabel.textContent = 'Department';
+    departmentLabel.htmlFor = 'user-department';
+    this.applyStyles(departmentLabel, { display: 'block', marginBottom: '5px', fontWeight: 'bold' });
+
+    this.departmentSelectElement = document.createElement('select');
+    this.departmentSelectElement.id = 'user-department';
+    this.departmentSelectElement.name = 'departmentId'; // Use departmentId for submission
+    this.applyStyles(this.departmentSelectElement, {
+        width: '100%',
+        padding: '8px 12px',
+        border: '1px solid #ced4da',
+        borderRadius: '4px',
+        boxSizing: 'border-box'
+    });
+
+    // Add a default "Select Department" option
+    const defaultOption = document.createElement('option');
+    defaultOption.value = ''; // No department selected
+    defaultOption.textContent = '-- Select Department (Optional) --';
+    this.departmentSelectElement.appendChild(defaultOption);
+
+    // Departments will be populated asynchronously
+    departmentGroup.appendChild(departmentLabel);
+    departmentGroup.appendChild(this.departmentSelectElement);
+    form.appendChild(departmentGroup);
+
     // Error message area
     const errorMessage = document.createElement('div');
     errorMessage.id = 'edit-user-error';
@@ -246,7 +285,8 @@ class EditUserModal extends ModalBase {
     const userData = {
       displayName: formData.get('displayName'),
       email: formData.get('email'),
-      role: formData.get('role') || user.role
+      role: formData.get('role') || user.role,
+      departmentId: formData.get('departmentId') || null // Get departmentId, default to null if empty/not selected
     };
     
     // Validate email if provided
@@ -268,12 +308,13 @@ class EditUserModal extends ModalBase {
       let roleChangeResult = { success: true };
       const currentUser = getCurrentUser();
       
-      // Update user's basic info
+      // Update user's basic info (including department)
       result = await updateUser(user.id, {
         displayName: userData.displayName,
-        email: userData.email
+        email: userData.email,
+        departmentId: userData.departmentId // Include departmentId in the update payload
       });
-      
+
       // If role change was requested and not editing self, also update role
       if (userData.role && userData.role !== user.role && 
           (!currentUser || user.id !== currentUser.id)) {
@@ -344,6 +385,67 @@ class EditUserModal extends ModalBase {
       errorElement.style.display = 'none';
     }, 5000);
   }
+
+ /**
+  * Fetches departments and populates the select dropdown, selecting the current user's department.
+  */
+ async fetchAndPopulateDepartments() {
+   if (!this.departmentSelectElement || !this.options.user) return;
+
+   const currentUserDepartmentId = this.options.user.department_id || ''; // Get current user's dept ID
+
+   // Indicate loading state
+   this.departmentSelectElement.disabled = true;
+   const loadingOption = document.createElement('option');
+   loadingOption.textContent = 'Loading departments...';
+   this.departmentSelectElement.appendChild(loadingOption);
+
+   try {
+     this.departments = await getAllDepartments();
+     // Clear existing options except the default
+     while (this.departmentSelectElement.options.length > 1) {
+         this.departmentSelectElement.remove(1);
+     }
+
+     // Populate with fetched departments
+     let foundCurrent = false;
+     this.departments.forEach(dept => {
+       const option = document.createElement('option');
+       option.value = dept.id;
+       option.textContent = dept.name;
+       if (dept.id === currentUserDepartmentId) {
+           option.selected = true;
+           foundCurrent = true;
+       }
+       this.departmentSelectElement.appendChild(option);
+     });
+
+     // Ensure the default option is selected if the user's current dept ID wasn't found or is null
+     if (!foundCurrent) {
+         this.departmentSelectElement.value = '';
+     }
+
+     logChatEvent('admin', 'Populated department dropdown for edit', { count: this.departments.length, selected: currentUserDepartmentId });
+   } catch (error) {
+     logChatEvent('error', 'Failed to fetch or populate departments for edit', { error: error.message });
+     this.showFormError(document.getElementById('edit-user-error'), 'Could not load departments.');
+      // Remove loading/error option if fetch fails
+      while (this.departmentSelectElement.options.length > 1) {
+         this.departmentSelectElement.remove(1);
+     }
+      const errorOption = document.createElement('option');
+      errorOption.textContent = 'Error loading';
+      errorOption.disabled = true;
+      this.departmentSelectElement.appendChild(errorOption);
+   } finally {
+       // Re-enable select after loading (or error)
+       this.departmentSelectElement.disabled = false;
+       // Remove loading option if it exists
+       if (loadingOption.parentNode === this.departmentSelectElement) {
+           this.departmentSelectElement.removeChild(loadingOption);
+       }
+   }
+ }
 }
 
 export default EditUserModal;

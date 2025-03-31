@@ -1,7 +1,7 @@
 // chat/components/messages/MessageInput.js
 // Message input component for HIPAA-compliant chat
 
-import { sendChatMessage } from '../../services/messageService.js';
+import { sendChatMessage, sendTypingIndicator } from '../../services/messageService.js'; // Added sendTypingIndicator
 import { isAuthenticated, hasPermission } from '../../services/auth';
 import { logChatEvent } from '../../utils/logger.js';
 import { validateMessage, containsPotentialPHI } from '../../utils/validation.js';
@@ -25,7 +25,12 @@ class MessageInput {
     this.sendButtonElement = null;
     this.characterCountElement = null;
     this.phiWarningElement = null;
-    
+
+    // Typing indicator state
+    this.isTyping = false;
+    this.typingTimeout = null;
+    this.TYPING_TIMEOUT_MS = 3000; // Send 'stopped typing' after 3s of inactivity
+
     // Bind methods
     this.render = this.render.bind(this);
     this.handleInput = this.handleInput.bind(this);
@@ -224,22 +229,22 @@ class MessageInput {
    */
   handleInput(e) {
     if (!this.textareaElement) return;
-    
-    const text = this.textareaElement.value.trim();
-    
+
+    const text = this.textareaElement.value.trim(); // Use untrimmed for length check? Maybe not.
+
     // Update character count
     if (this.characterCountElement) {
-      this.characterCountElement.textContent = `${text.length}/${this.options.maxLength}`;
-      
+      this.characterCountElement.textContent = `${this.textareaElement.value.length}/${this.options.maxLength}`; // Use actual length
+
       // Show warning when approaching limit
-      if (text.length > this.options.maxLength * 0.9) {
+      if (this.textareaElement.value.length > this.options.maxLength * 0.9) {
         this.characterCountElement.style.color = '#f44336';
       } else {
         this.characterCountElement.style.color = '#666';
       }
     }
-    
-    // Update send button
+
+    // Update send button (based on trimmed text)
     if (this.sendButtonElement) {
       if (text.length > 0) {
         this.sendButtonElement.disabled = false;
@@ -249,14 +254,39 @@ class MessageInput {
         this.sendButtonElement.style.opacity = '0.7';
       }
     }
-    
+
     // Check for PHI
-    this.checkPHI(text);
-    
+    this.checkPHI(this.textareaElement.value); // Check untrimmed value
+
+    // Check for mentions (basic)
+    this.checkMentions(this.textareaElement.value); // Check untrimmed value
+
     // Auto-resize textarea
     this.autoResizeTextarea();
+
+    // --- Typing Indicator Logic ---
+    // Clear existing timeout
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
+    }
+
+    // If not currently typing, send 'start typing' indicator (based on untrimmed length)
+    if (!this.isTyping && this.textareaElement.value.length > 0) {
+      this.isTyping = true;
+      sendTypingIndicator(true, this.options.channelId, this.options.userId);
+    }
+
+    // Set a timeout to send 'stop typing' indicator after inactivity
+    // Reset timeout even if already typing
+    this.typingTimeout = setTimeout(() => {
+      if (this.isTyping) {
+        this.isTyping = false;
+        sendTypingIndicator(false, this.options.channelId, this.options.userId);
+      }
+    }, this.TYPING_TIMEOUT_MS);
+    // --- End Typing Indicator Logic ---
   }
-  
+
   /**
    * Check for PHI in message
    * @param {string} text - Message text
@@ -270,7 +300,26 @@ class MessageInput {
       this.phiWarningElement.style.display = 'none';
     }
   }
-  
+
+  /**
+   * Check for @mentions in message (basic detection)
+   * @param {string} text - Message text
+   */
+  checkMentions(text) {
+    const mentionRegex = /@([a-zA-Z0-9_-]+)/g;
+    const mentions = text.match(mentionRegex);
+
+    if (mentions && mentions.length > 0) {
+      // Basic log for now, could add UI highlighting later
+      console.log('[MessageInput] Mentions detected:', mentions);
+      // Example: Add a visual cue
+      // this.textareaElement.style.borderColor = 'orange';
+    } else {
+      // Example: Remove visual cue
+      // this.textareaElement.style.borderColor = '#ddd'; // Reset border
+    }
+  }
+
   /**
    * Auto-resize textarea based on content
    */
@@ -336,10 +385,22 @@ class MessageInput {
       console.error('[CRM Extension] Cannot send message: no channel ID or user ID specified');
       return;
     }
-    
+
+    // --- Typing Indicator Logic ---
+    // Clear timeout and send 'stop typing' immediately if user was typing
+    if (this.typingTimeout) {
+        clearTimeout(this.typingTimeout);
+        this.typingTimeout = null;
+    }
+    if (this.isTyping) {
+        this.isTyping = false;
+        sendTypingIndicator(false, this.options.channelId, this.options.userId);
+    }
+    // --- End Typing Indicator Logic ---
+
     // Clear input
     this.textareaElement.value = '';
-    
+
     // Reset UI
     if (this.characterCountElement) {
       this.characterCountElement.textContent = `0/${this.options.maxLength}`;

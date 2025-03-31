@@ -40,7 +40,7 @@ class UserList {
   /**
    * Initialize the user list
    */
-  initialize() {
+  async initialize() { // Make initialize async
     // Create container element
     this.userListElement = document.createElement('div');
     this.userListElement.className = 'user-list';
@@ -59,11 +59,20 @@ class UserList {
       this.container.appendChild(this.userListElement);
     }
     
-    // Get initial user lists
-    this.onlineUsers = getOnlineUsers();
-    
-    if (this.options.showOfflineUsers) {
-      this.allUsers = getAllUsers();
+    // Render loading state initially
+    this.renderLoading();
+
+    // Get initial user lists asynchronously
+    try {
+      this.allUsers = await getAllUsers(); // Await the async call
+      // Derive online users from the fetched list initially
+      this.onlineUsers = this.allUsers.filter(u => u.online); // Assuming 'online' property exists from API/cache merge
+      logChatEvent('ui', 'Initial user list loaded', { count: this.allUsers.length });
+    } catch (error) {
+       console.error("[UserList] Failed to fetch initial users:", error);
+       this.allUsers = [];
+       this.onlineUsers = [];
+       // Optionally render an error state here
     }
     
     // Subscribe to user status updates
@@ -75,17 +84,39 @@ class UserList {
     // Log initialization
     logChatEvent('ui', 'User list component initialized');
   }
+
+  /**
+   * Render a loading state
+   */
+  renderLoading() {
+    if (!this.userListElement) return;
+    this.userListElement.innerHTML = `
+      <div class="user-list-header" style="padding: 12px 16px; border-bottom: 1px solid #e0e0e0; background-color: #e9ecef;">
+        <h3 style="margin: 0; font-size: 16px; font-weight: bold; color: #333;">Users</h3>
+      </div>
+      <div style="padding: 20px; text-align: center; color: #666;">Loading users...</div>
+    `;
+  }
   
   /**
    * Handle user status updates
-   * @param {Array} users - Updated online users
+   * @param {Array} users - Updated online users (received from listener)
    */
-  handleUserStatusUpdate(users) {
-    this.onlineUsers = users;
+  async handleUserStatusUpdate(users) { // Make handler async
+    this.onlineUsers = users; // Update based on listener data
     
-    // Also update all users if showing offline users
+    // Refetch the full list to ensure consistency if showing offline users
+    // This might be inefficient depending on frequency, consider optimizing later
     if (this.options.showOfflineUsers) {
-      this.allUsers = getAllUsers();
+       try {
+         this.allUsers = await getAllUsers(); // Await the async call
+       } catch (error) {
+         console.error("[UserList] Failed to refetch all users on status update:", error);
+         // Keep the old this.allUsers list on error? Or clear it? For now, keep.
+       }
+    } else {
+       // If only showing online, update allUsers based on onlineUsers for filtering
+       this.allUsers = this.onlineUsers;
     }
     
     // Re-render the list

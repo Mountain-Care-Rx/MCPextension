@@ -1,0 +1,169 @@
+/* MCPClient/styles/main.css */
+
+/* Target the main application container */
+.hipaa-chat-app {
+  /* Default variables (Light theme, Medium font size) */
+  --background-primary: #ffffff;
+  --background-secondary: #f5f7f9;
+  --background-tertiary: #e9ecef; /* Added for elements like input backgrounds */
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-accent: #007bff;
+  --text-on-accent: #ffffff;
+  --border-color: #e0e0e0;
+  --border-color-light: #f1f3f5;
+  --accent-color: #007bff;
+  --accent-color-hover: #0056b3;
+  --error-color: #dc3545;
+  --success-color: #28a745;
+  --font-base-size: 16px; /* Medium */
+  --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+
+  /* Apply base styles using variables */
+  font-family: var(--font-family-base);
+  font-size: var(--font-base-size);
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-sizing: border-box; /* Ensure padding/border are included in width/height */
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* --- Theme Overrides --- */
+
+/* Dark Theme */
+.hipaa-chat-app[data-theme="dark"] {
+  --background-primary: #2d3748; /* Dark gray */
+  --background-secondary: #1a202c; /* Very dark gray */
+  --background-tertiary: #4a5568; /* Medium gray */
+  --text-primary: #e2e8f0; /* Light gray */
+  --text-secondary: #a0aec0; /* Medium gray */
+  --text-accent: #63b3ed; /* Light Blue */
+  --text-on-accent: #1a202c;
+  --border-color: #4a5568; /* Gray */
+  --border-color-light: #2d3748;
+  --accent-color: #63b3ed; /* Light Blue */
+  --accent-color-hover: #4299e1;
+  --error-color: #feb2b2; /* Light Red */
+  --success-color: #9ae6b4; /* Light Green */
+}
+
+/* System Theme (Uses prefers-color-scheme) */
+@media (prefers-color-scheme: dark) {
+  .hipaa-chat-app[data-theme="system"] {
+    --background-primary: #2d3748;
+    --background-secondary: #1a202c;
+    --background-tertiary: #4a5568;
+    --text-primary: #e2e8f0;
+    --text-secondary: #a0aec0;
+    --text-accent: #63b3ed;
+    --text-on-accent: #1a202c;
+    --border-color: #4a5568;
+    --border-color-light: #2d3748;
+    --accent-color: #63b3ed;
+    --accent-color-hover: #4299e1;
+    --error-color: #feb2b2;
+    --success-color: #9ae6b4;
+  }
+}
+
+/* --- Font Size Overrides --- */
+
+.hipaa-chat-app[data-font-size="small"] {
+  --font-base-size: 14px;
+}
+
+.hipaa-chat-app[data-font-size="large"] {
+  --font-base-size: 18px;
+}
+
+/* --- Basic Component Styling using Variables (Examples) --- */
+/* Add more specific component styles here or in separate files */
+
+/* Example: Button styling */
+button {
+  font-family: var(--font-family-base);
+  font-size: var(--font-base-size);
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+}
+
+button:hover {
+  border-color: var(--accent-color);
+  background-color: var(--background-tertiary);
+}
+
+button.primary {
+  background-color: var(--accent-color);
+  color: var(--text-on-accent);
+  border-color: var(--accent-color);
+}
+
+button.primary:hover {
+  background-color: var(--accent-color-hover);
+  border-color: var(--accent-color-hover);
+}
+
+/* Example: Input styling */
+input[type="text"],
+input[type="password"],
+select {
+  font-family: var(--font-family-base);
+  font-size: var(--font-base-size);
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25); /* Use accent color with alpha */
+}
+
+/* Example: Links */
+a {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Add styles for other common elements like headers, paragraphs, lists etc. using variables */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary);
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+}
+
+p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* Ensure the settings view itself uses variables */
+/* (These might need adjustment based on SettingsViewRenderer structure) */
+.settings-category-header h3 {
+    color: var(--text-primary);
+}
+.settings-category-description {
+    color: var(--text-secondary);
+}
+.settings-row label {
+    color: var(--text-primary);
+}

@@ -255,8 +255,14 @@ async function login(username, password) {
     
     // For real authentication, connect to your server
     try {
-      // Send credentials to your authentication endpoint
-      const response = await fetch('/api/auth/login', { // TODO: Use configurable base URL
+      // Get base server URL from localStorage and construct full API path
+      const wsUrl = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000'; // Default if not set
+      const httpUrl = wsUrl.replace(/^ws/, 'http'); // Change ws:// or wss:// to http:// or https://
+      const apiUrl = `${httpUrl}/api/auth/login`;
+      console.log(`[AuthService] Attempting login to: ${apiUrl}`); // Log the target URL
+
+      // Send credentials to the constructed authentication endpoint
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -7,8 +7,8 @@ import { saveMessage, updateMessage as updateLocalMessage, deleteMessage as dele
 import { updateUserPresence } from './userService.js'; // Import presence update function
 
 // WebSocket connection configuration
-// Read from localStorage or use a secure placeholder default
-let WS_URL = localStorage.getItem('crmplus_chat_server_url') || 'wss://your-mcp-server.example.com';
+// Read from localStorage or use the local development default
+let WS_URL = localStorage.getItem('crmplus_chat_server_url') || 'ws://localhost:3000';
 const RECONNECT_INTERVAL = 5000; // 5 seconds
 const MAX_RECONNECT_ATTEMPTS = 5;
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds

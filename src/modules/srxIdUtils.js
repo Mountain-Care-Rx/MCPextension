@@ -20,7 +20,7 @@ export function updateSRxIDDisplay(id) {
       const srxIdText = document.getElementById('srxid-text');
       if (srxIdText) {
         srxIdText.textContent = id;
-        
+
         // Update the parent data attribute for copy functionality
         const srxIdDisplay = document.getElementById('srxid-display');
         if (srxIdDisplay) {
@@ -41,10 +41,10 @@ export function detectSRxID() {
   try {
     // Specifically target the contact.srx_id input field
     const srxIdInput = document.querySelector('input[name="contact.srx_id"]');
-    
+
     if (srxIdInput && srxIdInput.value) {
-      const srxId = srxIdInput.value.trim();
-      
+      const srxId = '^'+srxIdInput.value.trim();
+
       // Only proceed if it's a numerical value
       if (srxId && /^\d+$/.test(srxId)) {
         // Update only if the value has changed
@@ -57,12 +57,12 @@ export function detectSRxID() {
         return true; // Found but unchanged
       }
     }
-    
+
     // If we still have a previous ID, keep it
     if (lastSRxID) {
       return true;
     }
-    
+
     // If we get here, no ID was found
     return false;
   } catch (e) {
@@ -78,7 +78,7 @@ export function detectSRxID() {
 export function extractSRxIDFromURL() {
   try {
     const url = window.location.href;
-    
+
     // Common URL patterns for IDs
     const patterns = [
       /[?&]id=(\d+)/i,
@@ -87,14 +87,14 @@ export function extractSRxIDFromURL() {
       /\/patient\/(\d+)/i,
       /\/customer\/(\d+)/i
     ];
-    
+
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match && match[1]) {
         return match[1];
       }
     }
-    
+
     return null;
   } catch (e) {
     console.error("[CRM Extension] Error extracting ID from URL:", e);
@@ -109,7 +109,7 @@ export function extractSRxIDFromURL() {
 export function initSRxIDMonitoring() {
   // First attempt at direct detection
   detectSRxID();
-  
+
   // Set up a continuous check
   const checkInterval = setInterval(() => {
     // Check if URL has changed (indicating navigation to a new profile)
@@ -123,18 +123,18 @@ export function initSRxIDMonitoring() {
       // Try to detect the new ID immediately
       detectSRxID();
     }
-    
+
     // Always try to detect
     detectSRxID();
-    
+
   }, 500); // Check every 500ms
-  
+
   // Set up MutationObserver to specifically watch for changes to the contact.srx_id input
   try {
     const observer = new MutationObserver((mutations) => {
       // Check if any of the mutations affect our target
       let shouldCheckId = false;
-      
+
       for (const mutation of mutations) {
         // Check if the target is our input or could contain it
         if (
@@ -144,7 +144,7 @@ export function initSRxIDMonitoring() {
           shouldCheckId = true;
           break;
         }
-        
+
         // Check if any added nodes contain our input
         if (mutation.addedNodes.length > 0) {
           for (const node of mutation.addedNodes) {
@@ -160,25 +160,25 @@ export function initSRxIDMonitoring() {
           }
         }
       }
-      
+
       if (shouldCheckId) {
         detectSRxID();
       }
     });
-    
+
     // Observe changes to the document with focus on input elements
-    observer.observe(document.body, { 
-      childList: true, 
+    observer.observe(document.body, {
+      childList: true,
       subtree: true,
-      attributes: true, 
+      attributes: true,
       attributeFilter: ['value']
     });
-    
+
     console.log('[CRM Extension] SRx ID mutation observer active');
   } catch (err) {
     console.error('[CRM Extension] Error setting up observer for SRx ID:', err);
   }
-  
+
   // Set up a specific observer for the input's value changes
   setTimeout(() => {
     try {
@@ -188,12 +188,12 @@ export function initSRxIDMonitoring() {
         const inputObserver = new MutationObserver((mutations) => {
           detectSRxID();
         });
-        
+
         inputObserver.observe(input, {
           attributes: true,
           attributeFilter: ['value']
         });
-        
+
         console.log('[CRM Extension] Direct input observer attached to contact.srx_id');
       }
     } catch (err) {

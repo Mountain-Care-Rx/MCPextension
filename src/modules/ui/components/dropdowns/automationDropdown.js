@@ -98,7 +98,7 @@ export function createAutomationDropdown() {
       .nested-dropdown.open .nested-dropdown-content {
         display: block;
       }
-      
+
       /* Button-style options */
       .automation-btn {
         display: block;
@@ -356,7 +356,9 @@ function runConsoleBased(finalTextToFind) {
         let container = null;
         for (const selector of containerSelectors) {
           const element = document.querySelector(selector);
-          if (
+
+          for (let index = 0; index <= 10; index++) {
+            if (
             element &&
             element.querySelector('li, .v-list-item, .dropdown-item') &&
             element.scrollHeight > element.clientHeight
@@ -365,6 +367,8 @@ function runConsoleBased(finalTextToFind) {
             console.log(`[CRM Extension] Found scrollable dropdown container: ${selector}`);
             break;
           }
+          wait(500)
+        }
         }
 
         // Fallback: Find any scrollable element in the dialog

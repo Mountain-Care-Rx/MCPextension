@@ -6,7 +6,7 @@ const path = require("path");
 const archiver = require('archiver');
 
 // Fallback directory configuration
-const primaryProjectPath = path.join("C:", "Users", "cbarnett", "Desktop", "Other", "MCPextension");
+const primaryProjectPath = path.join(__dirname);
 const secondaryProjectPath = path.join("C:", "Users", "Chris", "Desktop", "Projects", "MCPextension");
 
 // Function to test if a directory is writable (or can be created)
@@ -47,7 +47,7 @@ function updateVersionInFile(filePath, versionPattern, newVersion) {
     }
 
     let content = fs.readFileSync(filePath, 'utf8');
-    
+
     // Validate JSON for manifest files before updating
     if (filePath.endsWith('manifest.json') || filePath.endsWith('manifest-firefox.json')) {
       try {
@@ -57,15 +57,15 @@ function updateVersionInFile(filePath, versionPattern, newVersion) {
         return false;
       }
     }
-    
+
     // For manifest files, use a more specific pattern to ensure we only replace the version field
     if (filePath.endsWith('manifest.json') || filePath.endsWith('manifest-firefox.json')) {
       const regex = /"version"\s*:\s*"([^"]+)"/;
       const updatedContent = content.replace(regex, `"version": "${newVersion}"`);
-      
+
       if (content !== updatedContent) {
         fs.writeFileSync(filePath, updatedContent, 'utf8');
-        
+
         // Validate the updated JSON
         try {
           JSON.parse(updatedContent);
@@ -110,7 +110,7 @@ function createOrUpdateFile(filePath, content) {
     if (!fs.existsSync(dirPath)) {
       fs.mkdirSync(dirPath, { recursive: true });
     }
-    
+
     fs.writeFileSync(filePath, content, 'utf8');
     console.log(`✅ Created/updated file: ${filePath}`);
     return true;
@@ -131,7 +131,7 @@ function updateVersions() {
     /"version"\s*:\s*"([^"]+)"/,
     newVersion
   );
-  
+
   updateVersionInFile(
     path.join(PROJECT_PATH, 'src/manifest-firefox.json'),
     /"version"\s*:\s*"([^"]+)"/,
@@ -222,7 +222,7 @@ function copyRecursiveSync(src, dest) {
 // Helper function to create browser-specific builds
 function createBrowserSpecificBuild(browser) {
   console.log(`Creating ${browser} build...`);
-  
+
   // Define the output directory for the bundled extension.
   const distDir = path.join(PROJECT_PATH, `dist-${browser.toLowerCase()}`);
 
@@ -281,7 +281,7 @@ function createBrowserSpecificBuild(browser) {
     { src: "src/modules/historyUtils.js", dest: "modules/historyUtils.js" }, // New history module
     { src: "src/modules/tagRemoveUtils.js", dest: "modules/tagRemoveUtils.js" }, // Tag removal utility
     { src: "src/modules/automationRemoveUtils.js", dest: "modules/automationRemoveUtils.js" }, // Automation removal utility
-    
+
     // UI Components
     { src: "src/modules/ui/headerBar.js", dest: "modules/ui/headerBar.js" },
     { src: "src/modules/ui/styles/headerStyles.js", dest: "modules/ui/styles/headerStyles.js" },
@@ -289,7 +289,7 @@ function createBrowserSpecificBuild(browser) {
     { src: "src/modules/ui/components/actionsGroup.js", dest: "modules/ui/components/actionsGroup.js" },
     { src: "src/modules/ui/components/dropdownsGroup.js", dest: "modules/ui/components/dropdownsGroup.js" },
     { src: "src/modules/ui/components/settingsGroup.js", dest: "modules/ui/components/settingsGroup.js" },
-    
+
     // Dropdown Components
     { src: "src/modules/ui/components/dropdowns/semaDropdown.js", dest: "modules/ui/components/dropdowns/semaDropdown.js" },
     { src: "src/modules/ui/components/dropdowns/vialSemaDropdown.js", dest: "modules/ui/components/dropdowns/vialSemaDropdown.js" },
@@ -304,7 +304,7 @@ function createBrowserSpecificBuild(browser) {
   moduleFilesToCopy.forEach(({ src, dest }) => {
     const srcPath = path.join(PROJECT_PATH, src);
     const destPath = path.join(distDir, dest);
-    
+
     if (fs.existsSync(srcPath)) {
       copyRecursiveSync(srcPath, destPath);
     } else {
@@ -348,15 +348,15 @@ function createBrowserSpecificBuild(browser) {
   // Log when archive is finalized
   output.on('close', () => {
     console.log(`✅ ${browser} archive created: ${zipPath} (${archive.pointer()} total bytes)`);
-    
+
     // Copy ZIP to distribution directory
     const distZipPath = path.join(DIST_PATH, `dist-${browser.toLowerCase()}.zip`);
-    
+
     // Make sure the dist directory exists
     if (!fs.existsSync(DIST_PATH)) {
       fs.mkdirSync(DIST_PATH, { recursive: true });
     }
-    
+
     fs.copyFileSync(zipPath, distZipPath);
     console.log(`✅ Copied ${browser} archive to dist directory: ${distZipPath}`);
   });

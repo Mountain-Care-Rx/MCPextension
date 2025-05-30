@@ -259,8 +259,27 @@ export function createFixedHeader() {
     header.appendChild(settingsGroup); // Settings stays at the far right
 
     // Add header to body
-    document.body.appendChild(header);
-    document.body.style.paddingTop = isHeaderVisible ? "32px" : "0";
+    document.body.insertBefore(header, document.body.firstChild); // Ensure header is at the very top
+
+    // Set body padding to match header height (force with !important)
+    header.style.position = "fixed";
+    header.style.top = "0";
+    header.style.left = "0";
+    header.style.right = "0";
+    header.style.zIndex = "9999";
+    header.style.width = "100%";
+    header.style.boxSizing = "border-box";
+    // Set the height explicitly if not already set in CSS
+    header.style.height = "32px";
+
+    // Add or update a style tag to force body padding-top
+    let styleTag = document.getElementById("crm-header-padding-style");
+    if (!styleTag) {
+      styleTag = document.createElement("style");
+      styleTag.id = "crm-header-padding-style";
+      document.head.appendChild(styleTag);
+    }
+    styleTag.textContent = `body { padding-top: 32px !important; }`;
 
     // Set initial visibility for automation elements based on setting
     setTimeout(() => {

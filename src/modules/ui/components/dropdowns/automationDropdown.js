@@ -367,7 +367,6 @@ function runConsoleBased(finalTextToFind) {
             console.log(`[CRM Extension] Found scrollable dropdown container: ${selector}`);
             break;
           }
-          wait(500)
         }
         }
 

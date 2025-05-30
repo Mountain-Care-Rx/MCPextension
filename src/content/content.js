@@ -13,7 +13,7 @@ import { initTagRemoval } from '../modules/tagRemoveUtils.js'; // Tag removal sy
 import { initAutomationRemoval } from '../modules/automationRemoveUtils.js'; // Automation removal system
 
 // Import initChat and initChatUI from the chat module
-import { initChat, initChatUI } from '../modules/chat/index.js';
+// import { initChat, initChatUI } from '../modules/chat/index.js';
 
 console.log('[CRM Extension] Content script injected.');
 
@@ -70,17 +70,17 @@ function initializeHeader() {
   // Get the current visibility setting
   const isHeaderVisible = localStorage.getItem('crmplus_headerBarVisible') !== 'false'; // default to true
   console.log('[CRM Extension] Header visibility setting on init:', isHeaderVisible);
-  
+
   try {
     console.log('[CRM Extension] Creating fixed header...');
     createFixedHeader();
-    
+
     // Explicitly set the visibility based on the setting
     toggleHeaderVisibility(isHeaderVisible);
   } catch (error) {
     console.error('[CRM Extension] Error creating fixed header:', error);
   }
-  
+
   // Initialize other features
   try {
     // Start monitoring console messages.
@@ -90,14 +90,14 @@ function initializeHeader() {
   } catch (error) {
     console.error('[CRM Extension] Error initializing console monitor:', error);
   }
-  
+
   try {
     // Automatically copy the phone number when the input is available.
     autoCopyPhone();
   } catch (error) {
     console.error('[CRM Extension] Error initializing auto phone copy:', error);
   }
-  
+
   // Initialize the alert system for provider-paid notifications
   try {
     // Start the alert system for provider-paid and other tag-based alerts
@@ -105,7 +105,7 @@ function initializeHeader() {
   } catch (error) {
     console.error('[CRM Extension] Error initializing alert system:', error);
   }
-  
+
   // Initialize the tag removal system
   try {
     // Start the tag removal system
@@ -113,7 +113,7 @@ function initializeHeader() {
   } catch (error) {
     console.error('[CRM Extension] Error initializing tag removal system:', error);
   }
-  
+
   // Initialize the automation removal system
   try {
     // Start the automation removal system
@@ -121,16 +121,16 @@ function initializeHeader() {
   } catch (error) {
     console.error('[CRM Extension] Error initializing automation removal system:', error);
   }
-  
+
   // Make sure phone display is cleared (redundant safety)
   clearPhoneDisplay();
-  
+
   // Initialize chat system and UI
   try {
     // Initialize chat system
     initChat().then(() => {
       console.log('[CRM Extension] Chat system initialized successfully');
-      
+
       // Explicitly initialize the chat UI after a short delay
       setTimeout(() => {
         if (typeof initChatUI === 'function') {
@@ -151,19 +151,19 @@ document.addEventListener('click', function(event) {
   const chatButton = event.target.closest('.chat-button');
   if (chatButton) {
     console.log('[CRM Extension] Chat button clicked (global event listener)');
-    
+
     // Debug info
     console.log('window.toggleChatUI exists:', typeof window.toggleChatUI === 'function');
     console.log('Chat container exists:', !!document.getElementById('hipaa-chat-container'));
-    
+
     // As a fallback, try to ensure the chat UI is available
     if (!document.getElementById('hipaa-chat-container')) {
       console.log('[CRM Extension] Chat container not found, initializing chat UI...');
-      
+
       try {
         if (typeof initChatUI === 'function') {
           initChatUI();
-          
+
           // Try to toggle the chat UI after a short delay
           setTimeout(() => {
             if (typeof window.toggleChatUI === 'function') {
@@ -186,19 +186,19 @@ document.addEventListener('click', function(event) {
 // Listen for messages from popup and background
 browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[CRM Extension] Received message:', message);
-  
+
   if (message.action === 'toggleHeaderVisibility') {
     console.log('[CRM Extension] Toggling header visibility to:', message.isVisible);
     try {
       const success = toggleHeaderVisibility(message.isVisible);
-      
+
       // Update localStorage for persistence
       localStorage.setItem('crmplus_headerBarVisible', message.isVisible.toString());
-      
+
       // Sync this change with browser storage (persistent across all tabs)
       browserAPI.runtime.sendMessage({ action: 'syncSettings' })
         .catch(error => console.error('[CRM Extension] Error syncing settings:', error));
-      
+
       sendResponse({ success });
     } catch (error) {
       console.error('[CRM Extension] Error toggling header visibility:', error);
@@ -206,7 +206,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     return true;
   }
-  
+
   // Add handler for explicit chat initialization
   if (message.action === 'initializeChat') {
     try {
@@ -224,7 +224,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     return true;
   }
-  
+
   return false;
 });
 
@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeHeader();
       });
   }
-  
+
   // Also ensure chat system is initialized
   if (!document.getElementById('hipaa-chat-container')) {
     try {

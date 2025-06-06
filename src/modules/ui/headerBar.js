@@ -158,10 +158,10 @@ export function createFixedHeader() {
     rightButtonsGroup.style.marginRight = "0";
 
     // Create chat button with explicit click handler
-    const chatButton = document.createElement("button");
-    chatButton.className = "chat-button btn";
-    chatButton.title = "Mountain Care Chat";
-    chatButton.style.marginRight = "8px";
+    // const chatButton = document.createElement("button");
+    // chatButton.className = "chat-button btn";
+    // chatButton.title = "Mountain Care Chat";
+    // chatButton.style.marginRight = "8px";
 
     // Create the content wrapper to hold the icon and text
     const chatContentWrapper = document.createElement("div");
@@ -170,76 +170,76 @@ export function createFixedHeader() {
     chatContentWrapper.style.justifyContent = "center";
 
     // Add chat icon
-    const chatIcon = document.createElement("span");
-    chatIcon.className = "icon";
-    chatIcon.innerHTML = '💬';
-    chatIcon.style.marginRight = "4px";
+    // const chatIcon = document.createElement("span");
+    // chatIcon.className = "icon";
+    // chatIcon.innerHTML = '💬';
+    // chatIcon.style.marginRight = "4px";
 
     // Add chat text
-    const chatText = document.createElement("span");
-    chatText.textContent = "Chat";
+    // const chatText = document.createElement("span");
+    // chatText.textContent = "Chat";
 
     // Add badge for notifications
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    Object.assign(badge.style, {
-      position: 'absolute',
-      top: '0',
-      right: '0',
-      backgroundColor: '#f44336',
-      color: 'white',
-      fontSize: '12px',
-      fontWeight: 'bold',
-      padding: '2px 6px',
-      borderRadius: '50%',
-      display: 'none'
-    });
+    // const badge = document.createElement("span");
+    // badge.className = "badge";
+    // Object.assign(badge.style, {
+    //   position: 'absolute',
+    //   top: '0',
+    //   right: '0',
+    //   backgroundColor: '#f44336',
+    //   color: 'white',
+    //   fontSize: '12px',
+    //   fontWeight: 'bold',
+    //   padding: '2px 6px',
+    //   borderRadius: '50%',
+    //   display: 'none'
+    // });
 
     // Assemble the chat button
-    chatContentWrapper.appendChild(chatIcon);
-    chatContentWrapper.appendChild(chatText);
-    chatButton.appendChild(chatContentWrapper);
-    chatButton.appendChild(badge);
+    // chatContentWrapper.appendChild(chatIcon);
+    // chatContentWrapper.appendChild(chatText);
+    // chatButton.appendChild(chatContentWrapper);
+    // chatButton.appendChild(badge);
 
     // Add explicit click handler
-    chatButton.addEventListener("click", function() {
-      console.log('[CRM Extension] Chat button clicked');
+    // chatButton.addEventListener("click", function() {
+    //   console.log('[CRM Extension] Chat button clicked');
 
       // Call the global toggleChatUI function if available
-      if (typeof window.toggleChatUI === 'function') {
-        window.toggleChatUI();
-      } else {
-        console.error('[CRM Extension] toggleChatUI function not available');
+    //   if (typeof window.toggleChatUI === 'function') {
+    //     window.toggleChatUI();
+    //   } else {
+    //     console.error('[CRM Extension] toggleChatUI function not available');
 
-        // Fallback: Try to toggle visibility directly
-        const chatContainer = document.getElementById('hipaa-chat-container');
-        if (chatContainer) {
-          chatContainer.style.display = chatContainer.style.display === 'none' ? 'flex' : 'none';
-          console.log('[CRM Extension] Toggled chat container visibility as fallback');
-        } else {
-          console.error('[CRM Extension] Chat container not found');
+    //     // Fallback: Try to toggle visibility directly
+    //     const chatContainer = document.getElementById('hipaa-chat-container');
+    //     if (chatContainer) {
+    //       chatContainer.style.display = chatContainer.style.display === 'none' ? 'flex' : 'none';
+    //       console.log('[CRM Extension] Toggled chat container visibility as fallback');
+    //     } else {
+    //       console.error('[CRM Extension] Chat container not found');
 
-          // As a last resort, try to initialize the chat UI explicitly
-          try {
-            if (typeof initChat === 'function') {
-              initChat().then(() => {
-                if (typeof window.toggleChatUI === 'function') {
-                  window.toggleChatUI();
-                }
-              });
-            }
-          } catch (chatError) {
-            console.error('[CRM Extension] Failed to initialize chat:', chatError);
-          }
-        }
-      }
-    });
+    //       // As a last resort, try to initialize the chat UI explicitly
+    //       try {
+    //         if (typeof initChat === 'function') {
+    //           initChat().then(() => {
+    //             if (typeof window.toggleChatUI === 'function') {
+    //               window.toggleChatUI();
+    //             }
+    //           });
+    //         }
+    //       } catch (chatError) {
+    //         console.error('[CRM Extension] Failed to initialize chat:', chatError);
+    //       }
+    //     }
+    //   }
+    // });
 
     // Create history dropdown
     const historyDropdown = createHistoryDropdown();
 
     // Add chat and history to right buttons group
-    rightButtonsGroup.appendChild(chatButton);
+    // rightButtonsGroup.appendChild(chatButton);
     rightButtonsGroup.appendChild(historyDropdown);
 
     // Create settings section
@@ -317,31 +317,31 @@ export function createFixedHeader() {
     initHistoryTracking(); // Initialize history tracking
 
     // Initialize HIPAA-compliant chat system
-    initChat();
+    // initChat();
 
     // Initialize chat monitoring
-    initChatMonitoring();
+    // initChatMonitoring();
 
     // Handle new chat messages
-    onNewMessages(messages => {
-      if (messages.length > 0) {
-        const latestMessage = messages[0];
-        // Show a toast notification for the latest message
-        showToast(`New message from ${latestMessage.sender}: ${latestMessage.text.substring(0, 30)}${latestMessage.text.length > 30 ? '...' : ''}`, 3000);
-      }
-    });
+    // onNewMessages(messages => {
+    //   if (messages.length > 0) {
+    //     const latestMessage = messages[0];
+    //     // Show a toast notification for the latest message
+    //     showToast(`New message from ${latestMessage.sender}: ${latestMessage.text.substring(0, 30)}${latestMessage.text.length > 30 ? '...' : ''}`, 3000);
+    //   }
+    // });
 
-    // Additional check to clear phone display when URL changes
-    window.addEventListener('popstate', function() {
-      console.log('[CRM Extension] Navigation detected, clearing phone display');
-      clearPhoneDisplay();
-    });
+    // // Additional check to clear phone display when URL changes
+    // window.addEventListener('popstate', function() {
+    //   console.log('[CRM Extension] Navigation detected, clearing phone display');
+    //   clearPhoneDisplay();
+    // });
 
-    // As an extra safety measure, check if we're on a patient profile
-    // If not, make sure phone is cleared
-    if (!isPatientProfilePage()) {
-      clearPhoneDisplay();
-    }
+    // // As an extra safety measure, check if we're on a patient profile
+    // // If not, make sure phone is cleared
+    // if (!isPatientProfilePage()) {
+    //   clearPhoneDisplay();
+    // }
 
     // Mark header as initialized to prevent duplicate initialization
     headerInitialized = true;
@@ -462,10 +462,14 @@ export function toggleHeaderVisibility(isVisible) {
       const hasAlerts = document.body.classList.contains('has-alert');
 
       if (isVisible) {
-        document.body.style.paddingTop = hasAlerts ? "72px" : "32px"; // 32px for header, 72px if alert is present
+        // document.querySelector("#app > div:nth-child(1) > div:nth-child(1) > div").style.paddingTop = hasAlerts ? "72px" : "32px"; // 32px for header, 72px if alert is present
+        document.querySelector("#app > div:nth-child(1) > div.flex.v2-collapse.sidebar-v2-location.pmd-app.sO76CG3rwxaaryItNHrX.flex.v2-collapse.sidebar-v2-location > div > header").style.paddingTop = hasAlerts ? "72px" : "32px"; // Ensure header is displayed
+        document.querySelector("#app > div:nth-child(1) > div.flex.v2-collapse.sidebar-v2-location.pmd-app.sO76CG3rwxaaryItNHrX.flex.v2-collapse.sidebar-v2-location > section > section > div").style.paddingTop = hasAlerts ? "72px" : "32px"; // Adjust padding for main content
+        document.querySelector("#app > div:nth-child(1) > div.flex.v2-open.sidebar-v2-location.sO76CG3rwxaaryItNHrX.flex.v2-open.sidebar-v2-location > div > header").style.paddingTop = hasAlerts ? "72px" : "32px"; // Adjust padding for open sidebar
         document.body.classList.remove('no-header');
       } else {
-        document.body.style.paddingTop = hasAlerts ? "40px" : "0"; // 40px if alert is present, 0 if not
+        document.querySelector("#app > div:nth-child(1)").style.paddingTop = hasAlerts ? "40px" : "0px"; // 32px for header, 72px if alert is present
+        document.querySelector("h1_header").style.paddingTop = hasAlerts ? "40px" : "0px";
         document.body.classList.add('no-header');
       }
 

@@ -25,19 +25,72 @@ const REMOVABLE_TAGS = [
     'np-tirz-0.5ml-inj',
     'np-tirz-0.75ml-inj',
     'np-tirz-1.0ml-inj',
-    'np-tirz-1.25ml-inj'
+    'np-tirz-1.25ml-inj',
+
+    'api-tirz-b6-0.25ml-syringe',
+    'api-tirz-b6-0.5ml-syringe',
+    'api-tirz-b6-0.75ml-syringe',
+    'api-tirz-b6-1.0ml-syringe',
+    'api-tirz-b6-1.25ml-syringe',
+    'api-tirz-b6-1.5ml-syringe',
+
+    'api-tirz-b6-2.5ml-vial',
+    'api-tirz-b6-5.0ml-vial',
+    'api-tirz-b6-7.5ml-vial',
+    'api-tirz-b6-10.0ml-vial',
+
+    'api-tirz-b12-2.5ml-vial',
+    'api-tirz-b12-5.0ml-vial',
+    'api-tirz-b12-7.5ml-vial',
+    'api-tirz-b12-10.0ml-vial',
+
+    'api-tirz-nad+-2.5ml-vial',
+    'api-tirz-nad+-5.0ml-vial',
+    'api-tirz-nad+-7.5ml-vial',
+    'api-tirz-nad+-10.0ml-vial',
+
+    'api-sema-b6-2.5ml-vial',
+    'api-sema-b6-5.0ml-vial',
+    'api-sema-b6-7.5ml-vial',
+    'api-sema-b6-10.0ml-vial',
+
+
+    'api-sema-b12-0.125ml-syringe',
+    'api-sema-b12-0.25ml-syringe',
+    'api-sema-b12-0.5ml-syringe',
+    'api-sema-b12-0.75ml-syringe',
+    'api-sema-b12-1.0ml-syringe',
+    'api-sema-b12-1.25ml-syringe',
+    'api-sema-b12-1.5ml-syringe',
+    'api-sema-b12-1.75ml-syringe',
+    'api-sema-b12-2.0ml-syringe',
+
+    'api-sema-b12-2.5ml-vial',
+    'api-sema-b12-5.0ml-vial',
+    'api-sema-b12-7.5ml-vial',
+    'api-sema-b12-10.0ml-vial',
+
+    'api-sema-nad+-2.5ml-vial',
+    'api-sema-nad+-5.0ml-vial',
+    'api-sema-nad+-7.5ml-vial',
+    'api-sema-nad+-10.0ml-vial',
+
+    'api-sema-lipo-2.5ml-vial',
+    'api-sema-lipo-5.0ml-vial',
+    'api-sema-lipo-7.5ml-vial',
+    'api-sema-lipo-10.0ml-vial',
   ];
-  
+
   // Store for found tags
   let foundTags = [];
-  
+
   /**
    * Initialize the tag removal system
    */
   export function initTagRemoval() {
     console.log('[CRM Extension] Tag removal system initialized');
   }
-  
+
   /**
    * Detect all removable tags on the current page
    * @returns {Array} Array of found tag elements
@@ -45,11 +98,11 @@ const REMOVABLE_TAGS = [
   export function detectTags() {
     // Reset found tags
     foundTags = [];
-    
+
     try {
       // Strategy 1: Look for tag elements with specific classes
       const tagElements = document.querySelectorAll('.tag, .tag-label, .pill, .badge');
-      
+
       for (const tag of tagElements) {
         const tagText = tag.textContent.trim().toLowerCase();
         // Check if the tag text contains any of our removable tags
@@ -60,7 +113,7 @@ const REMOVABLE_TAGS = [
           });
         }
       }
-      
+
       // Strategy 2: Look for elements with data-tag attributes
       const dataTagElements = document.querySelectorAll('[data-tag]');
       for (const element of dataTagElements) {
@@ -72,7 +125,7 @@ const REMOVABLE_TAGS = [
           });
         }
       }
-      
+
       // Strategy 3: Look for elements containing tag text within tag containers
       const tagContainers = document.querySelectorAll('.tags-container, .tag-list, .tags');
       for (const container of tagContainers) {
@@ -92,11 +145,11 @@ const REMOVABLE_TAGS = [
           }
         }
       }
-      
+
       // Strategy 4: Look for elements with class names that might contain our tags
       const allElements = document.querySelectorAll('*[class]');
       for (const element of allElements) {
-        const className = element.className.toLowerCase();
+        const className = String(element.className).toLowerCase();
         if (className && typeof className === 'string' && REMOVABLE_TAGS.some(tag => className.includes(tag))) {
           // Avoid duplicates
           if (!foundTags.some(foundTag => foundTag.element === element)) {
@@ -107,7 +160,7 @@ const REMOVABLE_TAGS = [
           }
         }
       }
-      
+
       console.log(`[CRM Extension] Found ${foundTags.length} removable tags`);
       return foundTags;
     } catch (error) {
@@ -115,7 +168,7 @@ const REMOVABLE_TAGS = [
       return [];
     }
   }
-  
+
   /**
    * Removes a specific tag by clicking its remove button or X icon
    * @param {Element} tagElement - The tag element to remove
@@ -130,7 +183,7 @@ const REMOVABLE_TAGS = [
         closeButton.click();
         return true;
       }
-      
+
       // Strategy 2: Look for a close icon that might be a sibling element
       const parent = tagElement.parentElement;
       if (parent) {
@@ -141,7 +194,7 @@ const REMOVABLE_TAGS = [
           return true;
         }
       }
-      
+
       // Strategy 3: Look at all children and siblings for any element that looks like an X button
       const possibleXElements = [...Array.from(tagElement.querySelectorAll('*')), ...Array.from(parent ? parent.children : [])];
       for (const elem of possibleXElements) {
@@ -151,33 +204,33 @@ const REMOVABLE_TAGS = [
           elem.click();
           return true;
         }
-        
+
         // Check if there's an X in the class name
-        if (elem.className && (elem.className.includes('close') || elem.className.includes('delete') || 
+        if (elem.className && (elem.className.includes('close') || elem.className.includes('delete') ||
             elem.className.includes('remove') || elem.className.includes('x-button'))) {
           console.log('[CRM Extension] Found X button by class name, clicking it');
           elem.click();
           return true;
         }
-        
+
         // Check if there's an X in FontAwesome or other icon fonts
-        if (elem.classList && (elem.classList.contains('fa-times') || elem.classList.contains('fa-close') || 
+        if (elem.classList && (elem.classList.contains('fa-times') || elem.classList.contains('fa-close') ||
             elem.classList.contains('icon-close') || elem.classList.contains('icon-remove'))) {
           console.log('[CRM Extension] Found X button by icon class, clicking it');
           elem.click();
           return true;
         }
       }
-      
+
       // Strategy 4: Check if the tag itself is clickable (might be a delete action)
-      if (tagElement.tagName === 'BUTTON' || tagElement.tagName === 'A' || 
-          tagElement.getAttribute('role') === 'button' || 
+      if (tagElement.tagName === 'BUTTON' || tagElement.tagName === 'A' ||
+          tagElement.getAttribute('role') === 'button' ||
           window.getComputedStyle(tagElement).cursor === 'pointer') {
         console.log('[CRM Extension] Tag appears to be clickable, clicking it');
         tagElement.click();
         return true;
       }
-      
+
       // Strategy 5: Look in parent containers for X buttons
       let currentParent = parent;
       for (let i = 0; i < 3 && currentParent; i++) {  // Look up to 3 levels up
@@ -194,7 +247,7 @@ const REMOVABLE_TAGS = [
         }
         currentParent = currentParent.parentElement;
       }
-      
+
       console.log('[CRM Extension] No method found to remove tag:', tagElement);
       return false;
     } catch (error) {
@@ -202,7 +255,7 @@ const REMOVABLE_TAGS = [
       return false;
     }
   }
-  
+
   /**
    * Removes all detected removable tags
    * @returns {Promise} Promise that resolves when all tags are processed
@@ -212,10 +265,10 @@ const REMOVABLE_TAGS = [
       try {
         // First refresh our list of tags
         detectTags();
-        
+
         let successCount = 0;
         const totalTags = foundTags.length;
-        
+
         if (totalTags === 0) {
           console.log('[CRM Extension] No removable tags found');
           // Resolve with a result object
@@ -227,9 +280,9 @@ const REMOVABLE_TAGS = [
           });
           return;
         }
-        
+
         console.log(`[CRM Extension] Attempting to remove ${totalTags} tags`);
-        
+
         // Use a recursive approach to ensure we remove tags one by one with delays
         function removeTagsSequentially(index) {
           if (index >= foundTags.length) {
@@ -243,20 +296,20 @@ const REMOVABLE_TAGS = [
             });
             return;
           }
-          
+
           const tag = foundTags[index];
           console.log(`[CRM Extension] Removing tag: ${tag.text}`);
-          
+
           if (removeTag(tag.element)) {
             successCount++;
           }
-          
+
           // Schedule the next tag removal after a short delay
           setTimeout(() => {
             removeTagsSequentially(index + 1);
           }, 300); // 300ms delay between removals to let UI update
         }
-        
+
         // Start the sequential removal process
         removeTagsSequentially(0);
       } catch (error) {

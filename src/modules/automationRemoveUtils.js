@@ -4,34 +4,15 @@
 
 // List of automations to remove
 const REMOVABLE_AUTOMATIONS = [
-    'Workflow - New Patient - Semaglutide 0.125ml Onboarding (Step 1)',
-    'Workflow - New Patient - Semaglutide 0.25ml Onboarding (Step 1)',
-    'Workflow - New Patient - Semaglutide 0.5ml Onboarding (Step 1)',
-    'Workflow - New Patient - Semaglutide 0.75ml Onboarding (Step 1)',
-    'Workflow - New Patient - Semaglutide 1.0ml Onboarding (Step 1)',
-    'Workflow - New Patient - Semaglutide 1.25ml Onboarding (Step 1)',
-    'Workflow - New Patient - Semaglutide 1.5ml Onboarding (Step 1)',
-    'Workflow - New Patient - Semaglutide 2.0ml Onboarding - (Step 1)',
-    'Workflow - New Patient - Tirzepatide 0.25ml Onboarding - (Step 1)',
-    'Workflow - New Patient - Tirzepatide 0.5ml Onboarding - (Step 1)',
-    'Workflow - New Patient - Tirzepatide 0.75ml Onboarding - (Step 1)',
-    'Workflow - New Patient - Tirzepatide 1.0ml Onboarding - (Step 1)',
-    'Workflow - New Patient - Tirzepatide 1.25ml Onboarding - (Step 1)',
-    'Workflow - New Patient - Tirzepatide 1.5ml Onboarding - (Step 1)',
-    'Workflow - Refill - Semaglutide/B12 Injection Refill Order - (Step 1)',
-    'Workflow - Semaglutide/B12 Vial Order - (Step 1)',
-    'Workflow - Semaglutide/B6 Vial Order - (Step 1)',
-    'Workflow - Semaglutide/Lipo Vial Order - (Step 1)',
-    'Workflow - Semaglutide/NAD+ Vial Order - (Step 1)',
-    'Workflow - Syringe - Tirzepatide/Pyridoxine Injection Order - (Step 1)',
-    'Workflow - Tirzepatide/Cyano Vial Order - (Step 1)',
-    'Workflow - Tirzepatide/NAD+ Vial Order - (Step 1)',
-    'Workflow - Tirzepatide/Pyridoxine Vial Order - (Step 1)'
+    'API - New Patient - Semaglutide Combo',
+    'API - New Patient - Tirzepatide Combo',
+    'API - Refill - Semaglutide Combo - (Step 1 Verify First Name)',
+    'API - Refill - Tirzepatide Combo - (Step 1 Verify First Name)',
   ];
-  
+
   // Array to store found automations
   let foundAutomations = [];
-  
+
   /**
    * Helper to safely get the bounding rectangle of an element.
    * Returns a default rectangle if the element is missing or unsupported.
@@ -46,14 +27,14 @@ const REMOVABLE_AUTOMATIONS = [
     }
     return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 };
   }
-  
+
   /**
    * Initialize the automation removal system.
    */
   export function initAutomationRemoval() {
     console.log('[CRM Extension] Automation removal system initialized');
   }
-  
+
   /**
    * Detect removable automations in the Active section.
    * Returns an array of objects { element, text }.
@@ -84,7 +65,7 @@ const REMOVABLE_AUTOMATIONS = [
       return [];
     }
   }
-  
+
   /**
    * Fallback: Filter workflows using boundingRect based on the Active label.
    */
@@ -104,7 +85,7 @@ const REMOVABLE_AUTOMATIONS = [
       return true;
     });
   }
-  
+
   /**
    * Find a section by its label text ("Active" or "Past") and return an object:
    * { label: HTMLElement, workflows: [HTMLElement, ...] }.
@@ -131,7 +112,7 @@ const REMOVABLE_AUTOMATIONS = [
       return null;
     }
   }
-  
+
   /**
    * Get workflows between the Active and Past labels.
    */
@@ -146,7 +127,7 @@ const REMOVABLE_AUTOMATIONS = [
       return rect.top > activeBottom && (!pastTop || rect.top < pastTop);
     });
   }
-  
+
   /**
    * Get workflows below the Past label.
    */
@@ -155,7 +136,7 @@ const REMOVABLE_AUTOMATIONS = [
     const allWorkflows = Array.from(document.querySelectorAll('div[id^="workflow_"], div[data-workflow-id]'));
     return allWorkflows.filter(wf => safeGetBoundingRect(wf).top > pastBottom);
   }
-  
+
   /**
    * Climb up the DOM to find a parent element that represents the workflow.
    */
@@ -168,7 +149,7 @@ const REMOVABLE_AUTOMATIONS = [
     }
     return null;
   }
-  
+
   /**
    * Attempt to remove a given automation element.
    * Returns a boolean or a Promise (if scrolling is needed).
@@ -198,13 +179,13 @@ const REMOVABLE_AUTOMATIONS = [
       return false;
     }
   }
-  
+
   /**
    * Try various strategies to click a remove button.
    */
   function attemptRemove(automationElement) {
     if (!automationElement) return false;
-    
+
     // Strategy 1: Look for close icon(s)
     try {
       const closeIcons = automationElement.querySelectorAll('i.icon-close, i.icon.icon-close');
@@ -215,7 +196,7 @@ const REMOVABLE_AUTOMATIONS = [
     } catch (e) {
       console.error('[CRM Extension] Error in Strategy 1:', e);
     }
-    
+
     // Strategy 2: Anchor tags with an "×" or "x"
     try {
       const closeLinks = automationElement.querySelectorAll('a');
@@ -229,7 +210,7 @@ const REMOVABLE_AUTOMATIONS = [
     } catch (e) {
       console.error('[CRM Extension] Error in Strategy 2:', e);
     }
-    
+
     // Strategy 3: Look for a Manage button to reveal removal options
     try {
       const manageButtons = automationElement.querySelectorAll('button, .btn, [role="button"]');
@@ -250,7 +231,7 @@ const REMOVABLE_AUTOMATIONS = [
     } catch (e) {
       console.error('[CRM Extension] Error in Strategy 3:', e);
     }
-    
+
     // Strategy 4: ID-based selectors for known workflow elements
     if (automationElement.id && automationElement.id.startsWith('workflow_')) {
       const workflowId = automationElement.id;
@@ -271,7 +252,7 @@ const REMOVABLE_AUTOMATIONS = [
         console.error('[CRM Extension] Error in Strategy 4:', e);
       }
     }
-    
+
     // Strategy 5: Check for span elements containing an "×" or "x"
     try {
       const spans = automationElement.querySelectorAll('span');
@@ -285,7 +266,7 @@ const REMOVABLE_AUTOMATIONS = [
     } catch (e) {
       console.error('[CRM Extension] Error in Strategy 5:', e);
     }
-    
+
     // Strategy 6: Check a few siblings for removal controls
     try {
       let sibling = automationElement.nextElementSibling, count = 0;
@@ -308,7 +289,7 @@ const REMOVABLE_AUTOMATIONS = [
     } catch (e) {
       console.error('[CRM Extension] Error in Strategy 6:', e);
     }
-    
+
     // Strategy 7: As a last resort, simulate a click near the top-right corner.
     try {
       const rect = safeGetBoundingRect(automationElement);
@@ -333,11 +314,11 @@ const REMOVABLE_AUTOMATIONS = [
     } catch (e) {
       console.error('[CRM Extension] Error in Strategy 7:', e);
     }
-    
+
     console.error('[CRM Extension] No method found to remove automation:', automationElement);
     return false;
   }
-  
+
   /**
    * Handle confirmation dialogs if they appear.
    */
@@ -370,7 +351,7 @@ const REMOVABLE_AUTOMATIONS = [
       }, 500);
     });
   }
-  
+
   /**
    * Remove all detected automations.
    * If nothing is found, exit immediately.
@@ -410,4 +391,3 @@ const REMOVABLE_AUTOMATIONS = [
       }
     });
   }
-  

@@ -192,23 +192,23 @@ export function createAPIDropdown() {
   // Flat map for dosage lookup
   const dosageToString = {
     // Tirzepatide syringes
-    "Tirzepatide|B6 syringe|QTY: 1 - 0.25": "api-tirz-b6-0.25ml-syringe",
-    "Tirzepatide|B6 syringe|QTY: 2 - 0.5": "api-tirz-b6-0.5ml-syringe",
-    "Tirzepatide|B6 syringe|QTY: 3 - 0.75": "api-tirz-b6-0.75ml-syringe",
-    "Tirzepatide|B6 syringe|QTY: 4 - 1.0": "api-tirz-b6-1.0ml-syringe",
-    "Tirzepatide|B6 syringe|QTY: 5 - 1.25": "api-tirz-b6-1.25ml-syringe",
-    "Tirzepatide|B6 syringe|QTY: 6 - 1.5": "api-tirz-b6-1.5ml-syringe",
+    "Tirzepatide|B6 syringe|QTY: 1 - 0.25 ml": "api-tirz-b6-0.25ml-syringe",
+    "Tirzepatide|B6 syringe|QTY: 2 - 0.5 ml": "api-tirz-b6-0.5ml-syringe",
+    "Tirzepatide|B6 syringe|QTY: 3 - 0.75 ml": "api-tirz-b6-0.75ml-syringe",
+    "Tirzepatide|B6 syringe|QTY: 4 - 1.0 ml": "api-tirz-b6-1.0ml-syringe",
+    "Tirzepatide|B6 syringe|QTY: 5 - 1.25 ml": "api-tirz-b6-1.25ml-syringe",
+    "Tirzepatide|B6 syringe|QTY: 6 - 1.5 ml": "api-tirz-b6-1.5ml-syringe",
 
     // Semaglutide syringes
-    "Semaglutide|B12 syringe|QTY: 0.5 - 0.125": "api-sema-b12-0.125ml-syringe",
-    "Semaglutide|B12 syringe|QTY: 1 - 0.25": "api-sema-b12-0.25ml-syringe",
-    "Semaglutide|B12 syringe|QTY: 2 - 0.5": "api-sema-b12-0.5ml-syringe",
-    "Semaglutide|B12 syringe|QTY: 3 - 0.75": "api-sema-b12-0.75ml-syringe",
-    "Semaglutide|B12 syringe|QTY: 4 - 1.0": "api-sema-b12-1.0ml-syringe",
-    "Semaglutide|B12 syringe|QTY: 5 - 1.25": "api-sema-b12-1.25ml-syringe",
-    "Semaglutide|B12 syringe|QTY: 6 - 1.5": "api-sema-b12-1.5ml-syringe",
-    "Semaglutide|B12 syringe|QTY: 7 - 1.75": "api-sema-b12-1.75ml-syringe",
-    "Semaglutide|B12 syringe|QTY: 8 - 2.0": "api-sema-b12-2.0ml-syringe",
+    "Semaglutide|B12 syringe|QTY: 0.5 - 0.125 ml": "api-sema-b12-0.125ml-syringe",
+    "Semaglutide|B12 syringe|QTY: 1 - 0.25 ml": "api-sema-b12-0.25ml-syringe",
+    "Semaglutide|B12 syringe|QTY: 2 - 0.5 ml": "api-sema-b12-0.5ml-syringe",
+    "Semaglutide|B12 syringe|QTY: 3 - 0.75 ml": "api-sema-b12-0.75ml-syringe",
+    "Semaglutide|B12 syringe|QTY: 4 - 1.0 ml": "api-sema-b12-1.0ml-syringe",
+    "Semaglutide|B12 syringe|QTY: 5 - 1.25 ml": "api-sema-b12-1.25ml-syringe",
+    "Semaglutide|B12 syringe|QTY: 6 - 1.5 ml": "api-sema-b12-1.5ml-syringe",
+    "Semaglutide|B12 syringe|QTY: 7 - 1.75 ml": "api-sema-b12-1.75ml-syringe",
+    "Semaglutide|B12 syringe|QTY: 8 - 2.0 ml": "api-sema-b12-2.0ml-syringe",
 
     // Tirzepatide vials
     "Tirzepatide|NAD+ vial|2.5 ml": "api-tirz-nad+-2.5ml-vial",

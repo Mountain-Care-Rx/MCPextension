@@ -3,6 +3,7 @@
 // import { createTagsDropdown } from './dropdowns/tagsDropdown.js';
 // import { createAutomationDropdown } from './dropdowns/automationDropdown.js';
 import { createAPIDropdown } from './dropdowns/apiDropdown.js';
+import { createFrequentTagsDropdown } from './dropdowns/tagsDropdown.js';
 
 /**
  * Creates the dropdowns group containing all dropdown menus
@@ -13,14 +14,29 @@ export function createDropdownsGroup() {
   const dropdownsGroup = document.createElement("div");
   dropdownsGroup.className = "group";
   dropdownsGroup.id = "crm-dropdowns-group";
+  dropdownsGroup.style.display = "flex";
+  dropdownsGroup.style.flexDirection = "row";
+  dropdownsGroup.style.justifyContent = "space-between";
+  dropdownsGroup.style.alignItems = "center";
+  dropdownsGroup.style.width = "100%";
 
-  // Add all dropdowns to the group
-  // We now have just two main dropdowns:
-  // - Automation dropdown (with nested Sema and Tirz)
-  // - Tags dropdown (with nested tag options)
-  // dropdownsGroup.appendChild(createAutomationDropdown());
-  // dropdownsGroup.appendChild(createTagsDropdown());
-  dropdownsGroup.appendChild(createAPIDropdown());
+  // Left: API dropdown
+  const leftGroup = document.createElement("div");
+  leftGroup.style.display = "flex";
+  leftGroup.style.flexDirection = "row";
+  leftGroup.style.alignItems = "center";
+  leftGroup.appendChild(createAPIDropdown());
+
+  // Right: Frequent tags dropdown
+  const rightGroup = document.createElement("div");
+  rightGroup.style.display = "flex";
+  rightGroup.style.flexDirection = "row";
+  rightGroup.style.alignItems = "center";
+  rightGroup.style.marginLeft = "auto";
+  rightGroup.appendChild(createFrequentTagsDropdown());
+
+  dropdownsGroup.appendChild(leftGroup);
+  dropdownsGroup.appendChild(rightGroup);
 
   // Set up global click handler to close dropdowns when clicking outside
   document.addEventListener("click", (e) => {

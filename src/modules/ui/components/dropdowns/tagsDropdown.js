@@ -1,637 +1,306 @@
-// modules/ui/components/dropdowns/tagsDropdown.js
-
-import { createDropdown } from '../dropdownsGroup.js';
-import { showToast } from '../../../phoneUtils.js';
+import { showToast } from "../../../phoneUtils";
 import { removeAllTags, removeAllAutomations } from '../../../ui/headerBar.js';
+// List of frequent tags (edit this array to add/remove tags)
+const FREQUENT_TAGS = [
+  "wait",
+  "warm",
+  "provider-wait",
+  "tirz-vial-price",
+  "tirz-syringe-price",
+  "sema-vial-price",
+  "sema-syringe-price",
+  "ship-duration",
+  "no-refill",
+  "no-titration",
+  "pickup-msg",
+  "call",
+  "fda",
+  "glp",
+  "states",
+  "video",
+  "talk-to-crm",
+  // Add more tags as needed
+];
 
-/**
- * Creates the Tags dropdown with both direct tag options and nested Vial dropdowns
- * 
- * @returns {HTMLElement} The Tags dropdown element
- */
-export function createTagsDropdown() {
-  // Create the main dropdown container
-  const dropdown = document.createElement("div");
-  dropdown.className = "dropdown";
-  dropdown.id = "crm-tags-dropdown"; // Add ID for future reference
-  
-  // Create the main dropdown button
-  const dropdownBtn = document.createElement("button");
-  dropdownBtn.className = "dropdown-btn";
-  dropdownBtn.textContent = "Tags";
-  
-  // Toggle dropdown menu when button is clicked
-  dropdownBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    // Close any other open dropdowns
-    document.querySelectorAll('.dropdown.show').forEach(d => {
-      if (d !== dropdown) {
-        d.classList.remove('show');
+export function createFrequentTagsDropdown() {
+  // Styled bar similar to apiDropdown
+  const tagBar = document.createElement("div");
+  tagBar.id = "crm-frequent-tags-bar";
+  tagBar.style.display = "flex";
+  tagBar.style.flexDirection = "row";
+  tagBar.style.alignItems = "center";
+  tagBar.style.gap = "8px";
+  tagBar.style.background = "#23272e";
+  tagBar.style.borderRadius = "4px";
+  tagBar.style.padding = "4px 8px";
+  tagBar.style.margin = "0 0 4px 0";
+  tagBar.style.minWidth = "0";
+  tagBar.style.boxShadow = "0px 4px 8px 0px rgba(0,0,0,0.10)";
+  tagBar.style.border = "1px solid rgba(255,255,255,0.06)";
+
+  const label = document.createElement("label");
+  label.textContent = "Frequent Tags:";
+  label.style.fontSize = "12px";
+  label.style.color = "#e6e6e6";
+  label.style.marginRight = "2px";
+
+  // Custom typable dropdown
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "Type or select a tag";
+  input.autocomplete = "off";
+  input.style.background = "#23272e";
+  input.style.color = "#a0e0ff";
+  input.style.border = "1px solid #444";
+  input.style.borderRadius = "2px";
+  input.style.padding = "2px 6px";
+  input.style.fontWeight = "normal";
+  input.style.fontSize = "12px";
+  input.style.height = "24px";
+  input.style.minWidth = "160px";
+  input.style.boxSizing = "border-box";
+  input.style.verticalAlign = "middle";
+
+  // Suggestion list
+  const suggestionBox = document.createElement("div");
+  suggestionBox.style.position = "absolute";
+  suggestionBox.style.background = "#23272e";
+  suggestionBox.style.color = "#a0e0ff";
+  suggestionBox.style.border = "1px solid #444";
+  suggestionBox.style.borderRadius = "2px";
+  suggestionBox.style.boxShadow = "0px 4px 8px 0px rgba(0,0,0,0.10)";
+  suggestionBox.style.fontSize = "12px";
+  suggestionBox.style.marginTop = "2px";
+  suggestionBox.style.zIndex = "10000";
+  suggestionBox.style.display = "none";
+  suggestionBox.style.maxHeight = "180px";
+  suggestionBox.style.overflowY = "auto";
+
+  // Container for relative positioning
+  const inputWrapper = document.createElement("div");
+  inputWrapper.style.position = "relative";
+  inputWrapper.appendChild(input);
+  inputWrapper.appendChild(suggestionBox);
+
+  let filteredTags = [];
+  let selectedIndex = -1;
+
+  function updateSuggestions() {
+    const value = input.value.trim().toLowerCase();
+    // Use sorted tags
+    const sortedTags = getSortedTags();
+    if (!value && document.activeElement === input) {
+      filteredTags = [...sortedTags];
+    } else {
+      filteredTags = sortedTags.filter(tag => tag.toLowerCase().includes(value));
+    }
+    suggestionBox.innerHTML = "";
+    selectedIndex = -1;
+    if (filteredTags.length === 0) {
+      suggestionBox.style.display = "none";
+      return;
+    }
+    filteredTags.forEach((tag, idx) => {
+      const item = document.createElement("div");
+      item.textContent = tag;
+      item.style.padding = "4px 8px";
+      item.style.cursor = "pointer";
+      item.style.borderRadius = "2px";
+      // Highlight on mouse hover
+      item.addEventListener("mouseenter", () => {
+        selectedIndex = idx;
+        updateSuggestionHighlight();
+      });
+      item.addEventListener("mouseleave", () => {
+        selectedIndex = -1;
+        updateSuggestionHighlight();
+      });
+      item.addEventListener("mousedown", async (e) => {
+        e.preventDefault();
+        await selectTag(tag);
+      });
+      if (idx === selectedIndex) {
+        item.style.background = "#1e90ff";
+        item.style.color = "#fff";
+      }
+      suggestionBox.appendChild(item);
+    });
+    suggestionBox.style.display = "block";
+  }
+
+  async function selectTag(tag) {
+    // Remove focus from input to trigger blur and hide suggestions
+    input.blur();
+    // Wait a bit to ensure the input blur doesn't interfere with tag selection
+    setTimeout(async () => {
+      await selectTagOptionAsync(tag);
+      incrementTagUsage(tag);
+      input.value = "";
+      suggestionBox.style.display = "none";
+    }, 120);
+  }
+
+  input.addEventListener("input", updateSuggestions);
+  input.addEventListener("focus", updateSuggestions);
+  input.addEventListener("blur", () => {
+    setTimeout(() => suggestionBox.style.display = "none", 100);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (suggestionBox.style.display === "block" && filteredTags.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % filteredTags.length;
+        updateSuggestionHighlight();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + filteredTags.length) % filteredTags.length;
+        updateSuggestionHighlight();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (selectedIndex >= 0 && selectedIndex < filteredTags.length) {
+          selectTag(filteredTags[selectedIndex]);
+        } else if (filteredTags.length === 1) {
+          selectTag(filteredTags[0]);
+        }
+      } else if (e.key === "Escape") {
+        suggestionBox.style.display = "none";
+      }
+    }
+  });
+
+  function updateSuggestionHighlight() {
+    Array.from(suggestionBox.children).forEach((item, idx) => {
+      if (idx === selectedIndex) {
+        item.style.background = "#1e90ff";
+        item.style.color = "#fff";
+      } else {
+        item.style.background = "#23272e";
+        item.style.color = "#a0e0ff";
       }
     });
-    dropdown.classList.toggle("show");
-  });
-  
-  // Create the dropdown content container
-  const dropdownContent = document.createElement("div");
-  dropdownContent.className = "dropdown-content";
-  dropdownContent.style.padding = "10px"; // Increased padding
-  
-  // Add Custom styling for nested dropdowns and button-style options
-  if (!document.getElementById('tags-dropdown-styles')) {
-    const style = document.createElement('style');
-    style.id = 'tags-dropdown-styles';
-    style.textContent = `
-      .nested-dropdown {
-        margin-bottom: 8px;
-        width: 100%;
-        position: relative;
-      }
-      .nested-dropdown-btn {
-        width: 100%;
-        text-align: left;
-        padding: 8px 12px;
-        background-color: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 3px;
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 13px;
-        color: #e6e6e6;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .nested-dropdown-btn:hover {
-        background-color: rgba(255, 255, 255, 0.2);
-      }
-      .nested-dropdown-btn:after {
-        content: "▼";
-        font-size: 8px;
-        color: #e6e6e6;
-      }
-      .nested-dropdown-content {
-        display: none;
-        padding: 5px 0 5px 10px;
-        margin-top: 3px !important;
-      }
-      .nested-dropdown.open .nested-dropdown-content {
-        display: block;
-      }
-      
-      /* Button-style tag options */
-      .tag-btn {
-        display: block;
-        width: 100%;
-        padding: 8px 12px;
-        margin-bottom: 8px;
-        background-color: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 4px;
-        text-align: left;
-        font-size: 13px;
-        color: #e6e6e6;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        font-weight: normal;
-      }
-      .tag-btn:hover {
-        background-color: rgba(255, 255, 255, 0.15);
-        border-color: rgba(255, 255, 255, 0.2);
-      }
-      .tag-btn:active {
-        background-color: rgba(255, 255, 255, 0.2);
-      }
-    `;
-    document.head.appendChild(style);
   }
-  
-  // Add Opt-in button at the top
-  const optInTag = document.createElement("button");
-  optInTag.className = "tag-btn";
-  optInTag.textContent = "Opt-in";
-  optInTag.addEventListener("click", () => {
-    // The Opt-in button doesn't need the cleanup operation
-    selectTagOption("opt-in");
-    dropdown.classList.remove("show"); // Close dropdown after selection
-  });
-  dropdownContent.appendChild(optInTag);
-  
-  // Add direct tag options to the main dropdown as buttons
-  // Create Refill-Sema-Inj button
-  const semaRefillTag = document.createElement("button");
-  semaRefillTag.className = "tag-btn";
-  semaRefillTag.textContent = "Refill-Sema-Inj";
-  semaRefillTag.addEventListener("click", () => {
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("refill-sema-inj");
-    dropdown.classList.remove("show"); // Close dropdown after selection
-  });
-  dropdownContent.appendChild(semaRefillTag);
-  
-  // Create Refill-Tirz-Inj button
-  const tirzRefillTag = document.createElement("button");
-  tirzRefillTag.className = "tag-btn";
-  tirzRefillTag.textContent = "Refill-Tirz-Inj";
-  tirzRefillTag.addEventListener("click", () => {
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("refill-tirz-inj");
-    dropdown.classList.remove("show"); // Close dropdown after selection
-  });
-  dropdownContent.appendChild(tirzRefillTag);
-  
-  // ============ VIAL-SEMA DROPDOWN ITEMS ============
-  // Create Vial-Sema nested dropdown
-  const vialSemaNestedDropdown = document.createElement("div");
-  vialSemaNestedDropdown.className = "nested-dropdown";
 
-  const vialSemaNestedBtn = document.createElement("button");
-  vialSemaNestedBtn.className = "nested-dropdown-btn";
-  vialSemaNestedBtn.textContent = "Vial-Semaglutide";
-
-  const vialSemaNestedContent = document.createElement("div");
-  vialSemaNestedContent.className = "nested-dropdown-content";
-
-  // Toggle nested dropdown when button is clicked
-  vialSemaNestedBtn.addEventListener("click", (e) => {
-    e.stopPropagation(); // Prevent event from bubbling up
-    vialSemaNestedDropdown.classList.toggle("open");
-  });
-
-  // Vial-Sema Option 1: Vial-Sema-B12
-  const vialSemaB12Item = document.createElement("button");
-  vialSemaB12Item.className = "tag-btn";
-  vialSemaB12Item.textContent = "Vial-Sema-B12";
-  vialSemaB12Item.addEventListener("click", (e) => {
-    e.stopPropagation(); // Prevent event from bubbling up
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("vial-sema-b12");
-  });
-  vialSemaNestedContent.appendChild(vialSemaB12Item);
-
-  // Vial-Sema Option 2: Vial-Sema-B6
-  const vialSemaB6Item = document.createElement("button");
-  vialSemaB6Item.className = "tag-btn";
-  vialSemaB6Item.textContent = "Vial-Sema-B6";
-  vialSemaB6Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("vial-sema-b6");
-  });
-  vialSemaNestedContent.appendChild(vialSemaB6Item);
-
-  // Vial-Sema Option 3: Vial-Sema-Lipo
-  const vialSemaLipoItem = document.createElement("button");
-  vialSemaLipoItem.className = "tag-btn";
-  vialSemaLipoItem.textContent = "Vial-Sema-Lipo";
-  vialSemaLipoItem.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("vial-sema-lipo");
-  });
-  vialSemaNestedContent.appendChild(vialSemaLipoItem);
-
-  // Vial-Sema Option 4: Vial-Sema-NAD+
-  const vialSemaNADItem = document.createElement("button");
-  vialSemaNADItem.className = "tag-btn";
-  vialSemaNADItem.textContent = "Vial-Sema-NAD+";
-  vialSemaNADItem.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("vial-sema-nad+");
-  });
-  vialSemaNestedContent.appendChild(vialSemaNADItem);
-
-  // Assemble Vial-Sema nested dropdown
-  vialSemaNestedDropdown.appendChild(vialSemaNestedBtn);
-  vialSemaNestedDropdown.appendChild(vialSemaNestedContent);
-
-  // Add to main dropdown
-  dropdownContent.appendChild(vialSemaNestedDropdown);
-
-  // ============ VIAL-TIRZ DROPDOWN ITEMS ============
-  // Create Vial-Tirz nested dropdown
-  const vialTirzNestedDropdown = document.createElement("div");
-  vialTirzNestedDropdown.className = "nested-dropdown";
-
-  const vialTirzNestedBtn = document.createElement("button");
-  vialTirzNestedBtn.className = "nested-dropdown-btn";
-  vialTirzNestedBtn.textContent = "Vial-Tirzepatide";
-
-  const vialTirzNestedContent = document.createElement("div");
-  vialTirzNestedContent.className = "nested-dropdown-content";
-
-  // Toggle nested dropdown when button is clicked
-  vialTirzNestedBtn.addEventListener("click", (e) => {
-    e.stopPropagation(); // Prevent event from bubbling up
-    vialTirzNestedDropdown.classList.toggle("open");
-  });
-
-  // Vial-Tirz Option 1: Vial-Tirz-Cyano
-  const vialTirzCyanoItem = document.createElement("button");
-  vialTirzCyanoItem.className = "tag-btn";
-  vialTirzCyanoItem.textContent = "Vial-Tirz-Cyano";
-  vialTirzCyanoItem.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("vial-tirz-cyano");
-  });
-  vialTirzNestedContent.appendChild(vialTirzCyanoItem);
-
-  // Vial-Tirz Option 2: Vial-Tirz-NAD+
-  const vialTirzNADItem = document.createElement("button");
-  vialTirzNADItem.className = "tag-btn";
-  vialTirzNADItem.textContent = "Vial-Tirz-NAD+";
-  vialTirzNADItem.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("vial-tirz-nad+");
-  });
-  vialTirzNestedContent.appendChild(vialTirzNADItem);
-
-  // Vial-Tirz Option 3: Vial-Tirz-Pyr
-  const vialTirzPyrItem = document.createElement("button");
-  vialTirzPyrItem.className = "tag-btn";
-  vialTirzPyrItem.textContent = "Vial-Tirz-Pyr";
-  vialTirzPyrItem.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("vial-tirz-pyridoxine");
-  });
-  vialTirzNestedContent.appendChild(vialTirzPyrItem);
-
-  // Assemble Vial-Tirz nested dropdown
-  vialTirzNestedDropdown.appendChild(vialTirzNestedBtn);
-  vialTirzNestedDropdown.appendChild(vialTirzNestedContent);
-
-  // Add to main dropdown
-  dropdownContent.appendChild(vialTirzNestedDropdown);
-  
-  // ============ NP-SEMAGLUTIDE DROPDOWN ITEMS ============
-  // Create NP-Semaglutide nested dropdown
-  const npSemaNestedDropdown = document.createElement("div");
-  npSemaNestedDropdown.className = "nested-dropdown";
-
-  const npSemaNestedBtn = document.createElement("button");
-  npSemaNestedBtn.className = "nested-dropdown-btn";
-  npSemaNestedBtn.textContent = "NP-Semaglutide";
-
-  const npSemaNestedContent = document.createElement("div");
-  npSemaNestedContent.className = "nested-dropdown-content";
-
-  // Toggle nested dropdown when button is clicked
-  npSemaNestedBtn.addEventListener("click", (e) => {
-    e.stopPropagation(); // Prevent event from bubbling up
-    npSemaNestedDropdown.classList.toggle("open");
-  });
-
-  // NP-Semaglutide dosage options, arranged from smallest to largest
-  // First set of dosages (0.125ml to 0.75ml)
-  const npSema0125Item = document.createElement("button");
-  npSema0125Item.className = "tag-btn";
-  npSema0125Item.textContent = "NP-Sema 0.125";
-  npSema0125Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-sema-0.125ml-inj");
-  });
-  npSemaNestedContent.appendChild(npSema0125Item);
-
-  const npSema025Item = document.createElement("button");
-  npSema025Item.className = "tag-btn";
-  npSema025Item.textContent = "NP-Sema 0.25";
-  npSema025Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-sema-0.25ml-inj");
-  });
-  npSemaNestedContent.appendChild(npSema025Item);
-
-  const npSema05Item = document.createElement("button");
-  npSema05Item.className = "tag-btn";
-  npSema05Item.textContent = "NP-Sema 0.5";
-  npSema05Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-sema-0.5ml-inj");
-  });
-  npSemaNestedContent.appendChild(npSema05Item);
-
-  const npSema075Item = document.createElement("button");
-  npSema075Item.className = "tag-btn";
-  npSema075Item.textContent = "NP-Sema 0.75";
-  npSema075Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-sema-0.75ml-inj");
-  });
-  npSemaNestedContent.appendChild(npSema075Item);
-
-  // Second set of dosages (1.0ml to 2.0ml)
-  const npSema10Item = document.createElement("button");
-  npSema10Item.className = "tag-btn";
-  npSema10Item.textContent = "NP-Sema 1.0";
-  npSema10Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-sema-1.0ml-inj");
-  });
-  npSemaNestedContent.appendChild(npSema10Item);
-
-  const npSema125Item = document.createElement("button");
-  npSema125Item.className = "tag-btn";
-  npSema125Item.textContent = "NP-Sema 1.25";
-  npSema125Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-sema-1.25ml-inj");
-  });
-  npSemaNestedContent.appendChild(npSema125Item);
-
-  const npSema15Item = document.createElement("button");
-  npSema15Item.className = "tag-btn";
-  npSema15Item.textContent = "NP-Sema 1.5";
-  npSema15Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-sema-1.5ml-inj");
-  });
-  npSemaNestedContent.appendChild(npSema15Item);
-
-  const npSema20Item = document.createElement("button");
-  npSema20Item.className = "tag-btn";
-  npSema20Item.textContent = "NP-Sema 2.0";
-  npSema20Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-sema-2.0ml-inj");
-  });
-  npSemaNestedContent.appendChild(npSema20Item);
-
-  // Assemble NP-Semaglutide nested dropdown
-  npSemaNestedDropdown.appendChild(npSemaNestedBtn);
-  npSemaNestedDropdown.appendChild(npSemaNestedContent);
-
-  // Add to main dropdown
-  dropdownContent.appendChild(npSemaNestedDropdown);
-  
-  // ============ NP-TIRZEPATIDE DROPDOWN ITEMS ============
-  // Create NP-Tirzepatide nested dropdown
-  const npTirzNestedDropdown = document.createElement("div");
-  npTirzNestedDropdown.className = "nested-dropdown";
-
-  const npTirzNestedBtn = document.createElement("button");
-  npTirzNestedBtn.className = "nested-dropdown-btn";
-  npTirzNestedBtn.textContent = "NP-Tirzepatide";
-
-  const npTirzNestedContent = document.createElement("div");
-  npTirzNestedContent.className = "nested-dropdown-content";
-
-  // Toggle nested dropdown when button is clicked
-  npTirzNestedBtn.addEventListener("click", (e) => {
-    e.stopPropagation(); // Prevent event from bubbling up
-    npTirzNestedDropdown.classList.toggle("open");
-  });
-
-  // NP-Tirzepatide dosage options, arranged from smallest to largest
-  // First set of dosages (0.25ml to 1.0ml)
-  const npTirz025Item = document.createElement("button");
-  npTirz025Item.className = "tag-btn";
-  npTirz025Item.textContent = "NP-Tirz 0.25";
-  npTirz025Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-tirz-0.25ml-inj");
-  });
-  npTirzNestedContent.appendChild(npTirz025Item);
-
-  const npTirz05Item = document.createElement("button");
-  npTirz05Item.className = "tag-btn";
-  npTirz05Item.textContent = "NP-Tirz 0.5";
-  npTirz05Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-tirz-0.5ml-inj");
-  });
-  npTirzNestedContent.appendChild(npTirz05Item);
-
-  const npTirz075Item = document.createElement("button");
-  npTirz075Item.className = "tag-btn";
-  npTirz075Item.textContent = "NP-Tirz 0.75";
-  npTirz075Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-tirz-0.75ml-inj");
-  });
-  npTirzNestedContent.appendChild(npTirz075Item);
-
-  const npTirz10Item = document.createElement("button");
-  npTirz10Item.className = "tag-btn";
-  npTirz10Item.textContent = "NP-Tirz 1.0";
-  npTirz10Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-tirz-1.0ml-inj");
-  });
-  npTirzNestedContent.appendChild(npTirz10Item);
-
-  // Second set of dosages (1.25ml to 1.5ml)
-  const npTirz125Item = document.createElement("button");
-  npTirz125Item.className = "tag-btn";
-  npTirz125Item.textContent = "NP-Tirz 1.25";
-  npTirz125Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-tirz-1.25ml-inj");
-  });
-  npTirzNestedContent.appendChild(npTirz125Item);
-
-  const npTirz15Item = document.createElement("button");
-  npTirz15Item.className = "tag-btn";
-  npTirz15Item.textContent = "NP-Tirz 1.5";
-  npTirz15Item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeAllDropdowns();
-    // Run cleanup operations first, then select tag
-    cleanupAndSelectTag("np-tirz-1.5ml-inj");
-  });
-  npTirzNestedContent.appendChild(npTirz15Item);
-
-  // Assemble NP-Tirzepatide nested dropdown
-  npTirzNestedDropdown.appendChild(npTirzNestedBtn);
-  npTirzNestedDropdown.appendChild(npTirzNestedContent);
-
-  // Add to main dropdown
-  dropdownContent.appendChild(npTirzNestedDropdown);
-  
-  // Assemble the main dropdown
-  dropdown.appendChild(dropdownBtn);
-  dropdown.appendChild(dropdownContent);
-  
-  return dropdown;
+  tagBar.appendChild(label);
+  tagBar.appendChild(inputWrapper);
+  return tagBar;
 }
+// Use the robust tag selection logic from apiDropdown, but do not remove tags first
+function selectTagOptionAsync(tagText) {
+  return new Promise((resolve) => {
+    let tagInput = findTagInput();
 
-/**
- * Helper to close all open dropdowns and nested dropdowns
- */
-function closeAllDropdowns() {
-  document.querySelectorAll('.dropdown.show').forEach(d => d.classList.remove('show'));
-  document.querySelectorAll('.nested-dropdown.open').forEach(d => d.classList.remove('open'));
-}
+    if (tagInput) {
+      tagInput.focus();
 
-/**
- * Run cleanup operations (remove tags and automations) and then select the new tag
- * @param {string} tagText - Tag to select after cleanup
- */
-async function cleanupAndSelectTag(tagText) {
-  try {
-    // Run tag and automation removal in parallel for speed
-    const [tagResult, automationResult] = await Promise.all([
-      removeAllTags(),
-      removeAllAutomations()
-    ]);
-    
-    console.log('[CRM Extension] Cleanup completed:');
-    console.log(`- Tags: ${tagResult.removed}/${tagResult.total} removed`);
-    console.log(`- Automations: ${automationResult.removed}/${automationResult.total} removed`);
-    
-    // Now proceed with selecting the new tag
-    selectTagOption(tagText);
-  } catch (error) {
-    console.error('[CRM Extension] Error during cleanup:', error);
-    showToast('Error during cleanup. Please try again.');
-  }
-}
-
-/**
- * Selects a tag option from the dropdown
- * 
- * @param {string} tagText - The text of the tag to select
- */
-function selectTagOption(tagText) {
-  // Find the Tags input field with expanded selectors
-  let tagInput = findTagInput();
-  
-  if (tagInput) {
-    // Focus on the input field to open the dropdown
-    tagInput.focus();
-    
-    // Try to find the tag in the list of options
-    // Wait a moment for the dropdown to appear
-    setTimeout(() => {
-      // Type the text to filter the dropdown
-      tagInput.value = tagText;
-      tagInput.dispatchEvent(new Event('input', { bubbles: true }));
-      
-      // Wait for the filtered dropdown to update
+      // Wait longer for dropdown to appear and filter, matching apiDropdown
       setTimeout(() => {
-        // Look for the option in the dropdown that contains our text
-        const options = document.querySelectorAll('.v-list-item, .dropdown-item, .select-option, li');
-        let found = false;
-        
-        for (const option of options) {
-          if (option.textContent.toLowerCase().includes(tagText)) {
-            // Click the option to select it
-            option.click();
-            found = true;
-            showToast(`Selected tag: ${tagText}`);
-            break;
-          }
-        }
-        
-        // If we can't find the exact option, try alternative approaches
-        if (!found) {
-          // Try looking for a more generic class that might contain dropdown options
-          const allElements = document.querySelectorAll('*');
-          for (const elem of allElements) {
-            if (elem.textContent.trim().toLowerCase() === tagText) {
-              // If we find text content that matches exactly, try clicking it
-              elem.click();
+        tagInput.value = tagText;
+        tagInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+        setTimeout(() => {
+          const options = document.querySelectorAll('.v-list-item, .dropdown-item, .select-option, li');
+          let found = false;
+
+          for (const option of options) {
+            if (option.textContent.toLowerCase().includes(tagText)) {
+              option.click();
               found = true;
               showToast(`Selected tag: ${tagText}`);
               break;
             }
           }
-          
-          // If still not found, try keyboard navigation - press Enter key
+
           if (!found) {
-            // Press Enter key to attempt to select the filtered option
-            tagInput.dispatchEvent(new KeyboardEvent('keydown', { 
-              key: 'Enter', 
-              code: 'Enter',
-              keyCode: 13,
-              which: 13,
-              bubbles: true 
-            }));
+            const allElements = document.querySelectorAll('*');
+            for (const elem of allElements) {
+              if (elem.textContent.trim().toLowerCase() === tagText) {
+                elem.click();
+                found = true;
+                showToast(`Selected tag: ${tagText}`);
+                break;
+              }
+            }
+            if (!found) {
+              tagInput.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'Enter',
+                code: 'Enter',
+                keyCode: 13,
+                which: 13,
+                bubbles: true
+              }));
+            }
           }
-        }
-      }, 300); // Wait for dropdown to filter
-    }, 300); // Wait for dropdown to appear
-  } else {
-    showToast("Tags field not found");
-  }
+          // Wait a bit longer to ensure UI updates before resolving (match apiDropdown)
+          setTimeout(resolve, 600);
+        }, 400); // Wait for dropdown to filter
+      }, 400); // Wait for dropdown to appear
+    } else {
+      showToast("Tags field not found");
+      resolve();
+    }
+  });
 }
 
-/**
- * Enhanced function to find the tag input field with multiple strategies
- * @returns {HTMLElement|null} The found tag input element or null
- */
+// Use the robust findTagInput from apiDropdown
 function findTagInput() {
-  // Try several strategies to find the tag input field
-  
   // Strategy 1: Original selector - looking for "Add Tags" placeholder
   let tagInput = document.querySelector('input[placeholder="Add Tags"]');
   if (tagInput) return tagInput;
-  
+
   // Strategy 2: Broader placeholder pattern - any input with "tag" in placeholder
   const tagInputs = Array.from(document.querySelectorAll('input[placeholder]')).filter(input => {
     return input.placeholder.toLowerCase().includes('tag');
   });
   if (tagInputs.length > 0) return tagInputs[0];
-  
+
   // Strategy 3: Input within element with tag-related class
   const tagContainers = document.querySelectorAll('.tag-input, .tags-input, .tag-container');
   for (const container of tagContainers) {
     const input = container.querySelector('input');
     if (input) return input;
   }
-  
+
   // Strategy 4: Looking for smartList.bulkTags placeholder (from your example)
   tagInput = document.querySelector('input[placeholder="smartList.bulkTags.addTags"]');
   if (tagInput) return tagInput;
-  
+
   // Strategy 5: Generic attribute search - looking for any input that might be for tags
   const possibleTagInputs = document.querySelectorAll('.hl-text-input');
   if (possibleTagInputs.length > 0) {
     return possibleTagInputs[0]; // Return the first one as best guess
   }
-  
+
   // If no tag input found with any strategy
   console.error('[CRM Extension] Could not find tag input field with any strategy');
-  
+
   // One last attempt - log all inputs to help diagnose
   const allInputs = document.querySelectorAll('input');
   console.log('[CRM Extension] All inputs on page:', allInputs);
-  
+
   return null;
+}
+
+// Track tag usage in localStorage
+function getTagUsage() {
+  try {
+    return JSON.parse(localStorage.getItem('crm_frequent_tag_usage') || '{}');
+  } catch {
+    return {};
+  }
+}
+function incrementTagUsage(tag) {
+  const usage = getTagUsage();
+  usage[tag] = (usage[tag] || 0) + 1;
+  localStorage.setItem('crm_frequent_tag_usage', JSON.stringify(usage));
+}
+function getSortedTags() {
+  const usage = getTagUsage();
+  // Sort by usage descending, then alphabetically
+  return [...FREQUENT_TAGS].sort((a, b) => {
+    const ua = usage[a] || 0;
+    const ub = usage[b] || 0;
+    if (ua !== ub) return ub - ua;
+    return a.localeCompare(b);
+  });
 }

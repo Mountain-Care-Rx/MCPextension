@@ -84,7 +84,7 @@ export function createAPIDropdown() {
 
   // --- Submit button ---
   const submitBtn = document.createElement("button");
-  submitBtn.textContent = "Step 1";
+  submitBtn.textContent = "Refill";
   submitBtn.style.marginLeft = "6px";
   submitBtn.style.padding = "2px 12px";
   submitBtn.style.background = "#1e90ff";
@@ -117,7 +117,7 @@ export function createAPIDropdown() {
 
   // Show/hide Name button based on state
   function updateNameBtnVisibility() {
-    if (medicationSelect.value && submitBtn.textContent === "Step 1") {
+    if (medicationSelect.value && submitBtn.textContent === "Refill") {
       nameBtn.style.display = "inline-block";
     } else {
       nameBtn.style.display = "none";
@@ -131,15 +131,28 @@ export function createAPIDropdown() {
 
   // Name button click handler
   nameBtn.addEventListener("click", async () => {
-    // Step 1.5: Verify first name
-    let tag = null;
+    // Step 1.5: Add name tag if only medication is selected, or name tag + compound tag if both are selected
+    let nameTag = null;
+    let compoundTag = null;
     if (medicationSelect.value === "Tirzepatide") {
-      tag = "api-refill-patient-tirz-name";
+      nameTag = "api-refill-patient-tirz-name";
+      if (compoundSelect.value === "B6 syringe") compoundTag = "api-refill-tirz-b6-syringe";
+      else if (compoundSelect.value === "B6 vial") compoundTag = "api-refill-tirz-b6-vial";
+      else if (compoundSelect.value === "B12 vial") compoundTag = "api-refill-tirz-b12-vial";
+      else if (compoundSelect.value === "NAD+ vial") compoundTag = "api-refill-tirz-nad-vial";
     } else if (medicationSelect.value === "Semaglutide") {
-      tag = "api-refill-patient-sema-name";
+      nameTag = "api-refill-patient-sema-name";
+      if (compoundSelect.value === "B12 syringe") compoundTag = "api-refill-sema-b12-syringe";
+      else if (compoundSelect.value === "B12 vial") compoundTag = "api-refill-sema-b12-vial";
+      else if (compoundSelect.value === "B6 vial") compoundTag = "api-refill-sema-b6-vial";
+      else if (compoundSelect.value === "Lipo vial") compoundTag = "api-refill-sema-lipo-vial";
+      else if (compoundSelect.value === "NAD+ vial") compoundTag = "api-refill-sema-nad-vial";
     }
-    if (tag) {
-      await cleanupAndSelectTag(tag);
+    if (nameTag && !compoundTag) {
+      await cleanupAndSelectTag(nameTag);
+    } else if (nameTag && compoundTag) {
+      await cleanupAndSelectTag(nameTag);
+      await cleanupAndSelectTag(compoundTag);
     } else {
       showToast("Please select a medication.");
     }
@@ -151,13 +164,13 @@ export function createAPIDropdown() {
     if (selectedMedication) {
       compoundLabel.style.display = "inline-block";
       compoundSelect.style.display = "inline-block";
-      submitBtn.textContent = "Step 1";
+      submitBtn.textContent = "Refill";
     } else {
       compoundLabel.style.display = "none";
       compoundSelect.style.display = "none";
       dosageLabel.style.display = "none";
       dosageSelect.style.display = "none";
-      submitBtn.textContent = "Step 1";
+      submitBtn.textContent = "Refill";
     }
     updateCompoundOptions();
   });
@@ -167,11 +180,11 @@ export function createAPIDropdown() {
     if (selectedCompound) {
       dosageLabel.style.display = "inline-block";
       dosageSelect.style.display = "inline-block";
-      submitBtn.textContent = "Step 2";
+      submitBtn.textContent = "Form";
     } else {
       dosageLabel.style.display = "none";
       dosageSelect.style.display = "none";
-      submitBtn.textContent = "Step 1";
+      submitBtn.textContent = "Refill";
     }
     updateDosageOptions();
   });
@@ -181,7 +194,7 @@ export function createAPIDropdown() {
     if (selectedDosage) {
       submitBtn.textContent = "Step 4";
     } else {
-      submitBtn.textContent = "Step 2";
+      submitBtn.textContent = "Form";
     }
   });
 
@@ -327,7 +340,7 @@ export function createAPIDropdown() {
     // }
     // Determine step from button label
     let stepValue = null;
-    if (submitBtn.textContent === "Step 1") {
+    if (submitBtn.textContent === "Refill") {
       stepValue = "Step 1: Start Refill";
       if (medicationSelect.value === "Tirzepatide") {
         cleanupAndSelectTag("api-refill-patient-tirz");
@@ -336,15 +349,28 @@ export function createAPIDropdown() {
         cleanupAndSelectTag("api-refill-patient-sema");
         return;
       }
-    } else if (submitBtn.textContent === "Step 2") {
+    } else if (submitBtn.textContent === "Form") {
       stepValue = "Step 2: Verify form";
+      // Step 2: Tag depends on medication and compound
+      let tag = null;
       if (medicationSelect.value === "Tirzepatide") {
-        cleanupAndSelectTag("api-refill-patient-tirz-form");
-        return;
+        if (compoundSelect.value === "B6 syringe") tag = "api-refill-tirz-b6-syringe";
+        else if (compoundSelect.value === "B6 vial") tag = "api-refill-tirz-b6-vial";
+        else if (compoundSelect.value === "B12 vial") tag = "api-refill-tirz-b12-vial";
+        else if (compoundSelect.value === "NAD+ vial") tag = "api-refill-tirz-nad-vial";
       } else if (medicationSelect.value === "Semaglutide") {
-        cleanupAndSelectTag("api-refill-patient-sema-form");
-        return;
+        if (compoundSelect.value === "B12 syringe") tag = "api-refill-sema-b12-syringe";
+        else if (compoundSelect.value === "B12 vial") tag = "api-refill-sema-b12-vial";
+        else if (compoundSelect.value === "B6 vial") tag = "api-refill-sema-b6-vial";
+        else if (compoundSelect.value === "Lipo vial") tag = "api-refill-sema-lipo-vial";
+        else if (compoundSelect.value === "NAD+ vial") tag = "api-refill-sema-nad-vial";
       }
+      if (tag) {
+        await cleanupAndSelectTag(tag);
+      } else {
+        showToast("No tag found for this medication/compound combination.");
+      }
+      return;
     } else if (submitBtn.textContent === "Step 4") {
       stepValue = "Step 4: Sending payment";
     } else {

@@ -1,7 +1,7 @@
 // modules/ui/components/dropdownsGroup.js
 
-import { createTagsDropdown } from './dropdowns/tagsDropdown.js';
-import { createAutomationDropdown } from './dropdowns/automationDropdown.js';
+// import { createTagsDropdown } from './dropdowns/tagsDropdown.js';
+// import { createAutomationDropdown } from './dropdowns/automationDropdown.js';
 import { createAPIDropdown } from './dropdowns/apiDropdown.js';
 
 /**
@@ -18,8 +18,8 @@ export function createDropdownsGroup() {
   // We now have just two main dropdowns:
   // - Automation dropdown (with nested Sema and Tirz)
   // - Tags dropdown (with nested tag options)
-  dropdownsGroup.appendChild(createAutomationDropdown());
-  dropdownsGroup.appendChild(createTagsDropdown());
+  // dropdownsGroup.appendChild(createAutomationDropdown());
+  // dropdownsGroup.appendChild(createTagsDropdown());
   dropdownsGroup.appendChild(createAPIDropdown());
 
   // Set up global click handler to close dropdowns when clicking outside

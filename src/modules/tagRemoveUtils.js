@@ -27,6 +27,9 @@ const REMOVABLE_TAGS = [
     'np-tirz-1.0ml-inj',
     'np-tirz-1.25ml-inj',
 
+    'api-refill-patient-tirz',
+    'api-refill-patient-sema',
+
     'api-tirz-b6-0.25ml-syringe',
     'api-tirz-b6-0.5ml-syringe',
     'api-tirz-b6-0.75ml-syringe',

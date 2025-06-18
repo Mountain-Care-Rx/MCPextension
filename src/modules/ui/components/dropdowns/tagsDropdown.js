@@ -192,48 +192,61 @@ function selectTagOptionAsync(tagText) {
 
     if (tagInput) {
       tagInput.focus();
-
-      // Wait longer for dropdown to appear and filter, matching apiDropdown
       setTimeout(() => {
         tagInput.value = tagText;
         tagInput.dispatchEvent(new Event('input', { bubbles: true }));
 
-        setTimeout(() => {
+        // Poll for up to 500ms for the tag option to appear
+        const start = Date.now();
+        const pollInterval = 50;
+        const maxWait = 500;
+        function trySelect() {
           const options = document.querySelectorAll('.v-list-item, .dropdown-item, .select-option, li');
-          let found = false;
-
           for (const option of options) {
             if (option.textContent.toLowerCase().includes(tagText)) {
               option.click();
-              found = true;
               showToast(`Selected tag: ${tagText}`);
-              break;
+              setTimeout(resolve, 300); // allow UI to update
+              return;
             }
           }
-
-          if (!found) {
-            const allElements = document.querySelectorAll('*');
-            for (const elem of allElements) {
-              if (elem.textContent.trim().toLowerCase() === tagText) {
-                elem.click();
+          if (Date.now() - start < maxWait) {
+            setTimeout(trySelect, pollInterval);
+          } else {
+            // fallback: try the old logic
+            let found = false;
+            for (const option of options) {
+              if (option.textContent.toLowerCase().includes(tagText)) {
+                option.click();
                 found = true;
                 showToast(`Selected tag: ${tagText}`);
                 break;
               }
             }
             if (!found) {
-              tagInput.dispatchEvent(new KeyboardEvent('keydown', {
-                key: 'Enter',
-                code: 'Enter',
-                keyCode: 13,
-                which: 13,
-                bubbles: true
-              }));
+              const allElements = document.querySelectorAll('*');
+              for (const elem of allElements) {
+                if (elem.textContent.trim().toLowerCase() === tagText) {
+                  elem.click();
+                  found = true;
+                  showToast(`Selected tag: ${tagText}`);
+                  break;
+                }
+              }
+              if (!found) {
+                tagInput.dispatchEvent(new KeyboardEvent('keydown', {
+                  key: 'Enter',
+                  code: 'Enter',
+                  keyCode: 13,
+                  which: 13,
+                  bubbles: true
+                }));
+              }
             }
+            setTimeout(resolve, 300);
           }
-          // Wait a bit longer to ensure UI updates before resolving (match apiDropdown)
-          setTimeout(resolve, 600);
-        }, 400); // Wait for dropdown to filter
+        }
+        trySelect();
       }, 400); // Wait for dropdown to appear
     } else {
       showToast("Tags field not found");

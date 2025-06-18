@@ -222,7 +222,7 @@ function selectTagOptionAsync(tagText) {
           }
           if (!found && attempts < maxAttempts) {
             attempts++;
-            setTimeout(trySelect, 200);
+            setTimeout(trySelect, 400); // Increased timeout per attempt
           } else if (!found) {
             tagInput.dispatchEvent(new KeyboardEvent('keydown', {
               key: 'Enter',

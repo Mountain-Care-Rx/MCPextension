@@ -1,0 +1,54 @@
+{
+  "name": "CRM+",
+  "version": "2025.06.13",
+  "description": "Enhanced CRM Tool for MtnCareRx",
+  "manifest_version": 3,
+  "update_url": "https://latteralus.github.io/MCPextension/updates.xml",
+  "icons": {
+    "16": "assets/icon.png",
+    "48": "assets/icon.png",
+    "128": "assets/icon.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "assets/icon.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "clipboardWrite",
+    "storage",
+    "management"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://app.mtncarerx.com/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/*.png",
+        "assets/*.jpg",
+        "assets/*.svg",
+        "assets/*.ico",
+        "modules/*.js",
+        "modules/ui/*.js",
+        "modules/ui/components/*.js",
+        "modules/ui/components/dropdowns/*.js",
+        "modules/ui/styles/*.js"
+      ],
+      "matches": [
+        "*://app.mtncarerx.com/*"
+      ]
+    }
+  ]
+}

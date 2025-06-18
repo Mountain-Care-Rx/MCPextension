@@ -192,7 +192,7 @@ export function createAPIDropdown() {
   dosageSelect.addEventListener("change", () => {
     selectedDosage = dosageSelect.value;
     if (selectedDosage) {
-      submitBtn.textContent = "Step 4";
+      submitBtn.textContent = "Invoice";
     } else {
       submitBtn.textContent = "Form";
     }
@@ -353,25 +353,31 @@ export function createAPIDropdown() {
       stepValue = "Step 2: Verify form";
       // Step 2: Tag depends on medication and compound
       let tag = null;
+      let formTag = null;
       if (medicationSelect.value === "Tirzepatide") {
         if (compoundSelect.value === "B6 syringe") tag = "api-refill-tirz-b6-syringe";
         else if (compoundSelect.value === "B6 vial") tag = "api-refill-tirz-b6-vial";
         else if (compoundSelect.value === "B12 vial") tag = "api-refill-tirz-b12-vial";
         else if (compoundSelect.value === "NAD+ vial") tag = "api-refill-tirz-nad-vial";
+        formTag = "api-refill-patient-tirz-form";
       } else if (medicationSelect.value === "Semaglutide") {
         if (compoundSelect.value === "B12 syringe") tag = "api-refill-sema-b12-syringe";
         else if (compoundSelect.value === "B12 vial") tag = "api-refill-sema-b12-vial";
         else if (compoundSelect.value === "B6 vial") tag = "api-refill-sema-b6-vial";
         else if (compoundSelect.value === "Lipo vial") tag = "api-refill-sema-lipo-vial";
         else if (compoundSelect.value === "NAD+ vial") tag = "api-refill-sema-nad-vial";
+        formTag = "api-refill-patient-sema-form";
       }
-      if (tag) {
+      if (tag && formTag) {
+        await cleanupAndSelectTag(tag);
+        await cleanupAndSelectTag(formTag);
+      } else if (tag) {
         await cleanupAndSelectTag(tag);
       } else {
         showToast("No tag found for this medication/compound combination.");
       }
       return;
-    } else if (submitBtn.textContent === "Step 4") {
+    } else if (submitBtn.textContent === "Invoice") {
       stepValue = "Step 4: Sending payment";
     } else {
       showToast("Unknown step. Please check your selections.");
@@ -389,7 +395,7 @@ export function createAPIDropdown() {
       return;
     }
 
-    if (submitBtn.textContent === "Step 4") {
+    if (submitBtn.textContent === "Invoice") {
       if (!dosageStringToFind) {
         showToast("No dosage found for this selection.");
         console.error("No dosage found for key:", dosageKey);

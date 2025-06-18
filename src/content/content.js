@@ -1,7 +1,7 @@
 // content/content.js
 
 import { monitorConsoleMessages } from '../modules/consoleMonitor.js';
-import { createFixedHeader, toggleHeaderVisibility } from '../modules/ui/headerBar.js';
+import { createFixedHeader, toggleHeaderVisibility, removeHeaderBar } from '../modules/ui/headerBar.js';
 import { autoCopyPhone } from '../modules/autoPhoneCopy.js';
 import { clearPhoneDisplay } from '../modules/phoneUtils.js';
 import { initNameMonitoring } from '../modules/nameUtils.js';
@@ -122,6 +122,72 @@ function initializeHeader() {
   clearPhoneDisplay();
 }
 
+// --- HEADER PADDING MANAGEMENT ---
+const HEADER_HEIGHT = 32;
+
+function getMainContentElement() {
+  // Try common main content containers in order of preference
+  return (
+    document.querySelector('#app > div > div:last-child') || // Vue/React root
+    document.querySelector('.main-content') ||
+    document.querySelector('#app') ||
+    document.body
+  );
+}
+
+function addHeaderPadding() {
+  const main = getMainContentElement();
+  if (main) {
+    main.style.paddingTop = HEADER_HEIGHT + 'px';
+    // Debug: log the element and its outerHTML
+    console.log('[CRM Extension] addHeaderPadding: applying to', main, main.outerHTML);
+    // As a fallback, also apply to all parent elements up to body
+    let parent = main.parentElement;
+    while (parent && parent !== document.body) {
+      parent.style.paddingTop = HEADER_HEIGHT + 'px';
+      parent = parent.parentElement;
+    }
+  } else {
+    console.warn('[CRM Extension] addHeaderPadding: no main content element found');
+  }
+}
+
+function removeHeaderPadding() {
+  const main = getMainContentElement();
+  if (main) {
+    main.style.paddingTop = '';
+    // Remove from all parent elements up to body
+    let parent = main.parentElement;
+    while (parent && parent !== document.body) {
+      parent.style.paddingTop = '';
+      parent = parent.parentElement;
+    }
+    console.log('[CRM Extension] removeHeaderPadding: removed from', main, main.outerHTML);
+  }
+}
+
+// Patch createFixedHeader and removeHeaderBar to always adjust padding
+const _origCreateFixedHeader = createFixedHeader;
+const _origRemoveHeaderBar = removeHeaderBar;
+
+function patchedCreateFixedHeader() {
+  _origCreateFixedHeader();
+  addHeaderPadding();
+}
+
+function patchedRemoveHeaderBar() {
+  _origRemoveHeaderBar();
+  removeHeaderPadding();
+}
+
+// Replace the originals for this script's context
+window.createFixedHeader = patchedCreateFixedHeader;
+window.removeHeaderBar = patchedRemoveHeaderBar;
+
+// Use the patched versions everywhere in this file
+// ...replace all createFixedHeader/removeHeaderBar calls below...
+// (For this file, just use the patched names directly)
+
 // Listen for messages from popup and background
 browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[CRM Extension] Received message:', message);
@@ -169,4 +235,47 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Remove all chat initialization on window load as well
+///////////////////////
+// SPA URL Watcher  //
+///////////////////////
+
+(function setupUrlWatcher() {
+  let lastUrl = location.href;
+  let headerCheckTimeout = null;
+
+  function urlMatchesHeaderCriteria(url) {
+    try {
+      const u = new URL(url, location.origin);
+      return (
+        u.hostname === 'app.mtncarerx.com' &&
+        (u.href.includes('contacts') || u.href.includes('conversations'))
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function handleUrlChange() {
+    const currentUrl = location.href;
+    if (currentUrl === lastUrl) return;
+    lastUrl = currentUrl;
+    if (headerCheckTimeout) clearTimeout(headerCheckTimeout);
+    headerCheckTimeout = setTimeout(() => {
+      if (urlMatchesHeaderCriteria(currentUrl)) {
+        if (!document.getElementById('mcp-crm-header')) {
+          patchedCreateFixedHeader();
+          const isHeaderVisible = localStorage.getItem('crmplus_headerBarVisible') !== 'false';
+          toggleHeaderVisibility(isHeaderVisible);
+        }
+      } else {
+        if (document.getElementById('mcp-crm-header')) {
+          patchedRemoveHeaderBar();
+        }
+      }
+    }, 100);
+  }
+
+  const observer = new MutationObserver(handleUrlChange);
+  observer.observe(document.body, { childList: true, subtree: true });
+  setInterval(handleUrlChange, 500);
+})();

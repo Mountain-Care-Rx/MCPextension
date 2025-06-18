@@ -38,6 +38,10 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+    - name: Pull changes
+      run: |
+        git pull origin main"
+
     - name: Commit changes
       run: |
         git add .

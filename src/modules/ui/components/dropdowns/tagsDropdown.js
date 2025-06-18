@@ -220,9 +220,11 @@ function selectTagOptionAsync(tagText) {
               }
             }
           }
+          let timeout = 400;
           if (!found && attempts < maxAttempts) {
             attempts++;
-            setTimeout(trySelect, 400); // Increased timeout per attempt
+            setTimeout(trySelect, timeout); // Increased timeout per attempt
+            timeout += 200; // Increment timeout for each attempt
           } else if (!found) {
             tagInput.dispatchEvent(new KeyboardEvent('keydown', {
               key: 'Enter',

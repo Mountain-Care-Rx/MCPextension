@@ -12,7 +12,9 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ChanTsune/release-with-commit@v2.8.0
+        id: create_release
         with:
           regexp: "Release ((\\d+([.]\\d+)*)-(alpha|beta|rc)\\d*)((\\s|\\S)*)"
           regexp_options: "us"
@@ -24,21 +26,26 @@ jobs:
         env:
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' # This token is provided by Actions, you do not need to create your own token
 
-      # Add these steps after your existing release step
       - name: Upload Chrome dist zip to Release
         uses: softprops/action-gh-release@v2
-        if: github.event_name == 'release'
         with:
           files: dist-chrome.zip
+          tag_name: ${{ steps.create_release.outputs.tag_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Firefox dist zip to Release
         uses: softprops/action-gh-release@v2
-        if: github.event_name == 'release'
         with:
           files: dist-firefox.zip
+          tag_name: ${{ steps.create_release.outputs.tag_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Edge dist zip to Release
         uses: softprops/action-gh-release@v2
-        if: github.event_name == 'release'
         with:
           files: dist-edge.zip
+          tag_name: ${{ steps.create_release.outputs.tag_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

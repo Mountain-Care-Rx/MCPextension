@@ -189,65 +189,39 @@ export function createFrequentTagsDropdown() {
 function selectTagOptionAsync(tagText) {
   return new Promise((resolve) => {
     let tagInput = findTagInput();
-
     if (tagInput) {
       tagInput.focus();
       setTimeout(() => {
         tagInput.value = tagText;
         tagInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-        // Poll for up to 500ms for the tag option to appear
+        // Poll every 100ms for up to 500ms for the tag option
         const start = Date.now();
-        const pollInterval = 50;
-        const maxWait = 500;
-        function trySelect() {
+        const poll = () => {
           const options = document.querySelectorAll('.v-list-item, .dropdown-item, .select-option, li');
           for (const option of options) {
             if (option.textContent.toLowerCase().includes(tagText)) {
               option.click();
               showToast(`Selected tag: ${tagText}`);
-              setTimeout(resolve, 300); // allow UI to update
+              setTimeout(resolve, 200);
               return;
             }
           }
-          if (Date.now() - start < maxWait) {
-            setTimeout(trySelect, pollInterval);
+          if (Date.now() - start < 500) {
+            setTimeout(poll, 100);
           } else {
-            // fallback: try the old logic
-            let found = false;
-            for (const option of options) {
-              if (option.textContent.toLowerCase().includes(tagText)) {
-                option.click();
-                found = true;
-                showToast(`Selected tag: ${tagText}`);
-                break;
-              }
-            }
-            if (!found) {
-              const allElements = document.querySelectorAll('*');
-              for (const elem of allElements) {
-                if (elem.textContent.trim().toLowerCase() === tagText) {
-                  elem.click();
-                  found = true;
-                  showToast(`Selected tag: ${tagText}`);
-                  break;
-                }
-              }
-              if (!found) {
-                tagInput.dispatchEvent(new KeyboardEvent('keydown', {
-                  key: 'Enter',
-                  code: 'Enter',
-                  keyCode: 13,
-                  which: 13,
-                  bubbles: true
-                }));
-              }
-            }
-            setTimeout(resolve, 300);
+            // Fallback: press Enter
+            tagInput.dispatchEvent(new KeyboardEvent('keydown', {
+              key: 'Enter',
+              code: 'Enter',
+              keyCode: 13,
+              which: 13,
+              bubbles: true
+            }));
+            setTimeout(resolve, 200);
           }
-        }
-        trySelect();
-      }, 400); // Wait for dropdown to appear
+        };
+        poll();
+      }, 400);
     } else {
       showToast("Tags field not found");
       resolve();

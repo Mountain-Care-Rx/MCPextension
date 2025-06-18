@@ -189,6 +189,7 @@ export function createFrequentTagsDropdown() {
 function selectTagOptionAsync(tagText) {
   return new Promise((resolve) => {
     let tagInput = findTagInput();
+    let timeout = 400;
     if (tagInput) {
       tagInput.focus();
       setTimeout(() => {
@@ -220,7 +221,6 @@ function selectTagOptionAsync(tagText) {
               }
             }
           }
-          let timeout = 400;
           if (!found && attempts < maxAttempts) {
             attempts++;
             setTimeout(trySelect, timeout); // Increased timeout per attempt

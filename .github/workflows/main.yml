@@ -24,8 +24,10 @@ jobs:
         id: check_tag
         run: |
           if git rev-parse "refs/tags/${{ steps.get_tag.outputs.tag_name }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_ENV
             echo "exists=true" >> $GITHUB_OUTPUT
           else
+            echo "exists=false" >> $GITHUB_ENV
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 

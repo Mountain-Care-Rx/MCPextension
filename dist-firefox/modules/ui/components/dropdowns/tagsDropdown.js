@@ -195,7 +195,7 @@ function selectTagOptionAsync(tagText) {
         tagInput.value = tagText;
         tagInput.dispatchEvent(new Event('input', { bubbles: true }));
         let attempts = 0;
-        const maxAttempts = 5;
+        const maxAttempts = 10;
         function trySelect() {
           const options = document.querySelectorAll('.v-list-item, .dropdown-item, .select-option, li');
           let found = false;

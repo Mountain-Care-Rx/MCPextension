@@ -39,7 +39,7 @@ export function createFrequentTagsDropdown() {
   tagBar.style.border = "1px solid rgba(255,255,255,0.06)";
 
   const label = document.createElement("label");
-  label.textContent = "Frequent Tags:";
+  label.textContent = "📎Hi I'm Snippy:";
   label.style.fontSize = "12px";
   label.style.color = "#e6e6e6";
   label.style.marginRight = "2px";

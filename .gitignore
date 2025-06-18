@@ -1,3 +1,6 @@
-/dist-chrome/
-/dist-firefox/
-/dist-edge/
+dist-chrome.zip
+dist-firefox.zip
+dist-edge.zip
+dist/dist-chrome.zip
+dist/dist-firefox.zip
+dist/dist-edge.zip

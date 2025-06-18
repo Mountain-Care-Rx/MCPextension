@@ -13,7 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ChanTsune/release-with-commit@v2.8.0
+
+      - name: Get tag from commit message
+        id: get_tag
+        run: |
+          TAG=$(echo "${{ github.event.head_commit.message }}" | grep -oE 'Release (([0-9]+([.][0-9]+)*-(alpha|beta|rc)[0-9]+))' | head -n1 | awk '{print $2}')
+          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git rev-parse "refs/tags/${{ steps.get_tag.outputs.tag_name }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create release if tag does not exist
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: ChanTsune/release-with-commit@v2.8.0
         id: create_release
         with:
           regexp: "Release ((\\d+([.]\\d+)*)-(alpha|beta|rc)\\d*)((\\s|\\S)*)"
@@ -24,13 +42,13 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' # This token is provided by Actions, you do not need to create your own token
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
 
       - name: Upload Chrome dist zip to Release
         uses: softprops/action-gh-release@v2
         with:
           files: dist-chrome.zip
-          tag_name: ${{ steps.create_release.outputs.tag_name }}
+          tag_name: ${{ steps.get_tag.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -38,7 +56,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist-firefox.zip
-          tag_name: ${{ steps.create_release.outputs.tag_name }}
+          tag_name: ${{ steps.get_tag.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -46,6 +64,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist-edge.zip
-          tag_name: ${{ steps.create_release.outputs.tag_name }}
+          tag_name: ${{ steps.get_tag.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

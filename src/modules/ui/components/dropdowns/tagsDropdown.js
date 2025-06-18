@@ -194,22 +194,36 @@ function selectTagOptionAsync(tagText) {
       setTimeout(() => {
         tagInput.value = tagText;
         tagInput.dispatchEvent(new Event('input', { bubbles: true }));
-        // Poll every 100ms for up to 500ms for the tag option
-        const start = Date.now();
-        const poll = () => {
+        let attempts = 0;
+        const maxAttempts = 5;
+        function trySelect() {
           const options = document.querySelectorAll('.v-list-item, .dropdown-item, .select-option, li');
+          let found = false;
           for (const option of options) {
             if (option.textContent.toLowerCase().includes(tagText)) {
               option.click();
+              found = true;
               showToast(`Selected tag: ${tagText}`);
-              setTimeout(resolve, 200);
+              setTimeout(resolve, 600);
               return;
             }
           }
-          if (Date.now() - start < 500) {
-            setTimeout(poll, 100);
-          } else {
-            // Fallback: press Enter
+          if (!found) {
+            const allElements = document.querySelectorAll('*');
+            for (const elem of allElements) {
+              if (elem.textContent.trim().toLowerCase() === tagText) {
+                elem.click();
+                found = true;
+                showToast(`Selected tag: ${tagText}`);
+                setTimeout(resolve, 600);
+                return;
+              }
+            }
+          }
+          if (!found && attempts < maxAttempts) {
+            attempts++;
+            setTimeout(trySelect, 200);
+          } else if (!found) {
             tagInput.dispatchEvent(new KeyboardEvent('keydown', {
               key: 'Enter',
               code: 'Enter',
@@ -217,11 +231,11 @@ function selectTagOptionAsync(tagText) {
               which: 13,
               bubbles: true
             }));
-            setTimeout(resolve, 200);
+            setTimeout(resolve, 600);
           }
-        };
-        poll();
-      }, 400);
+        }
+        setTimeout(trySelect, 400); // Initial wait for dropdown to filter
+      }, 400); // Wait for dropdown to appear
     } else {
       showToast("Tags field not found");
       resolve();

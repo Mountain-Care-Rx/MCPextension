@@ -4,6 +4,9 @@ const esbuild = require("esbuild");
 const fs = require("fs");
 const path = require("path");
 const archiver = require('archiver');
+const crx3 = require('crx3'); // Correct import for crx3
+const { execSync } = require('child_process');
+const crypto = require('crypto');
 
 // Fallback directory configuration
 const primaryProjectPath = path.join(__dirname);
@@ -28,13 +31,14 @@ if (PROJECT_PATH === secondaryProjectPath) {
 
 const DIST_PATH = path.join(PROJECT_PATH, "dist");
 const GITHUB_REPO_PATH = PROJECT_PATH; // Using the same directory as project path for GitHub files
+const DOCS_UPDATES_PATH = path.join(PROJECT_PATH, 'docs', 'updates');
 
 // Helper function to get current date in YYYY.MM.DD format
 function getDateVersion() {
   const now = new Date();
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+  const month = now.getMonth() + 1; // No leading zero
+  const day = now.getDate(); // No leading zero
   return `${year}.${month}.${day}`;
 }
 
@@ -142,7 +146,7 @@ function updateVersions() {
   const chromeUpdatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
   <app appid="[YOUR_CHROME_EXTENSION_ID]">
-    <updatecheck codebase="https://latteralus.github.io/MCPextension/dist/dist-chrome.zip" version="${newVersion}" />
+    <updatecheck codebase="https://mountain-care-rx.github.io/MCPextension/dist/dist-chrome.zip" version="${newVersion}" />
   </app>
 </gupdate>`;
 
@@ -152,7 +156,7 @@ function updateVersions() {
   const edgeUpdatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
   <app appid="[YOUR_EDGE_EXTENSION_ID]">
-    <updatecheck codebase="https://latteralus.github.io/MCPextension/dist/dist-edge.zip" version="${newVersion}" />
+    <updatecheck codebase="https://mountain-care-rx.github.io/MCPextension/dist/dist-edge.zip" version="${newVersion}" />
   </app>
 </gupdate>`;
 
@@ -162,17 +166,17 @@ function updateVersions() {
   const updatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <updates>
   <browser id="chrome">
-    <redirect url="https://latteralus.github.io/MCPextension/chrome-updates.xml" />
+    <redirect url="https://mountain-care-rx.github.io/MCPextension/chrome-updates.xml" />
   </browser>
   <browser id="edge">
-    <redirect url="https://latteralus.github.io/MCPextension/edge-updates.xml" />
+    <redirect url="https://mountain-care-rx.github.io/MCPextension/edge-updates.xml" />
   </browser>
   <browser id="firefox">
-    <redirect url="https://latteralus.github.io/MCPextension/firefox-updates.json" />
+    <redirect url="https://mountain-care-rx.github.io/MCPextension/firefox-updates.json" />
   </browser>
   <default>
     <!-- Default to Chrome format if browser can't be determined -->
-    <redirect url="https://latteralus.github.io/MCPextension/chrome-updates.xml" />
+    <redirect url="https://mountain-care-rx.github.io/MCPextension/chrome-updates.xml" />
   </default>
 </updates>`;
 
@@ -185,7 +189,7 @@ function updateVersions() {
       "updates": [
         {
           "version": "${newVersion}",
-          "update_link": "https://latteralus.github.io/MCPextension/dist/dist-firefox.zip",
+          "update_link": "https://mountain-care-rx.github.io/MCPextension/dist/dist-firefox.zip",
           "applications": {
             "gecko": {
               "strict_min_version": "109.0"
@@ -370,16 +374,139 @@ function createBrowserSpecificBuild(browser) {
   archive.finalize();
 }
 
+// --- Automated .crx and .xpi creation ---
+// Requirements:
+//   - npm install crx3
+//   - npm install -g web-ext (for Firefox)
+//   - For Firefox signing: set MOZILLA_API_KEY and MOZILLA_API_SECRET as environment variables
+//
+const CHROME_KEY_PATH = path.join(PROJECT_PATH, 'chrome-extension-key.pem');
+
+function ensureChromeKey() {
+  if (!fs.existsSync(CHROME_KEY_PATH)) {
+    // Generate a new 2048-bit RSA key using Node.js
+    console.log('🔑 Generating new Chrome extension private key (Node.js)...');
+    const { privateKey } = crypto.generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+    });
+    fs.writeFileSync(CHROME_KEY_PATH, privateKey);
+    console.log(`✅ Created new key at ${CHROME_KEY_PATH}`);
+  }
+}
+
+function getAllFiles(dirPath, arrayOfFiles) {
+  const files = fs.readdirSync(dirPath);
+  arrayOfFiles = arrayOfFiles || [];
+  files.forEach(function(file) {
+    const fullPath = path.join(dirPath, file);
+    if (fs.statSync(fullPath).isDirectory()) {
+      arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
+    } else {
+      arrayOfFiles.push(fullPath);
+    }
+  });
+  return arrayOfFiles;
+}
+
+function createCrx(distDir, outCrxPath) {
+  ensureChromeKey();
+  // Debug: print directory and contents
+  console.log(`Creating .crx from directory: ${distDir}`);
+  try {
+    const files = fs.readdirSync(distDir);
+    console.log('Directory contents:', files);
+  } catch (e) {
+    console.error('Could not read directory:', distDir, e);
+  }
+  // Recursively collect all file paths
+  const allFiles = getAllFiles(distDir);
+  crx3(allFiles, {
+    keyPath: CHROME_KEY_PATH,
+    crxPath: outCrxPath
+  }).then(() => {
+    console.log(`✅ Created .crx: ${outCrxPath}`);
+  }).catch(err => {
+    console.error('❌ Error creating .crx:', err);
+  });
+}
+
+
+// Parse command-line arguments for Firefox channel
+let FIREFOX_CHANNEL = 'unlisted';
+for (const arg of process.argv) {
+  if (arg.startsWith('--firefox-channel=')) {
+    const val = arg.split('=')[1];
+    if (val === 'listed' || val === 'unlisted') {
+      FIREFOX_CHANNEL = val;
+    }
+  }
+}
+
+function createXpi(distDir, outXpiPath) {
+  // Requires web-ext and Mozilla API credentials
+  const apiKey = process.env.MOZILLA_API_KEY;
+  const apiSecret = process.env.MOZILLA_API_SECRET;
+  if (!apiKey || !apiSecret) {
+    console.warn('⚠️  Skipping .xpi creation: MOZILLA_API_KEY and MOZILLA_API_SECRET not set.');
+    return;
+  }
+  try {
+    execSync(`web-ext sign --source-dir="${distDir}" --api-key=${apiKey} --api-secret=${apiSecret} --artifacts-dir="${path.dirname(outXpiPath)}" --channel=${FIREFOX_CHANNEL}`, { stdio: 'inherit' });
+    console.log(`✅ Created .xpi in ${path.dirname(outXpiPath)} (channel: ${FIREFOX_CHANNEL})`);
+  } catch (err) {
+    console.error('❌ Error creating .xpi:', err);
+  }
+}
+
+// After zipping, create .crx and .xpi
+function postBuildArtifacts() {
+  // Chrome
+  const chromeDir = path.join(PROJECT_PATH, 'dist-chrome');
+  const chromeCrx = path.join(DIST_PATH, 'dist-chrome.crx');
+  createCrx(chromeDir, chromeCrx);
+  // Edge
+  const edgeDir = path.join(PROJECT_PATH, 'dist-edge');
+  const edgeCrx = path.join(DIST_PATH, 'dist-edge.crx');
+  createCrx(edgeDir, edgeCrx);
+  // Firefox
+  const firefoxDir = path.join(PROJECT_PATH, 'dist-firefox');
+  const firefoxXpi = path.join(DIST_PATH, 'dist-firefox.xpi');
+  createXpi(firefoxDir, firefoxXpi);
+}
+
+function copyUpdateArtifactsToDocs() {
+  if (!fs.existsSync(DOCS_UPDATES_PATH)) {
+    fs.mkdirSync(DOCS_UPDATES_PATH, { recursive: true });
+  }
+  const filesToCopy = fs.readdirSync(DIST_PATH).filter(f => /\.(crx|xpi|xml|json|zip)$/i.test(f));
+  for (const file of filesToCopy) {
+    const src = path.join(DIST_PATH, file);
+    const dest = path.join(DOCS_UPDATES_PATH, file);
+    fs.copyFileSync(src, dest);
+    console.log(`Copied ${file} to docs/updates/`);
+  }
+}
+
 // Main build process
 console.log('🚀 Starting build process...');
-
-// Step 1: Update all version information to current date
-const currentVersion = updateVersions();
-console.log(`📅 Using version: ${currentVersion}`);
-
-// Step 2: Create builds for all browsers
+// Update versions
+const newVersion = updateVersions();
+// Create browser builds
 createBrowserSpecificBuild("Chrome");
 createBrowserSpecificBuild("Edge");
 createBrowserSpecificBuild("Firefox");
 
+// Create .crx and .xpi artifacts
+postBuildArtifacts();
+copyUpdateArtifactsToDocs();
+
 console.log('🎉 All builds completed successfully!');
+// --- CRX and XPI packaging for server-hosted updates ---
+// NOTE: Chrome/Edge require .crx files signed with your private key. Firefox requires a signed .xpi file.
+// This script will output .zip files for manual conversion to .crx/.xpi, and update manifests for each browser.
+// You must:
+//   - For Chrome/Edge: Use Chrome's "pack extension" tool to create .crx from dist-chrome/ and dist-edge/.
+//   - For Firefox: Use Mozilla's signing service to create a .xpi from dist-firefox/.
+//   - Host the .crx/.xpi and update manifests (xml/json) on your server (e.g., GitHub Pages).

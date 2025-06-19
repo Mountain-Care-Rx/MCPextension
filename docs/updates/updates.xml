@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<updates>
+  <browser id="chrome">
+    <redirect url="https://latteralus.github.io/MCPextension/chrome-updates.xml" />
+  </browser>
+  <browser id="edge">
+    <redirect url="https://latteralus.github.io/MCPextension/edge-updates.xml" />
+  </browser>
+  <browser id="firefox">
+    <redirect url="https://latteralus.github.io/MCPextension/firefox-updates.json" />
+  </browser>
+  <default>
+    <!-- Default to Chrome format if browser can't be determined -->
+    <redirect url="https://latteralus.github.io/MCPextension/chrome-updates.xml" />
+  </default>
+</updates>

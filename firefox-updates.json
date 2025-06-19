@@ -3,8 +3,8 @@
     "crm-plus@example.com": {
       "updates": [
         {
-          "version": "2025.06.18",
-          "update_link": "https://latteralus.github.io/MCPextension/dist/dist-firefox.zip",
+          "version": "2025.6.19",
+          "update_link": "https://mountain-care-rx.github.io/MCPextension/dist/dist-firefox.zip",
           "applications": {
             "gecko": {
               "strict_min_version": "109.0"

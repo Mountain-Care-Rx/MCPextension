@@ -29,6 +29,8 @@ const REMOVABLE_TAGS = [
 
     'api-refill-patient-tirz',
     'api-refill-patient-sema',
+    'api-sema-refill-invoice',
+    'api-tirz-refill-invoice',
 
     'api-tirz-b6-0.25ml-syringe',
     'api-tirz-b6-0.5ml-syringe',

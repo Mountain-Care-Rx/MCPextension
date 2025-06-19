@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "build": "node build.js",
+    "build:publish": "node build.js --publish-to-stores",
     "build:chrome": "cross-env BROWSER=chrome node build.js",
     "build:edge": "cross-env BROWSER=edge node build.js",
     "build:firefox": "cross-env BROWSER=firefox node build.js",

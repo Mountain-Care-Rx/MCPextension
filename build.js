@@ -492,6 +492,17 @@ function copyUpdateArtifactsToDocs() {
   }
 }
 
+// Check for --publish-to-stores argument
+const PUBLISH_TO_STORES = process.argv.includes('--publish-to-stores');
+if (PUBLISH_TO_STORES) {
+  fs.writeFileSync(path.join(PROJECT_PATH, '.publish-to-stores'), '');
+  console.log('A .publish-to-stores marker file has been created. GitHub Actions will publish to Chrome/Firefox stores.');
+} else {
+  // Remove marker if it exists
+  const markerPath = path.join(PROJECT_PATH, '.publish-to-stores');
+  if (fs.existsSync(markerPath)) fs.unlinkSync(markerPath);
+}
+
 // Main build process
 console.log('🚀 Starting build process...');
 // Update versions

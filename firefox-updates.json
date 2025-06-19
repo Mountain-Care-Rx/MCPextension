@@ -4,7 +4,7 @@
       "updates": [
         {
           "version": "2025.6.19",
-          "update_link": "https://mountain-care-rx.github.io/MCPextension/dist/dist-firefox.zip",
+          "update_link": "https://mountain-care-rx.github.io/MCPextension/updates/dist-firefox.zip",
           "applications": {
             "gecko": {
               "strict_min_version": "109.0"

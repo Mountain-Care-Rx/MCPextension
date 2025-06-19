@@ -33,6 +33,9 @@ const DIST_PATH = path.join(PROJECT_PATH, "dist");
 const GITHUB_REPO_PATH = PROJECT_PATH; // Using the same directory as project path for GitHub files
 const DOCS_UPDATES_PATH = path.join(PROJECT_PATH, 'docs', 'updates');
 
+// Set the base URL for GitHub Pages updates directory
+const GITHUB_PAGES_BASE = "https://mountain-care-rx.github.io/MCPextension/updates/";
+
 // Helper function to get current date in YYYY.MM.DD format
 function getDateVersion() {
   const now = new Date();
@@ -146,7 +149,7 @@ function updateVersions() {
   const chromeUpdatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
   <app appid="[YOUR_CHROME_EXTENSION_ID]">
-    <updatecheck codebase="https://mountain-care-rx.github.io/MCPextension/dist/dist-chrome.zip" version="${newVersion}" />
+    <updatecheck codebase="${GITHUB_PAGES_BASE}dist-chrome.zip" version="${newVersion}" />
   </app>
 </gupdate>`;
 
@@ -156,7 +159,7 @@ function updateVersions() {
   const edgeUpdatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
   <app appid="[YOUR_EDGE_EXTENSION_ID]">
-    <updatecheck codebase="https://mountain-care-rx.github.io/MCPextension/dist/dist-edge.zip" version="${newVersion}" />
+    <updatecheck codebase="${GITHUB_PAGES_BASE}dist-edge.zip" version="${newVersion}" />
   </app>
 </gupdate>`;
 
@@ -166,17 +169,17 @@ function updateVersions() {
   const updatesXml = `<?xml version="1.0" encoding="UTF-8"?>
 <updates>
   <browser id="chrome">
-    <redirect url="https://mountain-care-rx.github.io/MCPextension/chrome-updates.xml" />
+    <redirect url="${GITHUB_PAGES_BASE}chrome-updates.xml" />
   </browser>
   <browser id="edge">
-    <redirect url="https://mountain-care-rx.github.io/MCPextension/edge-updates.xml" />
+    <redirect url="${GITHUB_PAGES_BASE}edge-updates.xml" />
   </browser>
   <browser id="firefox">
-    <redirect url="https://mountain-care-rx.github.io/MCPextension/firefox-updates.json" />
+    <redirect url="${GITHUB_PAGES_BASE}firefox-updates.json" />
   </browser>
   <default>
     <!-- Default to Chrome format if browser can't be determined -->
-    <redirect url="https://mountain-care-rx.github.io/MCPextension/chrome-updates.xml" />
+    <redirect url="${GITHUB_PAGES_BASE}chrome-updates.xml" />
   </default>
 </updates>`;
 
@@ -189,7 +192,7 @@ function updateVersions() {
       "updates": [
         {
           "version": "${newVersion}",
-          "update_link": "https://mountain-care-rx.github.io/MCPextension/dist/dist-firefox.zip",
+          "update_link": "${GITHUB_PAGES_BASE}dist-firefox.zip",
           "applications": {
             "gecko": {
               "strict_min_version": "109.0"

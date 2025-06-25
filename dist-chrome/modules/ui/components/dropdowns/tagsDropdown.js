@@ -47,7 +47,7 @@ export function createFrequentTagsDropdown() {
   // Custom typable dropdown
   const input = document.createElement("input");
   input.type = "text";
-  input.placeholder = "Type or select a tag";
+  input.placeholder = "Type or select a snippet";
   input.autocomplete = "off";
   input.style.background = "#23272e";
   input.style.color = "#a0e0ff";

@@ -170,7 +170,7 @@ export function createAPIDropdown() {
       compoundSelect.style.display = "none";
       dosageLabel.style.display = "none";
       dosageSelect.style.display = "none";
-      submitBtn.textContent = "Refill";
+      submitBtn.textContent = "Clear Tags";
     }
     updateCompoundOptions();
   });
@@ -184,7 +184,7 @@ export function createAPIDropdown() {
     } else {
       dosageLabel.style.display = "none";
       dosageSelect.style.display = "none";
-      submitBtn.textContent = "Refill";
+      submitBtn.textContent = selectedMedication ? "Refill" : "Clear Tags";
     }
     updateDosageOptions();
   });
@@ -194,7 +194,7 @@ export function createAPIDropdown() {
     if (selectedDosage) {
       submitBtn.textContent = "Invoice";
     } else {
-      submitBtn.textContent = "Form";
+      submitBtn.textContent = selectedCompound ? "Form" : (selectedMedication ? "Refill" : "Clear Tags");
     }
   });
 
@@ -334,10 +334,12 @@ export function createAPIDropdown() {
   };
 
   submitBtn.addEventListener("click", async () => {
-    // if (!medicationSelect.value || !compoundSelect.value || !dosageSelect.value) {
-    //   showToast("Please select all required options before proceeding.");
-    //   return;
-    // }
+    // If nothing is selected, clear tags
+    if (!medicationSelect.value && !compoundSelect.value && !dosageSelect.value) {
+      await removeAllTags();
+      showToast("All tags cleared.");
+      return;
+    }
     // Determine step from button label
     let stepValue = null;
     if (submitBtn.textContent === "Refill") {

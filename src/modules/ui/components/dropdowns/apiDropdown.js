@@ -428,6 +428,25 @@ export function createAPIDropdown() {
   dosageLabel.style.display = "none";
   dosageSelect.style.display = "none";
   submitBtn.style.display = "inline-block";
+  submitBtn.textContent = "Clear Tags";
+
+  // Helper to update the submit button label based on current selections
+  function updateSubmitBtnLabel() {
+    if (!medicationSelect.value && !compoundSelect.value && !dosageSelect.value) {
+      submitBtn.textContent = "Clear Tags";
+    } else if (dosageSelect.value) {
+      submitBtn.textContent = "Invoice";
+    } else if (compoundSelect.value) {
+      submitBtn.textContent = "Form";
+    } else if (medicationSelect.value) {
+      submitBtn.textContent = "Refill";
+    }
+  }
+
+  // Patch all change listeners to call updateSubmitBtnLabel
+  medicationSelect.addEventListener("change", updateSubmitBtnLabel);
+  compoundSelect.addEventListener("change", updateSubmitBtnLabel);
+  dosageSelect.addEventListener("change", updateSubmitBtnLabel);
 
   // Helper to update compound options based on selected medication
   function updateCompoundOptions() {

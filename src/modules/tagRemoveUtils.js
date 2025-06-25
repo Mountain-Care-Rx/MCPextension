@@ -111,7 +111,7 @@ const REMOVABLE_TAGS = [
       for (const tag of tagElements) {
         const tagText = tag.textContent.trim().toLowerCase();
         // Only remove tags that exactly match a REMOVABLE_TAGS entry
-        if (REMOVABLE_TAGS.includes(tagText)) {
+        if (REMOVABLE_TAGS.some(removableTag => tagText === removableTag.toLowerCase())) {
           foundTags.push({
             element: tag,
             text: tagText
@@ -122,8 +122,8 @@ const REMOVABLE_TAGS = [
       // Strategy 2: Look for elements with data-tag attributes
       const dataTagElements = document.querySelectorAll('[data-tag]');
       for (const element of dataTagElements) {
-        const tagValue = element.getAttribute('data-tag').toLowerCase();
-        if (REMOVABLE_TAGS.includes(tagValue)) {
+        const tagValue = element.getAttribute('data-tag').trim().toLowerCase();
+        if (REMOVABLE_TAGS.some(removableTag => tagValue === removableTag.toLowerCase())) {
           foundTags.push({
             element: element,
             text: tagValue
@@ -138,7 +138,7 @@ const REMOVABLE_TAGS = [
         for (const element of childElements) {
           if (element.nodeType === 1) { // Only element nodes
             const text = element.textContent.trim().toLowerCase();
-            if (REMOVABLE_TAGS.includes(text)) {
+            if (REMOVABLE_TAGS.some(removableTag => text === removableTag.toLowerCase())) {
               // Avoid duplicates
               if (!foundTags.some(foundTag => foundTag.element === element)) {
                 foundTags.push({
@@ -147,22 +147,6 @@ const REMOVABLE_TAGS = [
                 });
               }
             }
-          }
-        }
-      }
-
-      // Strategy 4: Look for elements with class names that might contain our tags
-      const allElements = document.querySelectorAll('*[class]');
-      for (const element of allElements) {
-        const className = String(element.className).toLowerCase();
-        // Only match if the className exactly matches a REMOVABLE_TAGS entry
-        if (REMOVABLE_TAGS.includes(className)) {
-          // Avoid duplicates
-          if (!foundTags.some(foundTag => foundTag.element === element)) {
-            foundTags.push({
-              element: element,
-              text: element.textContent.trim().toLowerCase()
-            });
           }
         }
       }

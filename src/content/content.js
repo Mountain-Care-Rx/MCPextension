@@ -136,34 +136,13 @@ function getMainContentElement() {
 }
 
 function addHeaderPadding() {
-  const main = getMainContentElement();
-  if (main) {
-    main.style.paddingTop = HEADER_HEIGHT + 'px';
-    // Debug: log the element and its outerHTML
-    console.log('[CRM Extension] addHeaderPadding: applying to', main, main.outerHTML);
-    // As a fallback, also apply to all parent elements up to body
-    let parent = main.parentElement;
-    while (parent && parent !== document.body) {
-      parent.style.paddingTop = HEADER_HEIGHT + 'px';
-      parent = parent.parentElement;
-    }
-  } else {
-    console.warn('[CRM Extension] addHeaderPadding: no main content element found');
-  }
+  // No longer adding padding to main content or parents; toolbar will cover the top
+  // (Function intentionally left blank)
 }
 
 function removeHeaderPadding() {
-  const main = getMainContentElement();
-  if (main) {
-    main.style.paddingTop = '';
-    // Remove from all parent elements up to body
-    let parent = main.parentElement;
-    while (parent && parent !== document.body) {
-      parent.style.paddingTop = '';
-      parent = parent.parentElement;
-    }
-    console.log('[CRM Extension] removeHeaderPadding: removed from', main, main.outerHTML);
-  }
+  // No longer removing padding; nothing to undo
+  // (Function intentionally left blank)
 }
 
 // Patch createFixedHeader and removeHeaderBar to always adjust padding

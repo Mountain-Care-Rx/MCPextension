@@ -110,8 +110,8 @@ const REMOVABLE_TAGS = [
 
       for (const tag of tagElements) {
         const tagText = tag.textContent.trim().toLowerCase();
-        // Check if the tag text contains any of our removable tags
-        if (REMOVABLE_TAGS.some(removableTag => tagText.includes(removableTag))) {
+        // Only remove tags that exactly match a REMOVABLE_TAGS entry
+        if (REMOVABLE_TAGS.includes(tagText)) {
           foundTags.push({
             element: tag,
             text: tagText
@@ -123,7 +123,7 @@ const REMOVABLE_TAGS = [
       const dataTagElements = document.querySelectorAll('[data-tag]');
       for (const element of dataTagElements) {
         const tagValue = element.getAttribute('data-tag').toLowerCase();
-        if (REMOVABLE_TAGS.some(removableTag => tagValue.includes(removableTag))) {
+        if (REMOVABLE_TAGS.includes(tagValue)) {
           foundTags.push({
             element: element,
             text: tagValue
@@ -138,7 +138,7 @@ const REMOVABLE_TAGS = [
         for (const element of childElements) {
           if (element.nodeType === 1) { // Only element nodes
             const text = element.textContent.trim().toLowerCase();
-            if (REMOVABLE_TAGS.some(removableTag => text.includes(removableTag))) {
+            if (REMOVABLE_TAGS.includes(text)) {
               // Avoid duplicates
               if (!foundTags.some(foundTag => foundTag.element === element)) {
                 foundTags.push({
@@ -155,7 +155,8 @@ const REMOVABLE_TAGS = [
       const allElements = document.querySelectorAll('*[class]');
       for (const element of allElements) {
         const className = String(element.className).toLowerCase();
-        if (className && typeof className === 'string' && REMOVABLE_TAGS.some(tag => className.includes(tag))) {
+        // Only match if the className exactly matches a REMOVABLE_TAGS entry
+        if (REMOVABLE_TAGS.includes(className)) {
           // Avoid duplicates
           if (!foundTags.some(foundTag => foundTag.element === element)) {
             foundTags.push({

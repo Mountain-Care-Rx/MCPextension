@@ -117,13 +117,15 @@ export function createAPIDropdown() {
 
   // Show/hide Name button based on state
   function updateNameBtnVisibility() {
-    if (medicationSelect.value && submitBtn.textContent === "Refill") {
+    // Show Name button only if a medication is selected, but no compound or dosage is selected
+    if (medicationSelect.value && !compoundSelect.value && !dosageSelect.value) {
       nameBtn.style.display = "inline-block";
     } else {
       nameBtn.style.display = "none";
     }
   }
 
+  // Patch all change listeners to call updateNameBtnVisibility
   medicationSelect.addEventListener("change", updateNameBtnVisibility);
   compoundSelect.addEventListener("change", updateNameBtnVisibility);
   dosageSelect.addEventListener("change", updateNameBtnVisibility);

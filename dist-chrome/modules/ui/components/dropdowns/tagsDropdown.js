@@ -2,8 +2,8 @@ import { showToast } from "../../../phoneUtils";
 import { removeAllTags, removeAllAutomations } from '../../../ui/headerBar.js';
 // List of frequent tags (edit this array to add/remove tags)
 const FREQUENT_TAGS = [
-  "wait",
-  "warm",
+  "wait-for-patient",
+  "arrived-warm",
   "provider-wait",
   "tirz-vial-price",
   "tirz-syringe-price",
@@ -13,11 +13,11 @@ const FREQUENT_TAGS = [
   "no-refill",
   "no-titration",
   "pickup-msg",
-  "call",
-  "fda",
-  "glp",
-  "states",
-  "video",
+  "patient-tried-calling",
+  "fda-decision-503a",
+  "glp-updated-clarification",
+  "states-we-ship",
+  "injection-tut-video",
   "talk-to-crm",
   // Add more tags as needed
 ];

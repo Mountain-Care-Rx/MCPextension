@@ -3,7 +3,7 @@
     "crm-plus@example.com": {
       "updates": [
         {
-          "version": "2025.6.26",
+          "version": "2025.7.9",
           "update_link": "https://mountain-care-rx.github.io/MCPextension/updates/dist-firefox.zip",
           "applications": {
             "gecko": {
